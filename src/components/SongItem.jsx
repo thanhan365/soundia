@@ -1,34 +1,39 @@
-import { useState } from "react";
+import { useState, useRef, useCallback } from "react";
 import { usePlayer } from "../context/PlayerContext";
 import { useToast } from "../context/ToastContext";
+import { useClickOutside } from "../hooks/useClickOutside";
 import { HiPlay, HiPause } from "react-icons/hi2";
 import { HiHeart, HiDotsHorizontal } from "react-icons/hi";
 import { HiQueueList } from "react-icons/hi2";
 import SongContextMenu from "./SongContextMenu";
 
-export default function SongItem({ song, index }) {
+function SongItem({ song, index }) {
   const { currentSong, isPlaying, playSong, toggleFavorite, isFavorite, addToQueue } = usePlayer();
   const { showToast } = useToast();
   const isActive = currentSong?.id === song.id;
   const liked = isFavorite(song.id);
   const [menuPos, setMenuPos] = useState(null);
+  const menuRef = useRef(null);
 
-  const handleFav = (e) => {
+  // Close menu khi click outside
+  useClickOutside(menuRef, () => setMenuPos(null));
+
+  const handleFav = useCallback((e) => {
     e.stopPropagation();
     toggleFavorite(song.id);
     showToast(liked ? "Đã bỏ yêu thích" : "Đã thêm vào yêu thích", liked ? "info" : "success");
-  };
+  }, [song.id, liked, toggleFavorite, showToast]);
 
-  const handleQueue = (e) => {
+  const handleQueue = useCallback((e) => {
     e.stopPropagation();
     addToQueue(song);
     showToast(`"${song.title}" đã thêm vào hàng đợi`, "success");
-  };
+  }, [song, addToQueue, showToast]);
 
-  const handleMenu = (e) => {
+  const handleMenu = useCallback((e) => {
     e.stopPropagation();
     setMenuPos({ x: e.clientX, y: e.clientY });
-  };
+  }, []);
 
   return (
     <>
@@ -111,8 +116,12 @@ export default function SongItem({ song, index }) {
       </button>
 
       {menuPos && (
-        <SongContextMenu song={song} position={menuPos} onClose={() => setMenuPos(null)} />
+        <div ref={menuRef}>
+          <SongContextMenu song={song} position={menuPos} onClose={() => setMenuPos(null)} />
+        </div>
       )}
     </>
   );
 }
+
+export default SongItem;

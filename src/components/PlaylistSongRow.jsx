@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useState, useRef, useCallback } from "react";
 import { usePlayer } from "../context/PlayerContext";
 import { useToast } from "../context/ToastContext";
+import { useClickOutside } from "../hooks/useClickOutside";
 import { HiPlay, HiHeart, HiDotsHorizontal, HiTrash, HiSwitchVertical } from "react-icons/hi";
 import SongContextMenu from "./SongContextMenu";
 
@@ -8,19 +9,23 @@ export default function PlaylistSongRow({ song, index, isPlaying, isCurrent, onP
   const { toggleFavorite, isFavorite, addToQueue } = usePlayer();
   const { showToast } = useToast();
   const [menuPos, setMenuPos] = useState(null);
+  const menuRef = useRef(null);
 
   const liked = isFavorite(song.id);
 
-  const handleMenu = (e) => {
+  // Close menu khi click outside
+  useClickOutside(menuRef, () => setMenuPos(null));
+
+  const handleMenu = useCallback((e) => {
     e.stopPropagation();
     setMenuPos({ x: e.clientX, y: e.clientY });
-  };
+  }, []);
 
   const extraItems = [
-    { 
-      icon: HiTrash, 
-      label: "Xóa khỏi playlist", 
-      action: () => { onRemove(song.id); } 
+    {
+      icon: HiTrash,
+      label: "Xóa khỏi playlist",
+      action: () => { onRemove(song.id); }
     },
   ];
 
@@ -108,12 +113,14 @@ export default function PlaylistSongRow({ song, index, isPlaying, isCurrent, onP
 
       {/* Context Menu */}
       {menuPos && (
-        <SongContextMenu 
-          song={song} 
-          position={menuPos} 
-          onClose={() => setMenuPos(null)} 
-          extraItems={extraItems}
-        />
+        <div ref={menuRef}>
+          <SongContextMenu
+            song={song}
+            position={menuPos}
+            onClose={() => setMenuPos(null)}
+            extraItems={extraItems}
+          />
+        </div>
       )}
     </div>
   );

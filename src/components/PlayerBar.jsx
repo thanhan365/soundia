@@ -1,6 +1,7 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useCallback } from "react";
 import { usePlayer } from "../context/PlayerContext";
 import { useToast } from "../context/ToastContext";
+import { useClickOutside } from "../hooks/useClickOutside";
 import ProgressBar from "./ProgressBar";
 import VolumeControl from "./VolumeControl";
 import { HiPlay, HiPause, HiBackward, HiForward } from "react-icons/hi2";
@@ -22,43 +23,43 @@ export default function PlayerBar() {
 
   const liked = currentSong ? isFavorite(currentSong.id) : false;
 
-  const handleLike = () => {
+  // Use click outside hook để đóng menu
+  useClickOutside(menuRef, () => setMenuOpen(false));
+
+  const handleLike = useCallback(() => {
     if (!currentSong) return;
     toggleFavorite(currentSong.id);
     showToast(liked ? "Đã bỏ yêu thích" : "Đã thêm vào yêu thích", liked ? "info" : "success");
-  };
+  }, [currentSong, liked, toggleFavorite, showToast]);
 
-  useEffect(() => {
-    const handleClick = (e) => {
-      if (menuRef.current && !menuRef.current.contains(e.target)) setMenuOpen(false);
-    };
-    if (menuOpen) document.addEventListener("mousedown", handleClick);
-    return () => document.removeEventListener("mousedown", handleClick);
-  }, [menuOpen]);
-
-  const handleAddToQueue = () => {
+  const handleAddToQueue = useCallback(() => {
     if (!currentSong) return;
     addToQueue(currentSong);
     showToast(`Đã thêm vào danh sách chờ`, "success");
     setMenuOpen(false);
-  };
-  const handleAddToPlaylist = (pl) => {
+  }, [currentSong, addToQueue, showToast]);
+
+  const handleAddToPlaylist = useCallback((pl) => {
     if (!currentSong) return;
     addSongToPlaylist(pl.id, currentSong.id);
     showToast(`Đã thêm vào "${pl.name}"`, "success");
     setMenuOpen(false);
-  };
-  const handleCopyLink = () => {
+  }, [currentSong, addSongToPlaylist, showToast]);
+
+  const handleCopyLink = useCallback(() => {
     navigator.clipboard.writeText(`https://soundia.app/song/${currentSong?.id}`);
     showToast("Đã sao chép liên kết", "success");
     setMenuOpen(false);
-  };
-  const handleShare = () => {
+  }, [currentSong, showToast]);
+
+  const handleShare = useCallback(() => {
     if (navigator.share) {
       navigator.share({ title: currentSong.title, text: `${currentSong.title} - ${currentSong.artist}` });
-    } else { handleCopyLink(); }
+    } else {
+      handleCopyLink();
+    }
     setMenuOpen(false);
-  };
+  }, [currentSong, handleCopyLink]);
 
   /* ─────────── MOBILE < 480px: layout 2 hàng ─────────── */
   /* Hàng 1: Cover + Title + Like + 3 chấm                */
@@ -76,7 +77,7 @@ export default function PlayerBar() {
     >
       <div className="max-w-screen-2xl mx-auto">
 
-        {/* ═══ MOBILE LAYOUT (<640px): 2 rows ═══ */}
+        {/* ═══ MOBILE LAYOUT (<640px): 3 rows ═══ */}
         <div className="sm:hidden">
           {/* Row 1: Song info */}
           <div className="flex items-center gap-2 px-2 sm:px-3 pt-2 pb-1">
@@ -129,23 +130,49 @@ export default function PlayerBar() {
             )}
           </div>
 
-          {/* Row 2: Progress + Controls */}
+          {/* Row 2: Progress */}
+          <div className="px-2 py-1">
+            <ProgressBar />
+          </div>
+
+          {/* Row 3: Controls + Extras */}
           <div className="px-2 pb-2">
-            <div className="mb-1"><ProgressBar /></div>
-            <div className="flex items-center justify-center gap-4">
-              <button onClick={playPrev} className="text-gray-400 active:text-white p-1.5 rounded-full hover:text-gray-300">
-                <HiBackward className="text-lg" />
-              </button>
-              <button
-                onClick={togglePlay}
-                disabled={!currentSong}
-                className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${currentSong ? "bg-white text-dark active:scale-90" : "bg-white/10 text-gray-600"}`}
-              >
-                {isPlaying ? <HiPause className="text-lg" /> : <HiPlay className="text-lg ml-0.5" />}
-              </button>
-              <button onClick={playNext} className="text-gray-400 active:text-white p-1.5 rounded-full hover:text-gray-300">
-                <HiForward className="text-lg" />
-              </button>
+            <div className="flex items-center justify-center gap-1">
+              {/* Center controls */}
+              <div className="flex items-center gap-1">
+                <button onClick={toggleShuffle} className={`p-1 flex-shrink-0 ${shuffle ? "text-neon" : "text-gray-600"}`}>
+                  <IoShuffle className="text-[14px]" />
+                </button>
+                <button onClick={playPrev} className="text-gray-400 active:text-white p-1 flex-shrink-0 rounded-full hover:text-gray-300">
+                  <HiBackward className="text-base" />
+                </button>
+                <button
+                  onClick={togglePlay}
+                  disabled={!currentSong}
+                  className={`w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 ${currentSong ? "bg-white text-dark active:scale-90" : "bg-white/10 text-gray-600"}`}
+                >
+                  {isPlaying ? <HiPause className="text-base" /> : <HiPlay className="text-base ml-0.5" />}
+                </button>
+                <button onClick={playNext} className="text-gray-400 active:text-white p-1 flex-shrink-0 rounded-full hover:text-gray-300">
+                  <HiForward className="text-base" />
+                </button>
+                <button onClick={toggleRepeat} className={`p-1 flex-shrink-0 ${repeatMode !== "none" ? "text-neon" : "text-gray-600"}`}>
+                  <IoRepeat className="text-[14px]" />
+                  {repeatMode === "one" && <span className="inline-block text-[7px] ml-0.5">1</span>}
+                </button>
+                <button onClick={() => setLyricsOpen(!lyricsOpen)} className={`p-1 text-xs font-bold flex-shrink-0 ${lyricsOpen ? "text-neon" : "text-gray-600"}`}>
+                  LRC
+                </button>
+              </div>
+
+              {/* Right side: Volume + Queue */}
+              <div className="flex-1" />
+              <div className="flex items-center gap-1">
+                <div className="w-20"><VolumeControl /></div>
+                <button onClick={() => setQueueOpen(!queueOpen)} className={`p-1 flex-shrink-0 ${queueOpen ? "text-neon" : "text-gray-600"}`}>
+                  <HiQueueList className="text-base" />
+                </button>
+              </div>
             </div>
           </div>
         </div>
