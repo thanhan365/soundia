@@ -23,39 +23,52 @@ const personalNav = [
 export default function Sidebar({ isOpen, onClose }) {
   const { currentSong, playlists } = usePlayer();
   const [showModal, setShowModal] = useState(false);
+  const [hovered, setHovered] = useState(false);
+
+  // Desktop: sidebar nổi, chỉ hiện icon, hover mở rộng
+  // Mobile: slide-in khi bấm menu
+  const isExpanded = isOpen || hovered;
 
   return (
     <>
-      {/* Overlay */}
+      {/* Mobile overlay */}
       {isOpen && (
         <div className="fixed inset-0 bg-black/60 z-40 lg:hidden" onClick={onClose} />
       )}
 
       <aside
+        onMouseEnter={() => setHovered(true)}
+        onMouseLeave={() => setHovered(false)}
         className={`
-          fixed top-0 left-0 h-full w-64 z-50
-          bg-[#170f23]/95 backdrop-blur-xl border-r border-white/5
-          flex flex-col transition-transform duration-300
-          lg:translate-x-0 lg:static lg:z-auto
-          ${isOpen ? "translate-x-0" : "-translate-x-full"}
+          fixed top-0 left-0 z-50 bottom-[96px] sm:bottom-[72px]
+          bg-[#170f23]/98 backdrop-blur-2xl border-r border-white/5
+          flex flex-col transition-all duration-300 ease-in-out
+          ${isExpanded ? "w-64 shadow-2xl shadow-black/50" : "w-[68px]"}
+          ${isOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}
         `}
       >
         {/* Logo */}
-        <div className="p-5 pb-3">
-          <NavLink to="/" onClick={onClose} className="flex items-center gap-3 no-underline group">
+        <div className="p-4 pb-3 flex items-center gap-3 flex-shrink-0">
+          <NavLink to="/" onClick={onClose} className="flex items-center gap-3 no-underline group min-w-0">
             <img
               src="/soundia-logo.jpg"
               alt="Soundia"
-              className="w-10 h-10 rounded-xl object-cover group-hover:shadow-neon group-hover:scale-105 transition-all duration-300"
+              className="w-9 h-9 rounded-xl object-cover flex-shrink-0 group-hover:shadow-neon group-hover:scale-105 transition-all duration-300"
             />
-            <h1 className="text-xl font-extrabold tracking-wider text-white group-hover:text-neon transition-colors duration-300">
+            <h1
+              className={`
+                text-lg font-extrabold tracking-wider text-white group-hover:text-neon
+                transition-all duration-300 whitespace-nowrap overflow-hidden
+                ${isExpanded ? "opacity-100 w-auto" : "opacity-0 w-0"}
+              `}
+            >
               SOUNDIA
             </h1>
           </NavLink>
         </div>
 
         {/* Main Nav */}
-        <nav className="px-3 space-y-0.5">
+        <nav className="px-2 space-y-0.5">
           {mainNav.map(({ to, icon: Icon, label }) => (
             <NavLink
               key={to}
@@ -63,26 +76,28 @@ export default function Sidebar({ isOpen, onClose }) {
               end={to === "/"}
               onClick={onClose}
               className={({ isActive }) => `
-                flex items-center gap-3 px-3 py-2 rounded-lg text-[13px] font-semibold
-                no-underline transition-all duration-200
+                flex items-center gap-3 px-3 py-2.5 rounded-lg text-[13px] font-semibold
+                no-underline transition-all duration-200 whitespace-nowrap overflow-hidden
                 ${isActive
-                  ? "bg-white/10 text-white"
+                  ? "bg-neon/10 text-neon"
                   : "text-gray-400 hover:text-white hover:bg-white/5"
                 }
               `}
             >
               <Icon className="text-lg flex-shrink-0" />
-              {label}
+              <span className={`transition-all duration-300 ${isExpanded ? "opacity-100" : "opacity-0 w-0"}`}>
+                {label}
+              </span>
             </NavLink>
           ))}
         </nav>
 
         {/* Divider */}
-        <div className="mx-4 my-3 h-px bg-white/10" />
+        <div className="mx-3 my-3 h-px bg-white/10" />
 
         {/* Personal */}
-        <div className="px-3 flex-1 overflow-y-auto">
-          <p className="text-[11px] font-bold text-gray-500 uppercase tracking-widest px-3 mb-2">
+        <div className="px-2 flex-1 overflow-y-auto scrollbar-hide">
+          <p className={`text-[10px] font-bold text-gray-500 uppercase tracking-widest px-3 mb-2 transition-all duration-300 whitespace-nowrap ${isExpanded ? "opacity-100" : "opacity-0"}`}>
             Cá nhân
           </p>
           {personalNav.map(({ to, icon: Icon, label }) => (
@@ -91,23 +106,25 @@ export default function Sidebar({ isOpen, onClose }) {
               to={to}
               onClick={onClose}
               className={({ isActive }) => `
-                flex items-center gap-3 px-3 py-2 rounded-lg text-[13px] font-semibold
-                no-underline transition-all duration-200
+                flex items-center gap-3 px-3 py-2.5 rounded-lg text-[13px] font-semibold
+                no-underline transition-all duration-200 whitespace-nowrap overflow-hidden
                 ${isActive
-                  ? "bg-white/10 text-white"
+                  ? "bg-neon/10 text-neon"
                   : "text-gray-400 hover:text-white hover:bg-white/5"
                 }
               `}
             >
               <Icon className="text-lg flex-shrink-0" />
-              {label}
+              <span className={`transition-all duration-300 ${isExpanded ? "opacity-100" : "opacity-0 w-0"}`}>
+                {label}
+              </span>
             </NavLink>
           ))}
 
           {/* Playlists section */}
-          <div className="mt-4">
+          <div className={`mt-4 transition-all duration-300 ${isExpanded ? "opacity-100" : "opacity-0 h-0 overflow-hidden"}`}>
             <div className="flex items-center justify-between px-3 mb-2">
-              <p className="text-[11px] font-bold text-gray-500 uppercase tracking-widest">
+              <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">
                 Playlist
               </p>
               <button
@@ -149,14 +166,14 @@ export default function Sidebar({ isOpen, onClose }) {
 
         {/* Now Playing mini */}
         {currentSong && (
-          <div className="p-4 border-t border-white/5">
+          <div className="p-3 border-t border-white/5 flex-shrink-0">
             <div className="flex items-center gap-3">
               <img
                 src={currentSong.cover}
                 alt={currentSong.title}
-                className="w-10 h-10 rounded-lg object-cover"
+                className="w-9 h-9 rounded-lg object-cover flex-shrink-0"
               />
-              <div className="min-w-0 flex-1">
+              <div className={`min-w-0 flex-1 transition-all duration-300 ${isExpanded ? "opacity-100" : "opacity-0 w-0"}`}>
                 <p className="text-xs font-semibold text-white truncate">{currentSong.title}</p>
                 <p className="text-[10px] text-gray-500 truncate">{currentSong.artist}</p>
               </div>

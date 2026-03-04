@@ -1,9 +1,9 @@
 import { useEffect, useRef } from "react";
-import { HiPlus, HiLink, HiShare, HiMusicNote } from "react-icons/hi";
+import { HiPlus, HiLink, HiShare, HiMusicNote, HiX } from "react-icons/hi";
 import { usePlayer } from "../context/PlayerContext";
 import { useToast } from "../context/ToastContext";
 
-export default function SongContextMenu({ song, position, onClose }) {
+export default function SongContextMenu({ song, position, onClose, extraItems = [] }) {
   const ref = useRef(null);
   const { playlists, addSongToPlaylist, setLyricsOpen } = usePlayer();
   const { showToast } = useToast();
@@ -53,33 +53,76 @@ export default function SongContextMenu({ song, position, onClose }) {
     { icon: HiLink, label: "Sao chép liên kết", action: handleCopyLink },
     { icon: HiShare, label: "Chia sẻ", action: handleShare },
     { icon: HiMusicNote, label: "Xem lời bài hát", action: handleLyrics },
+    ...extraItems,
   ];
 
-  // Position the menu
-  const style = {
+  const isMobile = window.innerWidth < 640;
+
+  // Desktop: context menu tại vị trí click
+  const desktopStyle = {
     top: Math.min(position.y, window.innerHeight - 300),
     left: Math.min(position.x, window.innerWidth - 220),
   };
 
   return (
     <div className="fixed inset-0 z-[80]" onClick={onClose}>
-      <div
-        ref={ref}
-        style={style}
-        className="fixed bg-[#1a1a2e] border border-white/10 rounded-xl shadow-2xl py-2 w-52 animate-fade-in"
-        onClick={(e) => e.stopPropagation()}
-      >
-        {menuItems.map((item, i) => (
-          <button
-            key={i}
-            onClick={item.action}
-            className="w-full flex items-center gap-3 px-4 py-2.5 text-[13px] text-gray-300 hover:text-white hover:bg-white/5 transition-colors text-left"
+      {isMobile ? (
+        /* ═══ MOBILE: Bottom sheet ═══ */
+        <>
+          <div className="absolute inset-0 bg-black/50" />
+          <div
+            ref={ref}
+            className="absolute bottom-0 left-0 right-0 bg-[#1a1a2e] rounded-t-2xl py-3 px-1 animate-slide-up max-h-[70vh] overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}
           >
-            <item.icon className="text-sm text-gray-500 flex-shrink-0" />
-            <span className="truncate">{item.label}</span>
-          </button>
-        ))}
-      </div>
+            {/* Header */}
+            <div className="flex items-center gap-3 px-4 pb-3 mb-1 border-b border-white/5">
+              <img src={song.cover} alt="" className="w-10 h-10 rounded-lg object-cover" />
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold text-white truncate">{song.title}</p>
+                <p className="text-xs text-gray-500 truncate">{song.artist}</p>
+              </div>
+              <button onClick={onClose} className="p-1.5 text-gray-500 hover:text-white">
+                <HiX className="text-lg" />
+              </button>
+            </div>
+
+            {/* Items */}
+            {menuItems.map((item, i) => (
+              <button
+                key={i}
+                onClick={item.action}
+                className="w-full flex items-center gap-4 px-5 py-3.5 text-[14px] text-gray-300 active:bg-white/5 transition-colors text-left"
+              >
+                <item.icon className="text-base text-gray-500 flex-shrink-0" />
+                <span className="truncate">{item.label}</span>
+              </button>
+            ))}
+
+            {/* Safe area bottom */}
+            <div className="h-2" />
+          </div>
+        </>
+      ) : (
+        /* ═══ DESKTOP: Context menu ═══ */
+        <div
+          ref={ref}
+          style={desktopStyle}
+          className="fixed bg-[#1a1a2e] border border-white/10 rounded-xl shadow-2xl py-2 w-52 animate-fade-in"
+          onClick={(e) => e.stopPropagation()}
+        >
+          {menuItems.map((item, i) => (
+            <button
+              key={i}
+              onClick={item.action}
+              className="w-full flex items-center gap-3 px-4 py-2.5 text-[13px] text-gray-300 hover:text-white hover:bg-white/5 transition-colors text-left"
+            >
+              <item.icon className="text-sm text-gray-500 flex-shrink-0" />
+              <span className="truncate">{item.label}</span>
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

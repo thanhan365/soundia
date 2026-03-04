@@ -212,6 +212,22 @@ export function PlayerProvider({ children }) {
       )
     );
   };
+  const renamePlaylist = (playlistId, newName) => {
+    if (!newName.trim()) return;
+    setPlaylists((p) =>
+      p.map((pl) => pl.id === playlistId ? { ...pl, name: newName.trim() } : pl)
+    );
+  };
+  const reorderPlaylistSongs = (playlistId, newSongIds) => {
+    setPlaylists((p) =>
+      p.map((pl) => pl.id === playlistId ? { ...pl, songs: newSongIds } : pl)
+    );
+  };
+  const setPlaylistCover = (playlistId, coverUrl) => {
+    setPlaylists((p) =>
+      p.map((pl) => pl.id === playlistId ? { ...pl, cover: coverUrl } : pl)
+    );
+  };
 
   // --- Search History ---
   const addSearchHistory = (query) => {
@@ -230,6 +246,7 @@ export function PlayerProvider({ children }) {
         recentHistory, queueOpen, setQueueOpen, lyricsOpen, setLyricsOpen,
         manualQueue, addToQueue, getQueue,
         playlists, createPlaylist, deletePlaylist, addSongToPlaylist, removeSongFromPlaylist,
+        renamePlaylist, reorderPlaylistSongs, setPlaylistCover,
         searchHistory, addSearchHistory, clearSearchHistory,
         playSong, togglePlay, playNext, playPrev, seekTo, changeVolume,
       }}

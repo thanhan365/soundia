@@ -35,7 +35,7 @@ export default function SongItem({ song, index }) {
       <button
         onClick={() => playSong(song)}
         className={`
-          w-full flex items-center gap-3 p-3 rounded-xl
+          w-full flex items-center gap-1 sm:gap-2 lg:gap-3 p-2 sm:p-2.5 lg:p-3 rounded-lg sm:rounded-xl
           transition-all duration-300 group text-left relative
           ${isActive
             ? "bg-neon/10 border border-neon/20"
@@ -43,98 +43,73 @@ export default function SongItem({ song, index }) {
           }
         `}
       >
-        {/* Index / Play overlay */}
-        <div
-          className={`
-            w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0
-            transition-all duration-300 relative overflow-hidden
-            ${isActive ? "bg-neon/15" : "bg-white/5 group-hover:bg-neon/10"}
-          `}
-        >
-          {isActive && isPlaying ? (
-            <div className="flex items-center gap-0.5">
-              <span className="w-0.5 h-3 bg-neon rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
-              <span className="w-0.5 h-4 bg-neon rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
-              <span className="w-0.5 h-2 bg-neon rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
+        {/* Cover + Play overlay */}
+        <div className="relative w-8 h-8 sm:w-10 sm:h-10 rounded-lg overflow-hidden flex-shrink-0 group/cover">
+          <img
+            src={song.cover}
+            alt={song.title}
+            className={`w-full h-full object-cover transition-all duration-300 ${isActive ? "shadow-neon-sm" : ""}`}
+          />
+          {/* Play overlay on hover */}
+          <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover/cover:opacity-100 transition-opacity">
+            <HiPlay className="text-white text-base ml-0.5" />
+          </div>
+          {/* Sóng nhạc khi đang phát */}
+          {isActive && isPlaying && (
+            <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
+              <div className="flex items-center gap-[2px]">
+                <span className="w-[2px] bg-neon rounded-full animate-bounce" style={{ height: "8px", animationDelay: "0ms" }} />
+                <span className="w-[2px] bg-neon rounded-full animate-bounce" style={{ height: "12px", animationDelay: "150ms" }} />
+                <span className="w-[2px] bg-neon rounded-full animate-bounce" style={{ height: "6px", animationDelay: "300ms" }} />
+              </div>
             </div>
-          ) : isActive ? (
-            <HiPause className="text-neon text-lg" />
-          ) : (
-            <>
-              <span className="text-gray-500 text-xs font-medium group-hover:hidden">
-                {String(index + 1).padStart(2, "0")}
-              </span>
-              <HiPlay className="text-neon text-lg hidden group-hover:block" />
-            </>
           )}
         </div>
 
-        {/* Cover */}
-        <img
-          src={song.cover}
-          alt={song.title}
-          className={`
-            w-10 h-10 rounded-lg object-cover flex-shrink-0
-            transition-all duration-300
-            ${isActive ? "shadow-neon-sm" : ""}
-          `}
-        />
-
         {/* Info */}
         <div className="flex-1 min-w-0">
-          <p className={`text-sm font-semibold truncate transition-colors ${isActive ? "text-neon" : "text-white"}`}>
+          <p className={`text-[12px] sm:text-sm lg:text-base font-semibold truncate transition-colors ${isActive ? "text-neon" : "text-white"}`}>
             {song.title}
           </p>
-          <p className="text-xs text-gray-500 truncate">{song.artist}</p>
+          <p className="text-[10px] sm:text-xs lg:text-sm text-gray-500 truncate">{song.artist}</p>
         </div>
 
         {/* Duration */}
-        <span className="text-xs text-gray-600 font-mono flex-shrink-0 hidden sm:block">
+        <span className="text-[10px] sm:text-xs lg:text-sm text-gray-600 font-mono flex-shrink-0 hidden sm:block">
           {song.duration}
         </span>
 
-        {/* Action buttons - shown on hover */}
-        <div className="flex items-center gap-1 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+        {/* Actions — ẩn khi hover trên desktop, luôn hiển thị trên mobile */}
+        <div className="flex items-center gap-0.5 sm:gap-1 flex-shrink-0 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity duration-200">
           {/* Add to queue */}
           <button
             onClick={handleQueue}
-            className="p-1.5 text-gray-500 hover:text-neon transition-colors rounded-full hover:bg-white/5"
+            className="p-1 sm:p-1.5 text-gray-500 hover:text-neon active:text-neon transition-colors rounded-full"
             title="Thêm vào hàng đợi"
           >
-            <HiQueueList className="text-sm" />
+            <HiQueueList className="text-[11px] sm:text-sm lg:text-base" />
           </button>
 
           {/* Like */}
           <button
             onClick={handleFav}
-            className={`p-1.5 transition-all rounded-full hover:bg-white/5 ${liked ? "text-red-500" : "text-gray-500 hover:text-red-400"}`}
+            className={`p-1 sm:p-1.5 transition-all rounded-full ${liked ? "text-red-500" : "text-gray-500 hover:text-red-400 active:text-red-400"}`}
             title={liked ? "Bỏ yêu thích" : "Yêu thích"}
           >
-            <HiHeart className={`text-sm ${liked ? "drop-shadow-[0_0_4px_rgba(239,68,68,0.4)]" : ""}`} />
+            <HiHeart className={`text-[11px] sm:text-sm lg:text-base ${liked ? "drop-shadow-[0_0_4px_rgba(239,68,68,0.4)]" : ""}`} />
           </button>
 
           {/* Context menu */}
           <button
             onClick={handleMenu}
-            className="p-1.5 text-gray-500 hover:text-white transition-colors rounded-full hover:bg-white/5"
+            className="p-1 sm:p-1.5 text-gray-500 hover:text-white active:text-white transition-colors rounded-full"
             title="Thêm tùy chọn"
           >
-            <HiDotsHorizontal className="text-sm" />
+            <HiDotsHorizontal className="text-[11px] sm:text-sm lg:text-base" />
           </button>
         </div>
-
-        {/* Always visible like on non-hover for active */}
-        {!isActive && (
-          <button
-            onClick={handleFav}
-            className={`p-1 flex-shrink-0 group-hover:hidden ${liked ? "text-red-500" : "text-transparent"}`}
-          >
-            <HiHeart className="text-sm" />
-          </button>
-        )}
       </button>
 
-      {/* Context Menu */}
       {menuPos && (
         <SongContextMenu song={song} position={menuPos} onClose={() => setMenuPos(null)} />
       )}

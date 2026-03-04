@@ -1,0 +1,120 @@
+import { useState } from "react";
+import { usePlayer } from "../context/PlayerContext";
+import { useToast } from "../context/ToastContext";
+import { HiPlay, HiHeart, HiDotsHorizontal, HiTrash, HiSwitchVertical } from "react-icons/hi";
+import SongContextMenu from "./SongContextMenu";
+
+export default function PlaylistSongRow({ song, index, isPlaying, isCurrent, onPlay, onRemove, onDragStart, onDragOver, onDrop, onDragEnd, isDragging }) {
+  const { toggleFavorite, isFavorite, addToQueue } = usePlayer();
+  const { showToast } = useToast();
+  const [menuPos, setMenuPos] = useState(null);
+
+  const liked = isFavorite(song.id);
+
+  const handleMenu = (e) => {
+    e.stopPropagation();
+    setMenuPos({ x: e.clientX, y: e.clientY });
+  };
+
+  const extraItems = [
+    { 
+      icon: HiTrash, 
+      label: "Xóa khỏi playlist", 
+      action: () => { onRemove(song.id); } 
+    },
+  ];
+
+  return (
+    <div
+      draggable
+      onDragStart={(e) => onDragStart(e, index)}
+      onDragOver={(e) => onDragOver(e, index)}
+      onDrop={(e) => onDrop(e, index)}
+      onDragEnd={onDragEnd}
+      className={`
+        group flex items-center gap-2 sm:gap-3 px-2 sm:px-3 py-2 rounded-lg transition-all duration-200 relative
+        ${isCurrent ? "bg-neon/10 border border-neon/20 shadow-neon-sm" : "hover:bg-white/5 border border-transparent"}
+        ${isDragging ? "opacity-40 scale-95" : "opacity-100"}
+      `}
+    >
+      {/* Index / playing indicator */}
+      <div className="w-6 sm:w-8 flex items-center justify-center flex-shrink-0">
+        {isCurrent && isPlaying ? (
+          <div className="flex items-end gap-[2px] h-4">
+            <span className="w-[2px] sm:w-[3px] bg-neon rounded-full animate-bounce" style={{ height: "60%", animationDelay: "0ms" }} />
+            <span className="w-[2px] sm:w-[3px] bg-neon rounded-full animate-bounce" style={{ height: "100%", animationDelay: "150ms" }} />
+            <span className="w-[2px] sm:w-[3px] bg-neon rounded-full animate-bounce" style={{ height: "40%", animationDelay: "300ms" }} />
+          </div>
+        ) : (
+          <span className={`text-[10px] sm:text-xs ${isCurrent ? "text-neon font-bold" : "text-gray-600"}`}>
+            {String(index + 1).padStart(2, "0")}
+          </span>
+        )}
+      </div>
+
+      {/* Cover + Play overlay */}
+      <div className="relative w-9 h-9 sm:w-10 sm:h-10 flex-shrink-0 group/cover">
+        <img
+          src={song.cover}
+          alt={song.title}
+          className="w-full h-full rounded-lg object-cover"
+        />
+        <button
+          onClick={(e) => { e.stopPropagation(); onPlay(song); }}
+          className="absolute inset-0 bg-black/40 rounded-lg flex items-center justify-center opacity-0 group-hover/cover:opacity-100 transition-opacity duration-200"
+        >
+          <HiPlay className="text-white text-base ml-0.5" />
+        </button>
+      </div>
+
+      {/* Title + Artist */}
+      <div className="flex-1 min-w-0">
+        <p className={`text-[12px] sm:text-sm lg:text-base font-semibold truncate ${isCurrent ? "text-neon" : "text-white"}`}>
+          {song.title}
+        </p>
+        <p className="text-[10px] sm:text-xs lg:text-sm text-gray-400 truncate">{song.artist}</p>
+      </div>
+
+      {/* Duration */}
+      <span className="text-[10px] sm:text-xs lg:text-sm text-gray-600 w-10 sm:w-12 text-right hidden sm:block">{song.duration}</span>
+
+      {/* Actions */}
+      <div className="flex items-center gap-0.5 sm:gap-1 flex-shrink-0">
+        {/* Like */}
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            toggleFavorite(song.id);
+            showToast(liked ? "Đã bỏ yêu thích" : "Đã thêm yêu thích", liked ? "info" : "success");
+          }}
+          className={`p-1 sm:p-1.5 rounded-full transition-all ${liked ? "text-red-500" : "text-gray-600 sm:opacity-0 sm:group-hover:opacity-100 hover:text-white"}`}
+        >
+          <HiHeart className="text-[12px] sm:text-sm lg:text-base" />
+        </button>
+
+        {/* 3 dots menu */}
+        <button
+          onClick={handleMenu}
+          className="p-1 sm:p-1.5 rounded-full transition-all text-gray-600 sm:opacity-0 sm:group-hover:opacity-100 hover:text-white"
+        >
+          <HiDotsHorizontal className="text-[12px] sm:text-sm lg:text-base" />
+        </button>
+
+        {/* Drag handle */}
+        <span className="cursor-grab active:cursor-grabbing p-1 sm:p-1.5 text-gray-600 hover:text-white hidden md:block" title="Kéo để sắp xếp">
+          <HiSwitchVertical className="text-sm" />
+        </span>
+      </div>
+
+      {/* Context Menu */}
+      {menuPos && (
+        <SongContextMenu 
+          song={song} 
+          position={menuPos} 
+          onClose={() => setMenuPos(null)} 
+          extraItems={extraItems}
+        />
+      )}
+    </div>
+  );
+}

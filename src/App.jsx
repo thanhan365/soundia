@@ -14,6 +14,7 @@ import RecentPage from "./pages/RecentPage";
 import LibraryPage from "./pages/LibraryPage";
 import NewMusicPage from "./pages/NewMusicPage";
 import GenresPage from "./pages/GenresPage";
+import PlaylistPage from "./pages/PlaylistPage";
 import { HiMenuAlt2, HiArrowLeft } from "react-icons/hi";
 
 function AppContent() {
@@ -27,23 +28,23 @@ function AppContent() {
     <div className="animated-bg min-h-screen flex">
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
-      <main className={`flex-1 flex flex-col min-h-screen transition-all duration-300 ${queueOpen ? "lg:mr-80" : ""}`}>
+      <main className={`flex-1 flex flex-col min-h-screen transition-all duration-300 lg:pl-[68px] ${queueOpen ? "lg:mr-80" : ""}`}>
         {/* Header */}
-        <header className="sticky top-0 z-20 bg-[#170f23]/80 backdrop-blur-xl border-b border-white/5 px-4 lg:px-8 py-3 flex items-center gap-4">
+        <header className="sticky top-0 z-20 bg-[#170f23]/80 backdrop-blur-xl border-b border-white/5 px-2 sm:px-4 lg:px-8 py-2 sm:py-3 flex items-center gap-2 sm:gap-4">
           {!isHome && (
             <button
               onClick={() => navigate(-1)}
-              className="text-gray-400 hover:text-neon transition-colors"
+              className="text-gray-400 hover:text-neon transition-colors text-lg sm:text-xl"
               title="Quay lại"
             >
-              <HiArrowLeft className="text-xl" />
+              <HiArrowLeft />
             </button>
           )}
           <button
             onClick={() => setSidebarOpen(true)}
-            className="lg:hidden text-gray-400 hover:text-white transition-colors"
+            className="lg:hidden text-gray-400 hover:text-white transition-colors text-lg sm:text-xl"
           >
-            <HiMenuAlt2 className="text-xl" />
+            <HiMenuAlt2 />
           </button>
           <div className="flex-1">
             <SearchBar />
@@ -51,7 +52,7 @@ function AppContent() {
         </header>
 
         {/* Pages */}
-        <div className="flex-1 px-4 lg:px-8 py-6 pb-32 overflow-y-auto">
+        <div className="flex-1 px-2 sm:px-4 lg:px-8 py-4 sm:py-6 pb-32 overflow-y-auto">
           <Routes>
             <Route path="/" element={<Home />} />
             <Route path="/search" element={<SearchPage />} />
@@ -60,6 +61,7 @@ function AppContent() {
             <Route path="/library" element={<LibraryPage />} />
             <Route path="/new-music" element={<NewMusicPage />} />
             <Route path="/genres" element={<GenresPage />} />
+            <Route path="/playlist/:id" element={<PlaylistPage />} />
           </Routes>
         </div>
       </main>
