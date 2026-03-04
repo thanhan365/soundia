@@ -25,21 +25,19 @@ function AppContent() {
   const isHome = location.pathname === "/";
 
   return (
-    <div className="animated-bg min-h-screen flex">
+    <div className="animated-bg min-h-[100dvh] w-full max-w-[100vw] overflow-x-hidden flex">
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
       <main className={`flex-1 flex flex-col min-h-screen transition-all duration-300 lg:pl-[68px] ${queueOpen ? "lg:mr-80" : ""}`}>
         {/* Header */}
         <header className="sticky top-0 z-20 bg-[#170f23]/80 backdrop-blur-xl border-b border-white/5 px-2 sm:px-4 lg:px-8 py-2 sm:py-3 flex items-center gap-2 sm:gap-4">
-          {!isHome && (
-            <button
-              onClick={() => navigate(-1)}
-              className="text-gray-400 hover:text-neon transition-colors text-lg sm:text-xl"
-              title="Quay lại"
-            >
-              <HiArrowLeft />
-            </button>
-          )}
+          <button
+            onClick={() => navigate(-1)}
+            className="text-gray-400 hover:text-neon transition-colors text-lg sm:text-xl"
+            title="Quay lại"
+          >
+            <HiArrowLeft />
+          </button>
           <button
             onClick={() => setSidebarOpen(true)}
             className="lg:hidden text-gray-400 hover:text-white transition-colors text-lg sm:text-xl"

@@ -137,9 +137,9 @@ export default function PlayerBar() {
 
           {/* Row 3: Controls + Extras */}
           <div className="px-2 pb-2">
-            <div className="flex items-center justify-center gap-1">
+            <div className="flex items-center justify-center relative">
               {/* Center controls */}
-              <div className="flex items-center gap-1">
+              <div className="flex items-center gap-1 sm:gap-2">
                 <button onClick={toggleShuffle} className={`p-1 flex-shrink-0 ${shuffle ? "text-neon" : "text-gray-600"}`}>
                   <IoShuffle className="text-[14px]" />
                 </button>
@@ -165,10 +165,8 @@ export default function PlayerBar() {
                 </button>
               </div>
 
-              {/* Right side: Volume + Queue */}
-              <div className="flex-1" />
-              <div className="flex items-center gap-1">
-                <div className="w-20"><VolumeControl /></div>
+              {/* Extras (Queue, Lyrics) moved to absolute for perfect centering */}
+              <div className="absolute right-0 flex items-center gap-1">
                 <button onClick={() => setQueueOpen(!queueOpen)} className={`p-1 flex-shrink-0 ${queueOpen ? "text-neon" : "text-gray-600"}`}>
                   <HiQueueList className="text-base" />
                 </button>

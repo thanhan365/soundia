@@ -116,3 +116,11 @@ input[type="range"]::-moz-range-thumb {
   border: none;
   box-shadow: 0 0 6px rgba(0, 255, 204, 0.4);
 }
+
+/* Crisp images */
+.img-crisp {
+  image-rendering: -webkit-optimize-contrast;
+  image-rendering: high-quality;
+  image-rendering: crisp-edges;
+  transform: translateZ(0); /* force hardware acceleration */
+}

@@ -37,7 +37,7 @@ function SongItem({ song, index }) {
 
   return (
     <>
-      <button
+      <div
         onClick={() => playSong(song)}
         className={`
           w-full flex items-center gap-1 sm:gap-2 lg:gap-3 p-2 sm:p-2.5 lg:p-3 rounded-lg sm:rounded-xl
@@ -113,7 +113,7 @@ function SongItem({ song, index }) {
             <HiDotsHorizontal className="text-[11px] sm:text-sm lg:text-base" />
           </button>
         </div>
-      </button>
+      </div>
 
       {menuPos && (
         <div ref={menuRef}>

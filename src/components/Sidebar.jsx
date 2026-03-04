@@ -43,23 +43,23 @@ export default function Sidebar({ isOpen, onClose }) {
           fixed top-0 left-0 z-50 bottom-[96px] sm:bottom-[72px]
           bg-[#170f23]/98 backdrop-blur-2xl border-r border-white/5
           flex flex-col transition-all duration-300 ease-in-out
-          ${isExpanded ? "w-64 shadow-2xl shadow-black/50" : "w-[68px]"}
+          ${isExpanded ? "w-64 shadow-2xl shadow-black/50" : "w-[72px]"}
           ${isOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}
         `}
       >
         {/* Logo */}
-        <div className="p-4 pb-3 flex items-center gap-3 flex-shrink-0">
-          <NavLink to="/" onClick={onClose} className="flex items-center gap-3 no-underline group min-w-0">
+        <div className="p-4 flex items-center gap-3 flex-shrink-0">
+          <NavLink to="/" onClick={onClose} className="flex items-center gap-[10px] no-underline group min-w-0">
             <img
               src="/soundia-logo.jpg"
               alt="Soundia"
-              className="w-9 h-9 rounded-xl object-cover flex-shrink-0 group-hover:shadow-neon group-hover:scale-105 transition-all duration-300"
+              className="w-10 h-10 sm:w-[42px] sm:h-[42px] img-crisp rounded-xl object-cover flex-shrink-0 group-hover:shadow-neon group-hover:scale-105 transition-all duration-300"
             />
             <h1
               className={`
-                text-lg font-extrabold tracking-wider text-white group-hover:text-neon
-                transition-all duration-300 whitespace-nowrap overflow-hidden
-                ${isExpanded ? "opacity-100 w-auto" : "opacity-0 w-0"}
+                text-[22px] font-black tracking-widest text-white group-hover:text-neon group-hover:text-glow
+                transition-all duration-300 whitespace-nowrap
+                ${isExpanded ? "opacity-100 w-auto" : "opacity-0 w-0 overflow-hidden"}
               `}
             >
               SOUNDIA
