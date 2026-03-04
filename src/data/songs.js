@@ -167,7 +167,7 @@ const songs = [
     artist: "Suno",
     duration: "2:29",
     cover: "https://picsum.photos/seed/song3/300/300",
-    audio: "LƯỚT QUA TIM ANH.mp3",
+    audio: "/audio/LƯỚT QUA TIM ANH.mp3",
   },
 ];
 

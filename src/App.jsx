@@ -1,48 +1,82 @@
 import { useState } from "react";
-import { PlayerProvider } from "./context/PlayerContext";
+import { Routes, Route, useNavigate, useLocation } from "react-router-dom";
+import { PlayerProvider, usePlayer } from "./context/PlayerContext";
+import { ToastProvider } from "./context/ToastContext";
 import Sidebar from "./components/Sidebar";
 import PlayerBar from "./components/PlayerBar";
+import QueuePanel from "./components/QueuePanel";
+import LyricsView from "./components/LyricsView";
+import SearchBar from "./components/SearchBar";
 import Home from "./pages/Home";
-import { HiMenuAlt2 } from "react-icons/hi";
+import SearchPage from "./pages/SearchPage";
+import FavoritesPage from "./pages/FavoritesPage";
+import RecentPage from "./pages/RecentPage";
+import LibraryPage from "./pages/LibraryPage";
+import NewMusicPage from "./pages/NewMusicPage";
+import GenresPage from "./pages/GenresPage";
+import { HiMenuAlt2, HiArrowLeft } from "react-icons/hi";
 
-function App() {
+function AppContent() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const { queueOpen } = usePlayer();
+  const navigate = useNavigate();
+  const location = useLocation();
+  const isHome = location.pathname === "/";
 
   return (
-    <PlayerProvider>
-      <div className="animated-bg min-h-screen flex">
-        {/* Sidebar */}
-        <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+    <div className="animated-bg min-h-screen flex">
+      <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
-        {/* Main content */}
-        <main className="flex-1 flex flex-col min-h-screen">
-          {/* Top bar */}
-          <header className="sticky top-0 z-20 bg-dark/80 backdrop-blur-lg border-b border-gray-dark/30 px-4 lg:px-8 py-4 flex items-center gap-4">
+      <main className={`flex-1 flex flex-col min-h-screen transition-all duration-300 ${queueOpen ? "lg:mr-80" : ""}`}>
+        {/* Header */}
+        <header className="sticky top-0 z-20 bg-[#170f23]/80 backdrop-blur-xl border-b border-white/5 px-4 lg:px-8 py-3 flex items-center gap-4">
+          {!isHome && (
             <button
-              onClick={() => setSidebarOpen(true)}
-              className="lg:hidden text-gray-400 hover:text-white transition-colors"
+              onClick={() => navigate(-1)}
+              className="text-gray-400 hover:text-neon transition-colors"
+              title="Quay lại"
             >
-              <HiMenuAlt2 className="text-2xl" />
+              <HiArrowLeft className="text-xl" />
             </button>
-            <div className="flex items-center gap-3">
-              <div className="w-2 h-2 rounded-full bg-neon animate-pulse" />
-              <span className="text-sm text-gray-400 font-medium">
-                SOUNDIA Player
-              </span>
-            </div>
-          </header>
-
-          {/* Page content */}
-          <div className="flex-1 px-4 lg:px-8 py-6 pb-32">
-            <Home />
+          )}
+          <button
+            onClick={() => setSidebarOpen(true)}
+            className="lg:hidden text-gray-400 hover:text-white transition-colors"
+          >
+            <HiMenuAlt2 className="text-xl" />
+          </button>
+          <div className="flex-1">
+            <SearchBar />
           </div>
-        </main>
+        </header>
 
-        {/* Player Bar */}
-        <PlayerBar />
-      </div>
-    </PlayerProvider>
+        {/* Pages */}
+        <div className="flex-1 px-4 lg:px-8 py-6 pb-32 overflow-y-auto">
+          <Routes>
+            <Route path="/" element={<Home />} />
+            <Route path="/search" element={<SearchPage />} />
+            <Route path="/favorites" element={<FavoritesPage />} />
+            <Route path="/recent" element={<RecentPage />} />
+            <Route path="/library" element={<LibraryPage />} />
+            <Route path="/new-music" element={<NewMusicPage />} />
+            <Route path="/genres" element={<GenresPage />} />
+          </Routes>
+        </div>
+      </main>
+
+      <QueuePanel />
+      <LyricsView />
+      <PlayerBar />
+    </div>
   );
 }
 
-export default App;
+export default function App() {
+  return (
+    <PlayerProvider>
+      <ToastProvider>
+        <AppContent />
+      </ToastProvider>
+    </PlayerProvider>
+  );
+}

@@ -7,9 +7,9 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        dark: '#0f0f0f',
-        'dark-light': '#1a1a2e',
-        'dark-card': '#16162a',
+        dark: '#170f23',
+        'dark-light': '#1e1632',
+        'dark-card': '#1a1230',
         neon: '#00ffcc',
         'neon-dim': '#00cc99',
         'gray-dark': '#2a2a3e',
@@ -23,7 +23,6 @@ module.exports = {
       animation: {
         'gradient-bg': 'gradientShift 15s ease infinite',
         shimmer: 'shimmer 2s infinite linear',
-        'glow-pulse': 'glowPulse 2s ease-in-out infinite',
       },
       keyframes: {
         gradientShift: {
@@ -33,10 +32,6 @@ module.exports = {
         shimmer: {
           '0%': { backgroundPosition: '-200% 0' },
           '100%': { backgroundPosition: '200% 0' },
-        },
-        glowPulse: {
-          '0%, 100%': { boxShadow: '0 0 15px rgba(0, 255, 204, 0.3)' },
-          '50%': { boxShadow: '0 0 30px rgba(0, 255, 204, 0.6)' },
         },
       },
     },

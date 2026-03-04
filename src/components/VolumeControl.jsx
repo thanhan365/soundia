@@ -1,4 +1,5 @@
 import { usePlayer } from "../context/PlayerContext";
+import RangeSlider from "./RangeSlider";
 import { HiVolumeUp, HiVolumeOff } from "react-icons/hi";
 
 export default function VolumeControl() {
@@ -24,22 +25,15 @@ export default function VolumeControl() {
           <HiVolumeOff className="text-lg" />
         )}
       </button>
-      <div className="relative w-20 h-1 group">
-        <div className="absolute inset-0 bg-gray-dark rounded-full" />
-        <div
-          className="absolute top-0 left-0 h-full bg-neon rounded-full"
-          style={{ width: `${volume * 100}%` }}
-        />
-        <input
-          type="range"
-          min="0"
-          max="1"
-          step="0.01"
-          value={volume}
-          onChange={handleChange}
-          className="absolute inset-0 w-full opacity-0 cursor-pointer"
-        />
-      </div>
+      <RangeSlider
+        value={volume}
+        min={0}
+        max={1}
+        step={0.01}
+        onChange={handleChange}
+        showGlow={false}
+        className="w-20 h-1"
+      />
     </div>
   );
 }
