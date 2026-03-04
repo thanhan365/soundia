@@ -1,26 +1,29 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useCallback } from "react";
 import { HiPlus, HiLink, HiShare, HiMusicNote, HiX } from "react-icons/hi";
+import { HiQueueList } from "react-icons/hi2";
 import { usePlayer } from "../context/PlayerContext";
 import { useToast } from "../context/ToastContext";
+import { useClickOutside } from "../hooks/useClickOutside";
 
 export default function SongContextMenu({ song, position, onClose, extraItems = [] }) {
   const ref = useRef(null);
-  const { playlists, addSongToPlaylist, setLyricsOpen } = usePlayer();
+  const { playlists, addSongToPlaylist, setLyricsOpen, addToQueue } = usePlayer();
   const { showToast } = useToast();
 
-  useEffect(() => {
-    const handleClick = (e) => {
-      if (ref.current && !ref.current.contains(e.target)) onClose();
-    };
-    document.addEventListener("mousedown", handleClick);
-    return () => document.removeEventListener("mousedown", handleClick);
-  }, [onClose]);
+  // Close menu khi click outside
+  useClickOutside(ref, onClose);
 
   const handleCopyLink = () => {
     navigator.clipboard.writeText(`https://soundia.app/song/${song.id}`);
     showToast("Đã sao chép liên kết", "success");
     onClose();
   };
+
+  const handleAddToQueue = useCallback(() => {
+    addToQueue(song);
+    showToast(`"${song.title}" đã thêm vào hàng đợi`, "success");
+    onClose();
+  }, [song, addToQueue, showToast, onClose]);
 
   const handleShare = () => {
     if (navigator.share) {
@@ -43,6 +46,7 @@ export default function SongContextMenu({ song, position, onClose, extraItems = 
   };
 
   const menuItems = [
+    { icon: HiQueueList, label: "Thêm vào danh sách chờ", action: handleAddToQueue },
     ...(playlists.length > 0
       ? playlists.map((pl) => ({
           icon: HiPlus,
