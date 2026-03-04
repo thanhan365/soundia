@@ -55,26 +55,26 @@ export default function BannerSlider() {
             onClick={() => playSong(song)}
           >
             {/* Background image — cố định tỉ lệ, không tràn */}
-            <div className="relative w-full h-40 sm:h-48 md:h-64 lg:h-72 overflow-hidden">
+            <div className="relative w-full h-32 sm:h-48 md:h-64 lg:h-72 overflow-hidden">
               <img
                 src={song.cover}
                 alt={song.title}
                 className="w-full h-full object-cover object-center group-hover/slide:scale-105 transition-transform duration-700"
               />
               {/* Overlay gradient */}
-              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-black/10" />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-black/20" />
               <div className="absolute inset-0 bg-gradient-to-r from-black/50 via-transparent to-transparent" />
             </div>
 
             {/* Content */}
-            <div className="absolute bottom-0 left-0 right-0 p-2 sm:p-3 md:p-6 lg:p-8 z-10">
-              <p className="text-[9px] sm:text-xs text-neon font-semibold uppercase tracking-widest mb-1 sm:mb-2">
+            <div className="absolute bottom-0 left-0 right-0 p-2 sm:p-4 md:p-6 lg:p-8 pb-14 sm:pb-4 z-10">
+              <p className="text-[8px] sm:text-xs text-neon font-semibold uppercase tracking-widest mb-0.5 sm:mb-2">
                 🔥 Nổi bật
               </p>
-              <h2 className="text-sm sm:text-lg md:text-2xl lg:text-3xl font-extrabold text-white mb-0.5 sm:mb-1 drop-shadow-lg line-clamp-2 sm:line-clamp-3">
+              <h2 className="text-xs sm:text-lg md:text-2xl lg:text-3xl font-extrabold text-white mb-0.5 sm:mb-1 drop-shadow-lg line-clamp-2 sm:line-clamp-3">
                 {song.title}
               </h2>
-              <p className="text-xs sm:text-sm text-gray-300 line-clamp-1">{song.artist}</p>
+              <p className="text-[10px] sm:text-sm text-gray-300 line-clamp-1">{song.artist}</p>
             </div>
           </div>
         ))}
