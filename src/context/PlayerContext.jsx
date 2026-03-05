@@ -28,7 +28,17 @@ export function PlayerProvider({ children }) {
   const [manualQueue, setManualQueue] = useState([]);
   const [playlists, setPlaylists] = useState(() => {
     const saved = localStorage.getItem("soundia_playlists");
-    return saved ? JSON.parse(saved) : [];
+    if (!saved) return [];
+    try {
+      const parsed = JSON.parse(saved);
+      // Clean up invalid song IDs and remove duplicates
+      return parsed.map((pl) => ({
+        ...pl,
+        songs: [...new Set(pl.songs)].filter((sid) => songs.some((s) => String(s.id) === String(sid)))
+      }));
+    } catch {
+      return [];
+    }
   });
   const [searchHistory, setSearchHistory] = useState(() => {
     const saved = localStorage.getItem("soundia_search_history");

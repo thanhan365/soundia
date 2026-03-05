@@ -64,12 +64,18 @@ export default function PlaylistSongRow({ song, index, isPlaying, isCurrent, onP
           alt={song.title}
           className="w-full h-full rounded-lg object-cover"
         />
-        <button
-          onClick={(e) => { e.stopPropagation(); onPlay(song); }}
-          className="absolute inset-0 bg-black/40 rounded-lg flex items-center justify-center opacity-0 group-hover/cover:opacity-100 transition-opacity duration-200"
-        >
-          <HiPlay className="text-white text-base ml-0.5" />
-        </button>
+        <div className={`absolute inset-0 transition-all duration-300 flex items-center justify-center rounded-lg ${isCurrent && isPlaying ? "bg-black/40" : "bg-black/0 group-hover/cover:bg-black/30"}`}>
+          <button
+            onClick={(e) => { e.stopPropagation(); onPlay(song); }}
+            className={`w-7 h-7 rounded-full bg-neon flex items-center justify-center transform transition-transform duration-300 shadow-neon ${isCurrent && isPlaying ? "scale-100" : "scale-0 group-hover/cover:scale-100"}`}
+          >
+            {isCurrent && isPlaying ? (
+              <svg className="w-3.5 h-3.5 text-dark" viewBox="0 0 24 24" fill="currentColor"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+            ) : (
+              <svg className="w-3.5 h-3.5 text-dark ml-0.5" fill="currentColor" viewBox="0 0 20 20"><path d="M6.3 2.841A1.5 1.5 0 004 4.11V15.89a1.5 1.5 0 002.3 1.269l9.344-5.89a1.5 1.5 0 000-2.538L6.3 2.84z"/></svg>
+            )}
+          </button>
+        </div>
       </div>
 
       {/* Title + Artist */}

@@ -183,7 +183,7 @@ export default function PlaylistPage() {
             <div className="space-y-0.5">
               {songs.map((song, i) => (
                 <PlaylistSongRow
-                  key={song.id}
+                  key={`${song.id}-${i}`}
                   song={song}
                   index={i}
                   isPlaying={isPlaying}
