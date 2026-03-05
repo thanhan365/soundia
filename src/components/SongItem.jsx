@@ -56,16 +56,19 @@ function SongItem({ song, index }) {
             className={`w-full h-full object-cover transition-all duration-300 ${isActive ? "shadow-neon-sm" : ""}`}
           />
         <div className={`absolute inset-0 transition-all duration-300 flex items-center justify-center rounded-lg ${isActive && isPlaying ? "bg-black/40" : "bg-black/0 group-hover/cover:bg-black/30"}`}>
-          <button
-            onClick={(e) => { e.stopPropagation(); playSong(song); }}
-            className={`w-7 h-7 rounded-full bg-neon flex items-center justify-center transform transition-transform duration-300 shadow-neon ${isActive && isPlaying ? "scale-100" : "scale-0 group-hover/cover:scale-100"}`}
-          >
+          <div onClick={(e) => { e.stopPropagation(); playSong(song); }} className="cursor-pointer w-full h-full flex items-center justify-center">
             {isActive && isPlaying ? (
-              <svg className="w-3.5 h-3.5 text-dark" viewBox="0 0 24 24" fill="currentColor"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+              <div className="flex items-center gap-[2px]">
+                <span className="w-[2px] bg-neon rounded-full animate-bounce" style={{ height: "8px", animationDelay: "0ms" }} />
+                <span className="w-[2px] bg-neon rounded-full animate-bounce" style={{ height: "12px", animationDelay: "150ms" }} />
+                <span className="w-[2px] bg-neon rounded-full animate-bounce" style={{ height: "6px", animationDelay: "300ms" }} />
+              </div>
             ) : (
-              <svg className="w-3.5 h-3.5 text-dark ml-0.5" fill="currentColor" viewBox="0 0 20 20"><path d="M6.3 2.841A1.5 1.5 0 004 4.11V15.89a1.5 1.5 0 002.3 1.269l9.344-5.89a1.5 1.5 0 000-2.538L6.3 2.84z"/></svg>
+              <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-neon flex items-center justify-center transform scale-0 group-hover/cover:scale-100 transition-transform duration-300 shadow-neon">
+                <svg className="w-3.5 h-3.5 text-dark ml-0.5" fill="currentColor" viewBox="0 0 20 20"><path d="M6.3 2.841A1.5 1.5 0 004 4.11V15.89a1.5 1.5 0 002.3 1.269l9.344-5.89a1.5 1.5 0 000-2.538L6.3 2.84z"/></svg>
+              </div>
             )}
-          </button>
+          </div>
         </div>
         </div>
 

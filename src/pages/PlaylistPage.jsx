@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { usePlayer } from "../context/PlayerContext";
 import { useToast } from "../context/ToastContext";
@@ -36,6 +36,37 @@ export default function PlaylistPage() {
   const fileInputRef = useRef(null);
 
   const playlist = playlists.find((pl) => pl.id === id);
+
+  useEffect(() => {
+    if (!playlist || typeof window === "undefined") return;
+    const resolvedCount = playlist.songs.reduce(
+      (acc, sid) =>
+        acc + (allSongs.some((s) => String(s.id) === String(sid)) ? 1 : 0),
+      0
+    );
+    // #region agent log
+    fetch("http://127.0.0.1:7340/ingest/7a476181-2b3f-4bea-8a0b-e17fa8639b01", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Debug-Session-Id": "6bc027",
+      },
+      body: JSON.stringify({
+        sessionId: "6bc027",
+        runId: "pre-fix",
+        hypothesisId: "PL_COUNT",
+        location: "PlaylistPage.jsx:44",
+        message: "PlaylistPage playlist vs resolved songs",
+        data: {
+          playlistId: playlist.id,
+          rawCount: playlist.songs.length,
+          resolvedCount,
+        },
+        timestamp: Date.now(),
+      }),
+    }).catch(() => {});
+    // #endregion
+  }, [playlist, allSongs]);
 
   if (!playlist) {
     return (

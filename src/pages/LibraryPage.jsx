@@ -49,7 +49,7 @@ export default function LibraryPage() {
 
       {/* Tab Content */}
       {activeTab === "Bài hát" && (
-        <div className="space-y-4">
+        <div className="space-y-4 pb-10 sm:pb-16">
           {/* Local search */}
           <div className="relative max-w-sm">
             <HiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm" />
@@ -75,27 +75,68 @@ export default function LibraryPage() {
       )}
 
       {activeTab === "Playlist" && (
-        <div>
+        <div className="pb-10 sm:pb-16">
           {playlists.length > 0 ? (
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2 sm:gap-4">
-              {playlists.map((pl) => (
-                <div
-                  key={pl.id}
-                  className="group bg-white/[0.03] rounded-xl p-3 sm:p-4 border border-white/5 hover:border-neon/20 hover:bg-white/[0.05] transition-all duration-300 hover:scale-[1.02]"
-                >
-                  <div className="w-full aspect-square rounded-lg bg-gradient-to-br from-neon/20 to-purple-500/20 flex items-center justify-center mb-3">
-                    <HiCollection className="text-4xl text-neon/60" />
-                  </div>
-                  <h3 className="text-sm font-semibold text-white truncate">{pl.name}</h3>
-                  <p className="text-xs text-gray-500">{pl.songs.length} bài hát</p>
-                  <button
-                    onClick={() => deletePlaylist(pl.id)}
-                    className="text-xs text-gray-600 hover:text-red-400 mt-2 opacity-0 group-hover:opacity-100 transition-opacity"
+              {playlists.map((pl) => {
+                const resolvedCount = pl.songs.reduce(
+                  (acc, sid) =>
+                    acc +
+                    (allSongs.some((s) => String(s.id) === String(sid)) ? 1 : 0),
+                  0
+                );
+
+                // #region agent log
+                if (typeof window !== "undefined") {
+                  fetch(
+                    "http://127.0.0.1:7340/ingest/7a476181-2b3f-4bea-8a0b-e17fa8639b01",
+                    {
+                      method: "POST",
+                      headers: {
+                        "Content-Type": "application/json",
+                        "X-Debug-Session-Id": "6bc027",
+                      },
+                      body: JSON.stringify({
+                        sessionId: "6bc027",
+                        runId: "pre-fix",
+                        hypothesisId: "PL_COUNT_LIB",
+                        location: "LibraryPage.jsx:80",
+                        message: "Library playlist card count",
+                        data: {
+                          playlistId: pl.id,
+                          rawCount: pl.songs.length,
+                          resolvedCount,
+                        },
+                        timestamp: Date.now(),
+                      }),
+                    }
+                  ).catch(() => {});
+                }
+                // #endregion
+
+                return (
+                  <div
+                    key={pl.id}
+                    className="group bg-white/[0.03] rounded-xl p-3 sm:p-4 border border-white/5 hover:border-neon/20 hover:bg-white/[0.05] transition-all duration-300 hover:scale-[1.02]"
                   >
-                    Xóa playlist
-                  </button>
-                </div>
-              ))}
+                    <div className="w-full aspect-square rounded-lg bg-gradient-to-br from-neon/20 to-purple-500/20 flex items-center justify-center mb-3">
+                      <HiCollection className="text-4xl text-neon/60" />
+                    </div>
+                    <h3 className="text-sm font-semibold text-white truncate">
+                      {pl.name}
+                    </h3>
+                    <p className="text-xs text-gray-500">
+                      {resolvedCount} bài hát
+                    </p>
+                    <button
+                      onClick={() => deletePlaylist(pl.id)}
+                      className="text-xs text-gray-600 hover:text-red-400 mt-2 opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
+                      Xóa playlist
+                    </button>
+                  </div>
+                );
+              })}
             </div>
           ) : (
             <div className="text-center py-12">

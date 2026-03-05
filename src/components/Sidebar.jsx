@@ -21,7 +21,7 @@ const personalNav = [
 ];
 
 export default function Sidebar({ isOpen, onClose }) {
-  const { currentSong, playlists } = usePlayer();
+  const { currentSong, playlists, allSongs } = usePlayer();
   const [showModal, setShowModal] = useState(false);
   const [hovered, setHovered] = useState(false);
 
@@ -138,25 +138,60 @@ export default function Sidebar({ isOpen, onClose }) {
 
             {playlists.length > 0 ? (
               <div className="space-y-0.5">
-                {playlists.map((pl) => (
-                  <NavLink
-                    key={pl.id}
-                    to={`/playlist/${pl.id}`}
-                    onClick={onClose}
-                    className={({ isActive }) => `
-                      flex items-center gap-3 px-3 py-2 rounded-lg text-[13px]
-                      no-underline transition-all duration-200
-                      ${isActive
-                        ? "bg-white/10 text-white font-semibold"
-                        : "text-gray-400 hover:text-white hover:bg-white/5"
-                      }
-                    `}
-                  >
-                    <HiCollection className="text-sm flex-shrink-0 text-neon/60" />
-                    <span className="truncate">{pl.name}</span>
-                    <span className="text-[10px] text-gray-600 ml-auto">{pl.songs.length}</span>
-                  </NavLink>
-                ))}
+                {playlists.map((pl) => {
+                  const resolvedCount = pl.songs.reduce(
+                    (acc, sid) =>
+                      acc + (allSongs.some((s) => String(s.id) === String(sid)) ? 1 : 0),
+                    0
+                  );
+
+                  // #region agent log
+                  if (typeof window !== "undefined") {
+                    fetch("http://127.0.0.1:7340/ingest/7a476181-2b3f-4bea-8a0b-e17fa8639b01", {
+                      method: "POST",
+                      headers: {
+                        "Content-Type": "application/json",
+                        "X-Debug-Session-Id": "6bc027",
+                      },
+                      body: JSON.stringify({
+                        sessionId: "6bc027",
+                        runId: "pre-fix",
+                        hypothesisId: "PL_COUNT",
+                        location: "Sidebar.jsx:140",
+                        message: "Playlist count sidebar vs resolved",
+                        data: {
+                          playlistId: pl.id,
+                          rawCount: pl.songs.length,
+                          resolvedCount,
+                        },
+                        timestamp: Date.now(),
+                      }),
+                    }).catch(() => {});
+                  }
+                  // #endregion
+
+                  return (
+                    <NavLink
+                      key={pl.id}
+                      to={`/playlist/${pl.id}`}
+                      onClick={onClose}
+                      className={({ isActive }) => `
+                        flex items-center gap-3 px-3 py-2 rounded-lg text-[13px]
+                        no-underline transition-all duration-200
+                        ${isActive
+                          ? "bg-white/10 text-white font-semibold"
+                          : "text-gray-400 hover:text-white hover:bg-white/5"
+                        }
+                      `}
+                    >
+                      <HiCollection className="text-sm flex-shrink-0 text-neon/60" />
+                      <span className="truncate">{pl.name}</span>
+                      <span className="text-[10px] text-gray-600 ml-auto">
+                        {resolvedCount}
+                      </span>
+                    </NavLink>
+                  );
+                })}
               </div>
             ) : (
               <p className="px-3 text-xs text-gray-600 italic">Chưa có playlist nào</p>
