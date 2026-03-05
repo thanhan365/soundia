@@ -80,13 +80,13 @@ export default function PlaylistPage() {
   const onDragEnd = useCallback(() => setDragIdx(null), []);
 
   return (
-    <div className="-mx-4 lg:-mx-8 -mt-6">
+    <div className="-mx-2 sm:-mx-4 lg:-mx-8 -mt-6">
       {/* ═══════════ HERO HEADER ═══════════ */}
-      <div className="relative px-6 lg:px-10 pt-10 pb-8 bg-gradient-to-b from-neon/8 via-neon/3 to-transparent">
-        <div className="flex flex-col md:flex-row items-center md:items-end gap-7 max-w-5xl mx-auto">
+      <div className="relative px-4 sm:px-6 lg:px-10 pt-6 sm:pt-10 pb-6 sm:pb-8 bg-gradient-to-b from-neon/8 via-neon/3 to-transparent">
+        <div className="flex flex-col md:flex-row items-center md:items-end gap-4 sm:gap-7 max-w-5xl mx-auto">
           {/* Cover */}
           <div
-            className="relative w-44 h-44 md:w-52 md:h-52 rounded-xl overflow-hidden flex-shrink-0 group/cover cursor-pointer shadow-[0_8px_40px_rgba(0,0,0,0.5)] hover:shadow-[0_8px_50px_rgba(29,185,144,0.15)] transition-shadow duration-500"
+            className="relative w-32 h-32 sm:w-44 sm:h-44 md:w-52 md:h-52 rounded-xl overflow-hidden flex-shrink-0 group/cover cursor-pointer shadow-[0_8px_40px_rgba(0,0,0,0.5)] hover:shadow-[0_8px_50px_rgba(29,185,144,0.15)] transition-shadow duration-500"
             onClick={() => fileInputRef.current?.click()}
           >
             {playlist.cover ? (
@@ -127,7 +127,7 @@ export default function PlaylistPage() {
               </div>
             ) : (
               <h1
-                className="text-3xl md:text-5xl font-extrabold text-white mb-3 truncate cursor-pointer group/title hover:text-neon/90 transition-colors"
+                className="text-2xl sm:text-3xl md:text-5xl font-extrabold text-white mb-3 truncate cursor-pointer group/title hover:text-neon/90 transition-colors"
                 onClick={startEdit}
                 title="Bấm để đổi tên"
               >
@@ -147,7 +147,7 @@ export default function PlaylistPage() {
               <button
                 onClick={toggleAll}
                 disabled={!songs.length}
-                className="flex items-center gap-2.5 px-7 py-3 bg-neon text-dark rounded-full font-bold text-sm hover:brightness-110 transition-all disabled:opacity-30 disabled:cursor-not-allowed shadow-neon-sm active:scale-95"
+                className="flex items-center gap-2 sm:gap-2.5 px-5 py-2.5 sm:px-7 sm:py-3 bg-neon text-dark rounded-full font-bold text-xs sm:text-sm hover:brightness-110 transition-all disabled:opacity-30 disabled:cursor-not-allowed shadow-neon-sm active:scale-95"
               >
                 {isCurrentPl && isPlaying ? <HiPause className="text-xl" /> : <HiPlay className="text-xl" />}
                 {isCurrentPl && isPlaying ? "Tạm dừng" : "Phát tất cả"}
@@ -165,7 +165,7 @@ export default function PlaylistPage() {
       </div>
 
       {/* ═══════════ SONG TABLE ═══════════ */}
-      <div className="px-6 lg:px-10 max-w-5xl mx-auto mt-2">
+      <div className="px-4 sm:px-6 lg:px-10 max-w-5xl mx-auto mt-2">
         {songs.length > 0 ? (
           <>
             {/* Column headers */}
@@ -176,7 +176,7 @@ export default function PlaylistPage() {
               <div className="w-12 text-right hidden sm:flex items-center justify-end">
                 <HiClock className="text-gray-500 text-xs" />
               </div>
-              <div className="w-28" />
+              <div className="w-28 hidden sm:block" />
             </div>
 
             {/* Songs */}

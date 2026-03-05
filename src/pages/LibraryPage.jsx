@@ -29,13 +29,13 @@ export default function LibraryPage() {
       />
 
       {/* Tabs */}
-      <div className="flex items-center gap-1 bg-white/[0.03] rounded-xl p-1 w-fit">
+      <div className="flex items-center gap-1 bg-white/[0.03] rounded-xl p-1 w-full sm:w-fit overflow-x-auto scrollbar-hide">
         {tabs.map((tab) => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
             className={`
-              px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200
+              px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all duration-200 whitespace-nowrap flex-shrink-0
               ${activeTab === tab
                 ? "bg-neon/15 text-neon"
                 : "text-gray-400 hover:text-white hover:bg-white/5"
@@ -77,11 +77,11 @@ export default function LibraryPage() {
       {activeTab === "Playlist" && (
         <div>
           {playlists.length > 0 ? (
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2 sm:gap-4">
               {playlists.map((pl) => (
                 <div
                   key={pl.id}
-                  className="group bg-white/[0.03] rounded-xl p-4 border border-white/5 hover:border-neon/20 hover:bg-white/[0.05] transition-all duration-300 hover:scale-[1.02]"
+                  className="group bg-white/[0.03] rounded-xl p-3 sm:p-4 border border-white/5 hover:border-neon/20 hover:bg-white/[0.05] transition-all duration-300 hover:scale-[1.02]"
                 >
                   <div className="w-full aspect-square rounded-lg bg-gradient-to-br from-neon/20 to-purple-500/20 flex items-center justify-center mb-3">
                     <HiCollection className="text-4xl text-neon/60" />

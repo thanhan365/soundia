@@ -27,13 +27,13 @@ export default function GenresPage() {
           <button
             key={g.name}
             className={`
-              bg-gradient-to-br ${g.color} rounded-xl p-6 text-left
+              bg-gradient-to-br ${g.color} rounded-xl p-4 sm:p-6 text-left
               border border-white/5 hover:border-white/15
               hover:scale-[1.03] transition-all duration-300
             `}
           >
-            <p className="text-3xl mb-2">{g.emoji}</p>
-            <h3 className="text-lg font-bold text-white">{g.name}</h3>
+            <p className="text-2xl sm:text-3xl mb-1 sm:mb-2">{g.emoji}</p>
+            <h3 className="text-base sm:text-lg font-bold text-white">{g.name}</h3>
           </button>
         ))}
       </div>

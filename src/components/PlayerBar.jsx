@@ -166,7 +166,8 @@ export default function PlayerBar() {
               </div>
 
               {/* Extras (Queue, Lyrics) moved to absolute for perfect centering */}
-              <div className="absolute right-0 flex items-center gap-1">
+              <div className="absolute right-0 flex items-center gap-1 sm:gap-2">
+                <div className="hidden min-[360px]:block w-14 sm:w-16"><VolumeControl /></div>
                 <button onClick={() => setQueueOpen(!queueOpen)} className={`p-1 flex-shrink-0 ${queueOpen ? "text-neon" : "text-gray-600"}`}>
                   <HiQueueList className="text-base" />
                 </button>

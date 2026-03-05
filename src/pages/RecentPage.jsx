@@ -7,7 +7,7 @@ export default function RecentPage() {
   const { recentHistory } = usePlayer();
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-4 sm:space-y-8">
       {/* Hero section */}
       <HeroSection
         icon={HiClock}
@@ -23,15 +23,15 @@ export default function RecentPage() {
       {/* Recent list */}
       {recentHistory.length > 0 ? (
         <div>
-          <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center justify-between mb-3 sm:mb-6">
             <div>
-              <h2 className="text-2xl font-bold text-white">Nghe gần đây</h2>
+              <h2 className="text-lg sm:text-2xl font-bold text-white">Nghe gần đây</h2>
               <p className="text-sm text-gray-500 mt-1">
                 {recentHistory.length} bài (tối đa 20)
               </p>
             </div>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-1.5 sm:gap-3">
             {recentHistory.map((song, index) => (
               <SongItem key={`recent-${song.id}-${index}`} song={song} index={index} />
             ))}

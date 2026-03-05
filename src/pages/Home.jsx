@@ -19,7 +19,9 @@ export default function Home() {
       )}
 
       {/* Banner Slider */}
-      <BannerSlider />
+      <div className="-mx-4 sm:mx-0 px-4 sm:px-0">
+        <BannerSlider />
+      </div>
 
       {/* New music cards */}
       {newSongs.length > 0 && (

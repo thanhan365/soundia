@@ -11,7 +11,7 @@ export default function LyricsView() {
       {/* Close */}
       <button
         onClick={() => setLyricsOpen(false)}
-        className="absolute top-6 right-6 text-gray-400 hover:text-white transition-colors z-10"
+        className="absolute top-4 right-4 sm:top-6 sm:right-6 text-gray-400 hover:text-white transition-colors z-10"
       >
         <HiX className="text-2xl" />
       </button>
@@ -32,14 +32,14 @@ export default function LyricsView() {
         {currentSong ? (
           <>
             {/* Spinning cover */}
-            <div className={`w-48 h-48 md:w-64 md:h-64 rounded-full overflow-hidden border-4 border-white/10 shadow-2xl mb-8 ${isPlaying ? "animate-spin-slow" : ""}`}>
+            <div className={`w-36 h-36 sm:w-48 sm:h-48 md:w-64 md:h-64 rounded-full overflow-hidden border-4 border-white/10 shadow-2xl mb-6 sm:mb-8 ${isPlaying ? "animate-spin-slow" : ""}`}>
               <img src={currentSong.cover} alt={currentSong.title} className="w-full h-full object-cover" />
             </div>
 
-            <h2 className="text-2xl md:text-3xl font-bold text-white text-center mb-2">
+            <h2 className="text-xl sm:text-2xl md:text-3xl font-bold text-white text-center mb-2">
               {currentSong.title}
             </h2>
-            <p className="text-lg text-gray-400 mb-10">{currentSong.artist}</p>
+            <p className="text-base sm:text-lg text-gray-400 mb-6 sm:mb-10">{currentSong.artist}</p>
 
             {/* Lyrics placeholder */}
             <div className="w-full max-h-[40vh] overflow-y-auto text-center space-y-4 scrollbar-hide">
