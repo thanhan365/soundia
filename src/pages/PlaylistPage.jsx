@@ -47,7 +47,7 @@ export default function PlaylistPage() {
     );
   }
 
-  const songs = playlist.songs.map((sid) => allSongs.find((s) => s.id === sid)).filter(Boolean);
+  const songs = playlist.songs.map((sid) => allSongs.find((s) => String(s.id) === String(sid))).filter(Boolean);
   const totalDuration = songs.reduce((sum, s) => sum + parseDuration(s.duration), 0);
   const isCurrentPl = songs.some((s) => s.id === currentSong?.id);
   const covers = songs.slice(0, 4).map((s) => s.cover);

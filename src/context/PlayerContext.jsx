@@ -196,18 +196,18 @@ export function PlayerProvider({ children }) {
   const deletePlaylist = (id) => setPlaylists((p) => p.filter((pl) => pl.id !== id));
   const addSongToPlaylist = (playlistId, songId) => {
     setPlaylists((p) =>
-      p.map((pl) =>
-        pl.id === playlistId && !pl.songs.includes(songId)
-          ? { ...pl, songs: [...pl.songs, songId] }
-          : pl
-      )
+      p.map((pl) => {
+        if (pl.id !== playlistId) return pl;
+        if (pl.songs.some((id) => String(id) === String(songId))) return pl;
+        return { ...pl, songs: [...pl.songs, songId] };
+      })
     );
   };
   const removeSongFromPlaylist = (playlistId, songId) => {
     setPlaylists((p) =>
       p.map((pl) =>
         pl.id === playlistId
-          ? { ...pl, songs: pl.songs.filter((id) => id !== songId) }
+          ? { ...pl, songs: pl.songs.filter((id) => String(id) !== String(songId)) }
           : pl
       )
     );
