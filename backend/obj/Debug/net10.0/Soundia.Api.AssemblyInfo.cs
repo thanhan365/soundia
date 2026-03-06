@@ -14,7 +14,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("Soundia.Api")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+c67e3aef2d7dc79af7e39d5728a85748bafbc126")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+160a977f1185a9d8e975ccd12bfb3dcf8fe0ea15")]
 [assembly: System.Reflection.AssemblyProductAttribute("Soundia.Api")]
 [assembly: System.Reflection.AssemblyTitleAttribute("Soundia.Api")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

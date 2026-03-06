@@ -7,6 +7,7 @@ import PlayerBar from "./components/PlayerBar";
 import QueuePanel from "./components/QueuePanel";
 import LyricsView from "./components/LyricsView";
 import SearchBar from "./components/SearchBar";
+import YouTubeAudioPlayer from "./components/YouTubeAudioPlayer";
 import Home from "./pages/Home";
 import SearchPage from "./pages/SearchPage";
 import FavoritesPage from "./pages/FavoritesPage";
@@ -22,13 +23,25 @@ import { HiMenuAlt2, HiArrowLeft } from "react-icons/hi";
 
 function AppContent() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const { queueOpen } = usePlayer();
+  const {
+    queueOpen,
+    ytPlayerRef,
+    handleYTReady, handleYTStateChange, handleYTTimeUpdate, handleYTError,
+  } = usePlayer();
   const navigate = useNavigate();
   const location = useLocation();
-  const isHome = location.pathname === "/";
 
   return (
     <div className="animated-bg h-[100dvh] w-full max-w-[100vw] overflow-hidden flex">
+      {/* YouTube IFrame Player ẩn – dùng cho Deezer songs */}
+      <YouTubeAudioPlayer
+        ref={ytPlayerRef}
+        onReady={handleYTReady}
+        onStateChange={handleYTStateChange}
+        onTimeUpdate={handleYTTimeUpdate}
+        onError={handleYTError}
+      />
+
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
       <main className={`flex-1 flex flex-col h-full transition-all duration-300 lg:pl-[68px] ${queueOpen ? "lg:mr-80" : ""}`}>
@@ -75,6 +88,7 @@ function AppContent() {
     </div>
   );
 }
+
 
 export default function App() {
   return (

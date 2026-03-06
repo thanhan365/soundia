@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using System.Diagnostics;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 
 namespace Soundia.Api.Controllers
 {
@@ -8,8 +9,65 @@ namespace Soundia.Api.Controllers
     [Route("api/[controller]")]
     public class StreamController : ControllerBase
     {
-        // Cache URLs for 30 minutes to avoid hitting YouTube too often
-        private static readonly Dictionary<string, (string Url, DateTime Expiry)> _cache = new();
+        // Cache video IDs for 60 minutes
+        private static readonly Dictionary<string, (string VideoId, DateTime Expiry)> _videoIdCache = new();
+        // Cache stream URLs for 25 minutes
+        private static readonly Dictionary<string, (string Url, DateTime Expiry)> _streamCache = new();
+
+        /// <summary>
+        /// Search YouTube by query and return the first video ID.
+        /// Frontend uses this videoId with YouTube IFrame player.loadVideoById()
+        /// GET /api/stream/video-id?query=Son+Tung+Muon+Roi+Ma+Sao+Con
+        /// </summary>
+        [HttpGet("video-id")]
+        public async Task<IActionResult> GetVideoId([FromQuery] string query)
+        {
+            if (string.IsNullOrWhiteSpace(query))
+                return BadRequest(new { message = "query is required" });
+
+            var cacheKey = query.Trim().ToLowerInvariant();
+
+            // Check cache
+            if (_videoIdCache.TryGetValue(cacheKey, out var cached) && cached.Expiry > DateTime.UtcNow)
+            {
+                Console.WriteLine($"[VideoId] Cache HIT: {cacheKey} → {cached.VideoId}");
+                return Ok(new { videoId = cached.VideoId, source = "cache" });
+            }
+
+            Console.WriteLine($"[VideoId] Searching YouTube for: {query}");
+
+            using var http = new HttpClient();
+            http.Timeout = TimeSpan.FromSeconds(10);
+            http.DefaultRequestHeaders.Add("User-Agent",
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36");
+            http.DefaultRequestHeaders.Add("Accept-Language", "en-US,en;q=0.9");
+
+            try
+            {
+                var url = $"https://www.youtube.com/results?search_query={Uri.EscapeDataString(query)}";
+                var html = await http.GetStringAsync(url);
+
+                // YouTube embeds initial data as JSON in the page - extract video IDs
+                // Pattern: "videoId":"XXXXXXXXXXX"
+                var match = Regex.Match(html, "\"videoId\":\"([a-zA-Z0-9_-]{11})\"");
+                if (match.Success)
+                {
+                    var videoId = match.Groups[1].Value;
+                    _videoIdCache[cacheKey] = (videoId, DateTime.UtcNow.AddMinutes(60));
+                    Console.WriteLine($"[VideoId] Found: {videoId} for query: {query}");
+                    return Ok(new { videoId, source = "youtube-search" });
+                }
+
+                Console.WriteLine($"[VideoId] No video ID found in search results for: {query}");
+                return NotFound(new { message = "No video found for this query" });
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[VideoId] Error: {ex.Message}");
+                return StatusCode(503, new { message = "Could not search YouTube" });
+            }
+        }
+
 
         [HttpGet]
         public async Task<IActionResult> GetStream([FromQuery] string query)
@@ -21,7 +79,7 @@ namespace Soundia.Api.Controllers
 
             // Check cache first
             var cacheKey = query.ToLowerInvariant().Trim();
-            if (_cache.TryGetValue(cacheKey, out var cached) && cached.Expiry > DateTime.UtcNow)
+            if (_streamCache.TryGetValue(cacheKey, out var cached) && cached.Expiry > DateTime.UtcNow)
             {
                 return Ok(new { StreamUrl = cached.Url, Title = query, Source = "cache" });
             }
@@ -32,7 +90,7 @@ namespace Soundia.Api.Controllers
                 var result = await RunYtDlp(query);
                 if (result != null)
                 {
-                    _cache[cacheKey] = (result.Value.Url, DateTime.UtcNow.AddMinutes(30));
+                    _streamCache[cacheKey] = (result.Value.Url, DateTime.UtcNow.AddMinutes(30));
                     return Ok(new
                     {
                         StreamUrl = result.Value.Url,
@@ -95,7 +153,7 @@ namespace Soundia.Api.Controllers
 
                     if (bestUrl != null)
                     {
-                        _cache[cacheKey] = (bestUrl, DateTime.UtcNow.AddMinutes(30));
+                        _streamCache[cacheKey] = (bestUrl, DateTime.UtcNow.AddMinutes(30));
                         return Ok(new { StreamUrl = bestUrl, Title = title, Source = instance });
                     }
                 }
