@@ -11,6 +11,12 @@ const YouTubeAudioPlayer = forwardRef(function YouTubeAudioPlayer(
   const playerRef = useRef(null);
   const timerRef = useRef(null);
   const readyRef = useRef(false);
+  
+  // Lưu callback mới nhất để tránh stale clousure do useEffect chỉ chạy 1 lần
+  const callbacksRef = useRef({ onStateChange, onTimeUpdate, onError });
+  useEffect(() => {
+    callbacksRef.current = { onStateChange, onTimeUpdate, onError };
+  }, [onStateChange, onTimeUpdate, onError]);
 
   // ── Expose controls via ref ──────────────────────────────────────────────
   useImperativeHandle(ref, () => ({
@@ -88,23 +94,25 @@ const YouTubeAudioPlayer = forwardRef(function YouTubeAudioPlayer(
             onReady?.();
           },
           onStateChange: (e) => {
-            onStateChange?.(e.data);
+            callbacksRef.current.onStateChange?.(e.data);
 
             if (e.data === 1 /* PLAYING */) {
-              clearInterval(timerRef.current);
+              if (timerRef.current) clearInterval(timerRef.current);
               timerRef.current = setInterval(() => {
-                const t = playerRef.current?.getCurrentTime?.() ?? 0;
-                const d = playerRef.current?.getDuration?.() ?? 0;
-                onTimeUpdate?.(t, d);
-              }, 500);
+                if (playerRef.current && typeof playerRef.current.getCurrentTime === 'function') {
+                  const t = playerRef.current.getCurrentTime() || 0;
+                  const d = playerRef.current.getDuration() || 0;
+                  callbacksRef.current.onTimeUpdate?.(t, d);
+                }
+              }, 200); // Tăng tần suất update cho mượt hơn
             } else {
-              clearInterval(timerRef.current);
+              if (timerRef.current) clearInterval(timerRef.current);
             }
           },
           onError: (e) => {
             console.error('[YT] Player error code:', e.data);
-            clearInterval(timerRef.current);
-            onError?.();
+            if (timerRef.current) clearInterval(timerRef.current);
+            callbacksRef.current.onError?.();
           },
         },
       });

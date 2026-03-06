@@ -7,7 +7,7 @@ export default function RangeSlider({
   showGlow = false,
   className = "w-full h-1",
 }) {
-  const progress = max ? (value / max) * 100 : 0;
+  const progress = max > 0 ? (value / max) * 100 : 0;
 
   return (
     <div className={`relative flex-1 group ${className}`}>
@@ -24,10 +24,10 @@ export default function RangeSlider({
       )}
       <input
         type="range"
-        min={min}
-        max={max}
+        min={min || 0}
+        max={max || 100}
         step={step}
-        value={value}
+        value={value || 0}
         onChange={onChange}
         className="absolute inset-0 w-full opacity-0 cursor-pointer"
       />

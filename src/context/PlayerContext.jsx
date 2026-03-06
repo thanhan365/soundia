@@ -102,24 +102,61 @@ export function PlayerProvider({ children }) {
   }, [searchHistory]);
 
   // ── HTML5 Audio Events ────────────────────────────────────────────────────
+  const animFrameRef = useRef(null);
+
   useEffect(() => {
     const audio = audioRef.current;
-    const onTime = () => setCurrentTime(audio.currentTime);
-    const onMeta = () => setDuration(audio.duration);
+
+    const updateProgress = () => {
+      if (isPlaying && !isYTMode) {
+        setCurrentTime(audio.currentTime);
+        const dur = audio.duration;
+        if (dur && !isNaN(dur)) setDuration(dur);
+        animFrameRef.current = requestAnimationFrame(updateProgress);
+      }
+    };
+
+    const onMeta = () => {
+      const dur = audio.duration;
+      if (dur && !isNaN(dur)) setDuration(dur);
+    };
     const onEnd  = () => { if (repeatMode === "one") { audio.currentTime = 0; audio.play(); } else playNext(); };
     const onErr  = () => handleAudioError("Không thể phát bài này.");
+    const onPlay = () => {
+      setIsPlaying(true);
+      if (!isYTMode) {
+        if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
+        animFrameRef.current = requestAnimationFrame(updateProgress);
+      }
+    };
+    const onPause = () => {
+      setIsPlaying(false);
+      if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
+    };
 
-    audio.addEventListener("timeupdate", onTime);
     audio.addEventListener("loadedmetadata", onMeta);
     audio.addEventListener("ended", onEnd);
     audio.addEventListener("error", onErr);
+    audio.addEventListener("play", onPlay);
+    audio.addEventListener("pause", onPause);
+    
+    // Resume animation loop if playing state changes but events don't fire
+    if (isPlaying && !isYTMode) {
+      if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
+      animFrameRef.current = requestAnimationFrame(updateProgress);
+    } else {
+      if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
+    }
+
     return () => {
-      audio.removeEventListener("timeupdate", onTime);
+      if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
       audio.removeEventListener("loadedmetadata", onMeta);
       audio.removeEventListener("ended", onEnd);
       audio.removeEventListener("error", onErr);
+      audio.removeEventListener("play", onPlay);
+      audio.removeEventListener("pause", onPause);
     };
-  }, [repeatMode]); // eslint-disable-line
+  }, [repeatMode, isPlaying, isYTMode]); // eslint-disable-line
 
   // ── Helpers ───────────────────────────────────────────────────────────────
   const addToRecent = (song) =>
@@ -153,7 +190,10 @@ export function PlayerProvider({ children }) {
   }, [isYTMode, repeatMode]); // eslint-disable-line
 
   const handleYTTimeUpdate = useCallback((t, d) => {
-    if (isYTMode) { setCurrentTime(t); setDuration(d); }
+    if (isYTMode) { 
+      setCurrentTime(t); 
+      if (d > 0) setDuration(d); 
+    }
   }, [isYTMode]);
 
   const handleYTError = useCallback(() => {
@@ -171,8 +211,8 @@ export function PlayerProvider({ children }) {
         if (isPlaying) { ytPlayerRef.current?.pause(); setIsPlaying(false); }
         else { ytPlayerRef.current?.play(); setIsPlaying(true); }
       } else {
-        if (isPlaying) { audio.pause(); setIsPlaying(false); }
-        else { audio.play().catch(() => handleAudioError()); setIsPlaying(true); }
+        if (isPlaying) { audio.pause(); } // state is synced via onPause listener
+        else { setIsPlaying(true); audio.play().catch(() => handleAudioError()); }
       }
       return;
     }
@@ -187,7 +227,7 @@ export function PlayerProvider({ children }) {
       setCurrentSong(song);
       addToRecent(song);
       setIsYTMode(true);
-      setIsPlaying(false);
+      setIsPlaying(true); // always true immediately for UI responsiveness
       setIsLoadingStream(true);
       setCurrentTime(0);
       setDuration(0);
@@ -207,14 +247,15 @@ export function PlayerProvider({ children }) {
         setCurrentSong(song);
         addToRecent(song);
         setIsLoadingStream(false);
+        setIsPlaying(true); // Set to true immediately so play/pause button is accurate
 
         audio.src = song.audio;
         audio.load();
         await audio.play();
-        setIsPlaying(true);
       } catch (err) {
         console.error("Playback error", err);
         handleAudioError("Không thể phát bài này.");
+        setIsPlaying(false);
       }
     }
   };
@@ -226,31 +267,44 @@ export function PlayerProvider({ children }) {
       else { ytPlayerRef.current?.play(); setIsPlaying(true); }
     } else {
       const audio = audioRef.current;
-      if (isPlaying) { audio.pause(); setIsPlaying(false); }
-      else { audio.play().then(() => setIsPlaying(true)).catch(() => handleAudioError()); }
+      if (isPlaying) { audio.pause(); }
+      else { setIsPlaying(true); audio.play().catch(() => handleAudioError()); }
     }
   };
 
   const playNext = useCallback(() => {
     if (!currentSong) return;
+    // 1. Phục vụ Play Next trong danh sách chờ (Manual Queue)
     if (manualQueue.length > 0) {
       const next = manualQueue[0];
       setManualQueue((q) => q.slice(1));
       playSong(next);
       return;
     }
+    
+    // 2. Không có hàng đợi manual, tiếp tục play danh sách hiện tại
     const list = filteredSongs.length > 0 ? filteredSongs : allSongs;
+    
     if (shuffle) {
+      // Phát xáo trộn ngẫu nhiên
+      const sourceList = list.length > 1 ? list : allSongs; // Nếu list chỉ có 1 bài, lấy allSongs cho random
       let idx;
-      do { idx = Math.floor(Math.random() * list.length); }
-      while (list.length > 1 && list[idx].id === currentSong.id);
-      playSong(list[idx]);
+      do { idx = Math.floor(Math.random() * sourceList.length); }
+      while (sourceList.length > 1 && sourceList[idx].id === currentSong.id);
+      playSong(sourceList[idx]);
     } else {
+      // Phát bài biểu kế tiếp
       const idx = list.findIndex((s) => s.id === currentSong.id);
-      if (repeatMode === "none" && idx === list.length - 1) {
-        if (isYTMode) { ytPlayerRef.current?.pause(); }
-        else { audioRef.current.pause(); }
-        setIsPlaying(false);
+      
+      // Tính năng theo yêu cầu: Khi phát hết bài trong list (hoặc bài không có trong list)
+      // thì PHÁT RANDOM ngẫu nhiên từ thư viện (thay vì DỪNG LẠI).
+      if (repeatMode === "none" && (idx === list.length - 1 || idx === -1)) {
+        if (allSongs.length > 0) {
+          let randomIdx;
+          do { randomIdx = Math.floor(Math.random() * allSongs.length); }
+          while (allSongs.length > 1 && allSongs[randomIdx].id === currentSong.id);
+          playSong(allSongs[randomIdx]);
+        }
         return;
       }
       playSong(list[(idx + 1) % list.length]);

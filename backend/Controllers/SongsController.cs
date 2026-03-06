@@ -57,5 +57,24 @@ namespace Soundia.Api.Controllers
 
             return CreatedAtAction(nameof(GetSong), new { id = song.Id }, song);
         }
+
+        // Endpoint tạm thời để xóa bài hát mẫu
+        [HttpDelete("cleanup-static")]
+        public async Task<IActionResult> CleanupStaticSongs()
+        {
+            var staticSongs = await _context.Songs
+                .Where(s => s.AudioUrl.Contains("soundhelix.com") || s.Artist == "NeonWave")
+                .ToListAsync();
+
+            if (staticSongs.Count == 0)
+            {
+                return Ok(new { message = "Không tìm thấy bài hát tĩnh nào." });
+            }
+
+            _context.Songs.RemoveRange(staticSongs);
+            await _context.SaveChangesAsync();
+
+            return Ok(new { message = $"Đã xóa {staticSongs.Count} bài hát tĩnh.", count = staticSongs.Count });
+        }
     }
 }
