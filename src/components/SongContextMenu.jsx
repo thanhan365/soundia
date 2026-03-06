@@ -35,7 +35,7 @@ export default function SongContextMenu({ song, position, onClose, extraItems = 
   };
 
   const handleAddToPlaylist = (pl) => {
-    addSongToPlaylist(pl.id, song.id);
+    addSongToPlaylist(pl.id, song);
     showToast(`Đã thêm vào "${pl.name}"`, "success");
     onClose();
   };

@@ -1,24 +1,16 @@
 import { createContext, useContext, useState, useRef, useEffect, useCallback } from "react";
-<<<<<<< HEAD
 import { AuthContext } from "./AuthContext";
 import { useToast } from "./ToastContext";
 import api from "../utils/api";
-=======
-import songs from "../data/songs";
->>>>>>> d9b9a7bdd6beca500ceafa680c096f24878e5382
+import { searchDeezer } from "../services/deezerService";
 
 const PlayerContext = createContext();
 
 export function PlayerProvider({ children }) {
-<<<<<<< HEAD
   const { user } = useContext(AuthContext);
   const { showToast } = useToast();
   const [allSongs, setAllSongs] = useState([]);
   const [filteredSongs, setFilteredSongs] = useState([]);
-=======
-  const [allSongs] = useState(songs);
-  const [filteredSongs, setFilteredSongs] = useState(songs);
->>>>>>> d9b9a7bdd6beca500ceafa680c096f24878e5382
   const [currentSong, setCurrentSong] = useState(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
@@ -31,43 +23,18 @@ export function PlayerProvider({ children }) {
   const [error, setError] = useState(null);
   const [shuffle, setShuffle] = useState(false);
   const [repeatMode, setRepeatMode] = useState("none");
-<<<<<<< HEAD
   const [favorites, setFavorites] = useState([]);
-=======
-  const [favorites, setFavorites] = useState(() => {
-    const saved = localStorage.getItem("soundia_favorites");
-    return saved ? JSON.parse(saved) : [];
-  });
->>>>>>> d9b9a7bdd6beca500ceafa680c096f24878e5382
   const [recentHistory, setRecentHistory] = useState([]);
   const [queueOpen, setQueueOpen] = useState(false);
   const [lyricsOpen, setLyricsOpen] = useState(false);
   const [manualQueue, setManualQueue] = useState([]);
-<<<<<<< HEAD
   const [playlists, setPlaylists] = useState([]);
-=======
-  const [playlists, setPlaylists] = useState(() => {
-    const saved = localStorage.getItem("soundia_playlists");
-    if (!saved) return [];
-    try {
-      const parsed = JSON.parse(saved);
-      // Clean up invalid song IDs and remove duplicates
-      return parsed.map((pl) => ({
-        ...pl,
-        songs: [...new Set(pl.songs)].filter((sid) => songs.some((s) => String(s.id) === String(sid)))
-      }));
-    } catch {
-      return [];
-    }
-  });
->>>>>>> d9b9a7bdd6beca500ceafa680c096f24878e5382
   const [searchHistory, setSearchHistory] = useState(() => {
     const saved = localStorage.getItem("soundia_search_history");
     return saved ? JSON.parse(saved) : [];
   });
   const audioRef = useRef(new Audio());
 
-<<<<<<< HEAD
   // Fetch Songs on Mount
   useEffect(() => {
     const loadSongs = async () => {
@@ -115,23 +82,35 @@ export function PlayerProvider({ children }) {
       loadUserData();
     }
   }, [user, allSongs.length]);
-
-=======
->>>>>>> d9b9a7bdd6beca500ceafa680c096f24878e5382
-  // Search filter
+  // Search logic
   useEffect(() => {
-    const query = searchQuery.toLowerCase();
-    if (!query) {
-      setFilteredSongs(allSongs);
-    } else {
-      setFilteredSongs(
-        allSongs.filter(
-          (s) =>
-            s.title.toLowerCase().includes(query) ||
-            s.artist.toLowerCase().includes(query)
-        )
+    const handleSearch = async () => {
+      const query = searchQuery.toLowerCase().trim();
+      if (!query) {
+        setFilteredSongs(allSongs);
+        return;
+      }
+
+      // 1. Tìm trong database local trước
+      const localResults = allSongs.filter(
+        (s) =>
+          s.title.toLowerCase().includes(query) ||
+          s.artist.toLowerCase().includes(query)
       );
-    }
+
+      // 2. Gọi Deezer để lấy hàng triệu bài hát khác
+      const deezerResults = await searchDeezer(query);
+      
+      // Gộp kết quả (Ưu tiên local lên đầu)
+      const combined = [...localResults, ...deezerResults.filter(ds => 
+        !localResults.some(ls => ls.title === ds.title && ls.artist === ds.artist)
+      )];
+      
+      setFilteredSongs(combined);
+    };
+
+    const timer = setTimeout(handleSearch, 500); // Debounce
+    return () => clearTimeout(timer);
   }, [searchQuery, allSongs]);
 
   // Volume persistence
@@ -140,19 +119,7 @@ export function PlayerProvider({ children }) {
     audioRef.current.volume = volume;
   }, [volume]);
 
-<<<<<<< HEAD
-=======
-  // Favorites persistence
-  useEffect(() => {
-    localStorage.setItem("soundia_favorites", JSON.stringify(favorites));
-  }, [favorites]);
 
-  // Playlists persistence
-  useEffect(() => {
-    localStorage.setItem("soundia_playlists", JSON.stringify(playlists));
-  }, [playlists]);
-
->>>>>>> d9b9a7bdd6beca500ceafa680c096f24878e5382
   // Search history persistence
   useEffect(() => {
     localStorage.setItem("soundia_search_history", JSON.stringify(searchHistory));
@@ -197,18 +164,58 @@ export function PlayerProvider({ children }) {
   };
 
   // --- Playback ---
-  const playSong = (song) => {
+  const playSong = async (song) => {
     const audio = audioRef.current;
+    
+    // Nếu đang phát chính bài này thì Pause/Play
     if (currentSong?.id === song.id) {
       if (isPlaying) { audio.pause(); setIsPlaying(false); }
       else { audio.play().catch(() => handleAudioError()); setIsPlaying(true); }
       return;
     }
-    setCurrentSong(song);
-    addToRecent(song);
-    audio.src = song.audio;
-    audio.load();
-    audio.play().then(() => setIsPlaying(true)).catch(() => handleAudioError());
+
+    try {
+      let finalAudioUrl = song.audio;
+
+      // Với bài hát từ Deezer: luôn thử lấy full stream từ YouTube trước
+      if (song.isExternal) {
+        try {
+          const streamRes = await api.get(`/stream?query=${encodeURIComponent(`${song.artist} - ${song.title} audio`)}`);
+          if (streamRes.data?.streamUrl) {
+            finalAudioUrl = streamRes.data.streamUrl;
+          }
+        } catch (streamErr) {
+          console.warn("Full stream failed, using Deezer preview:", streamErr);
+          // Dùng Deezer preview 30s nếu stream thất bại
+          if (!finalAudioUrl) {
+            handleAudioError("Không thể phát bài này. Hãy thử bài khác.");
+            return;
+          }
+        }
+      }
+
+      // Nếu bài hát không có audio URL nào cả, thử stream
+      if (!finalAudioUrl) {
+        try {
+          const streamRes = await api.get(`/stream?query=${encodeURIComponent(`${song.artist} - ${song.title} audio`)}`);
+          finalAudioUrl = streamRes.data.streamUrl;
+        } catch {
+          handleAudioError("Không thể phát bài này. Hãy thử bài khác.");
+          return;
+        }
+      }
+
+      setCurrentSong({ ...song, audio: finalAudioUrl });
+      addToRecent(song);
+      
+      audio.src = finalAudioUrl;
+      audio.load();
+      await audio.play();
+      setIsPlaying(true);
+    } catch (err) {
+      console.error("Playback error", err);
+      handleAudioError("Không thể phát bài này. Hãy thử bài khác.");
+    }
   };
 
   const togglePlay = () => {
@@ -254,24 +261,40 @@ export function PlayerProvider({ children }) {
     setRepeatMode((m) => (m === "none" ? "all" : m === "all" ? "one" : "none"));
 
   // --- Favorites ---
-<<<<<<< HEAD
-  const toggleFavorite = async (songId) => {
+  const toggleFavorite = async (song) => {
     if (!user) {
       showToast("Vui lòng đăng nhập để sử dụng tính năng này", "error");
       return;
     }
 
+    let songToSave = { ...song };
+
     try {
+      // 1. Nếu là bài từ Deezer, phải lưu vào DB của mình trước để lấy ID thật
+      if (song.isExternal) {
+        const res = await api.post('/songs/external', {
+          title: song.title,
+          artist: song.artist,
+          duration: song.duration,
+          coverUrl: song.cover,
+          audioUrl: "YT_STREAM" // Placeholder
+        });
+        songToSave = res.data;
+      }
+
+      const songId = songToSave.id;
       await api.post('/favorites', { songId });
+      
       setFavorites((p) => p.includes(songId) ? p.filter((id) => id !== songId) : [...p, songId]);
+      
+      // Nếu vừa mới thêm vào DB, cập nhật danh sách allSongs
+      if (song.isExternal) {
+        setAllSongs(prev => [...prev, {...songToSave, cover: songToSave.coverUrl, audio: songToSave.audioUrl}]);
+      }
     } catch (err) {
       console.error("Failed to toggle favorite", err);
     }
   };
-=======
-  const toggleFavorite = (songId) =>
-    setFavorites((p) => p.includes(songId) ? p.filter((id) => id !== songId) : [...p, songId]);
->>>>>>> d9b9a7bdd6beca500ceafa680c096f24878e5382
   const isFavorite = (songId) => favorites.includes(songId);
 
   // --- Seek / Volume ---
@@ -289,7 +312,6 @@ export function PlayerProvider({ children }) {
   };
 
   // --- Playlists ---
-<<<<<<< HEAD
   const createPlaylist = async (name) => {
     if (!user) return null;
     try {
@@ -308,10 +330,24 @@ export function PlayerProvider({ children }) {
     setPlaylists((p) => p.filter((pl) => pl.id !== id));
   };
 
-  const addSongToPlaylist = async (playlistId, songId) => {
+  const addSongToPlaylist = async (playlistId, song) => {
     if (!user) return;
+    
+    let songToSave = { ...song };
+
     try {
+      // 1. Nếu là bài từ Deezer, lưu vào DB trước
+      if (song.isExternal) {
+        const res = await api.post('/songs/external', {
+          title: song.title, artist: song.artist, duration: song.duration,
+          coverUrl: song.cover, audioUrl: "YT_STREAM"
+        });
+        songToSave = res.data;
+      }
+
+      const songId = songToSave.id;
       await api.post(`/playlists/${playlistId}/songs`, { songId });
+      
       setPlaylists((p) =>
         p.map((pl) => {
           if (pl.id !== playlistId) return pl;
@@ -319,25 +355,13 @@ export function PlayerProvider({ children }) {
           return { ...pl, songs: [...pl.songs, songId] };
         })
       );
+
+      if (song.isExternal) {
+        setAllSongs(prev => [...prev, {...songToSave, cover: songToSave.coverUrl, audio: songToSave.audioUrl}]);
+      }
     } catch (err) {
       console.error("Failed to add song", err);
     }
-=======
-  const createPlaylist = (name) => {
-    const id = `pl_${Date.now()}`;
-    setPlaylists((p) => [...p, { id, name, songs: [], createdAt: Date.now() }]);
-    return id;
-  };
-  const deletePlaylist = (id) => setPlaylists((p) => p.filter((pl) => pl.id !== id));
-  const addSongToPlaylist = (playlistId, songId) => {
-    setPlaylists((p) =>
-      p.map((pl) => {
-        if (pl.id !== playlistId) return pl;
-        if (pl.songs.some((id) => String(id) === String(songId))) return pl;
-        return { ...pl, songs: [...pl.songs, songId] };
-      })
-    );
->>>>>>> d9b9a7bdd6beca500ceafa680c096f24878e5382
   };
   const removeSongFromPlaylist = (playlistId, songId) => {
     setPlaylists((p) =>

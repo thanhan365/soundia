@@ -2,6 +2,19 @@
   "version": 3,
   "targets": {
     "net10.0": {
+      "AngleSharp/1.2.0": {
+        "type": "package",
+        "compile": {
+          "lib/net8.0/AngleSharp.dll": {
+            "related": ".xml"
+          }
+        },
+        "runtime": {
+          "lib/net8.0/AngleSharp.dll": {
+            "related": ".xml"
+          }
+        }
+      },
       "Azure.Core/1.47.1": {
         "type": "package",
         "dependencies": {
@@ -1172,10 +1185,51 @@
         "build": {
           "buildTransitive/net8.0/_._": {}
         }
+      },
+      "YoutubeExplode/6.5.3": {
+        "type": "package",
+        "dependencies": {
+          "AngleSharp": "1.2.0"
+        },
+        "compile": {
+          "lib/net9.0/YoutubeExplode.dll": {
+            "related": ".xml"
+          }
+        },
+        "runtime": {
+          "lib/net9.0/YoutubeExplode.dll": {
+            "related": ".xml"
+          }
+        }
       }
     }
   },
   "libraries": {
+    "AngleSharp/1.2.0": {
+      "sha512": "uF/PzSCVcb+b2nqVvHZbOqexoJ9R6QLjonugPf0PQl+0h7YKaFZeXyspctbHe5HGlx7/Iuk5BErtk+t63ac/ZA==",
+      "type": "package",
+      "path": "anglesharp/1.2.0",
+      "files": [
+        ".nupkg.metadata",
+        ".signature.p7s",
+        "README.md",
+        "anglesharp.1.2.0.nupkg.sha512",
+        "anglesharp.nuspec",
+        "lib/net462/AngleSharp.dll",
+        "lib/net462/AngleSharp.xml",
+        "lib/net472/AngleSharp.dll",
+        "lib/net472/AngleSharp.xml",
+        "lib/net6.0/AngleSharp.dll",
+        "lib/net6.0/AngleSharp.xml",
+        "lib/net7.0/AngleSharp.dll",
+        "lib/net7.0/AngleSharp.xml",
+        "lib/net8.0/AngleSharp.dll",
+        "lib/net8.0/AngleSharp.xml",
+        "lib/netstandard2.0/AngleSharp.dll",
+        "lib/netstandard2.0/AngleSharp.xml",
+        "logo.png"
+      ]
+    },
     "Azure.Core/1.47.1": {
       "sha512": "oPcncSsDHuxB8SC522z47xbp2+ttkcKv2YZ90KXhRKN0YQd2+7l1UURT9EBzUNEXtkLZUOAB5xbByMTrYRh3yA==",
       "type": "package",
@@ -3633,6 +3687,22 @@
         "system.security.cryptography.protecteddata.nuspec",
         "useSharedDesignerContext.txt"
       ]
+    },
+    "YoutubeExplode/6.5.3": {
+      "sha512": "QhWnnc5BiELsZ9Ss+YWwgEkKoEzfsyfp0n6px2Tr1Fo0ze+dRWVktwYFFdFMbpBy38JJIRHKd/MTBS+Gt8Db5Q==",
+      "type": "package",
+      "path": "youtubeexplode/6.5.3",
+      "files": [
+        ".nupkg.metadata",
+        ".signature.p7s",
+        "favicon.png",
+        "lib/net9.0/YoutubeExplode.dll",
+        "lib/net9.0/YoutubeExplode.xml",
+        "lib/netstandard2.0/YoutubeExplode.dll",
+        "lib/netstandard2.0/YoutubeExplode.xml",
+        "youtubeexplode.6.5.3.nupkg.sha512",
+        "youtubeexplode.nuspec"
+      ]
     }
   },
   "projectFileDependencyGroups": {
@@ -3643,7 +3713,8 @@
       "Microsoft.EntityFrameworkCore.Design >= 10.0.3",
       "Microsoft.EntityFrameworkCore.SqlServer >= 10.0.3",
       "Microsoft.EntityFrameworkCore.Tools >= 10.0.3",
-      "Swashbuckle.AspNetCore >= 10.1.4"
+      "Swashbuckle.AspNetCore >= 10.1.4",
+      "YoutubeExplode >= 6.5.3"
     ]
   },
   "packageFolders": {
@@ -3653,11 +3724,11 @@
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "d:\\WORKSPACE\\soundia\\backend\\Soundia.Api.csproj",
+      "projectUniqueName": "D:\\WORKSPACE\\soundia\\backend\\Soundia.Api.csproj",
       "projectName": "Soundia.Api",
-      "projectPath": "d:\\WORKSPACE\\soundia\\backend\\Soundia.Api.csproj",
+      "projectPath": "D:\\WORKSPACE\\soundia\\backend\\Soundia.Api.csproj",
       "packagesPath": "C:\\Users\\User\\.nuget\\packages\\",
-      "outputPath": "d:\\WORKSPACE\\soundia\\backend\\obj\\",
+      "outputPath": "D:\\WORKSPACE\\soundia\\backend\\obj\\",
       "projectStyle": "PackageReference",
       "fallbackFolders": [
         "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
@@ -3727,6 +3798,10 @@
           "Swashbuckle.AspNetCore": {
             "target": "Package",
             "version": "[10.1.4, )"
+          },
+          "YoutubeExplode": {
+            "target": "Package",
+            "version": "[6.5.3, )"
           }
         },
         "imports": [

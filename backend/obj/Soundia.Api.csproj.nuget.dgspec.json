@@ -1,17 +1,17 @@
 {
   "format": 1,
   "restore": {
-    "d:\\WORKSPACE\\soundia\\backend\\Soundia.Api.csproj": {}
+    "D:\\WORKSPACE\\soundia\\backend\\Soundia.Api.csproj": {}
   },
   "projects": {
-    "d:\\WORKSPACE\\soundia\\backend\\Soundia.Api.csproj": {
+    "D:\\WORKSPACE\\soundia\\backend\\Soundia.Api.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "d:\\WORKSPACE\\soundia\\backend\\Soundia.Api.csproj",
+        "projectUniqueName": "D:\\WORKSPACE\\soundia\\backend\\Soundia.Api.csproj",
         "projectName": "Soundia.Api",
-        "projectPath": "d:\\WORKSPACE\\soundia\\backend\\Soundia.Api.csproj",
+        "projectPath": "D:\\WORKSPACE\\soundia\\backend\\Soundia.Api.csproj",
         "packagesPath": "C:\\Users\\User\\.nuget\\packages\\",
-        "outputPath": "d:\\WORKSPACE\\soundia\\backend\\obj\\",
+        "outputPath": "D:\\WORKSPACE\\soundia\\backend\\obj\\",
         "projectStyle": "PackageReference",
         "fallbackFolders": [
           "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
@@ -81,6 +81,10 @@
             "Swashbuckle.AspNetCore": {
               "target": "Package",
               "version": "[10.1.4, )"
+            },
+            "YoutubeExplode": {
+              "target": "Package",
+              "version": "[6.5.3, )"
             }
           },
           "imports": [

@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 import { useState, useContext } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
 import { usePlayer } from "../context/PlayerContext";
@@ -7,15 +6,6 @@ import {
   HiHome, HiHeart, HiClock,
   HiCollection, HiPlus,
   HiSparkles, HiViewGrid, HiUser, HiLogout, HiLogin
-=======
-import { useState } from "react";
-import { NavLink } from "react-router-dom";
-import { usePlayer } from "../context/PlayerContext";
-import {
-  HiHome, HiHeart, HiClock,
-  HiCollection, HiPlus,
-  HiSparkles, HiViewGrid,
->>>>>>> d9b9a7bdd6beca500ceafa680c096f24878e5382
 } from "react-icons/hi";
 import CreatePlaylistModal from "./CreatePlaylistModal";
 
@@ -32,17 +22,11 @@ const personalNav = [
 ];
 
 export default function Sidebar({ isOpen, onClose }) {
-<<<<<<< HEAD
   const { currentSong, playlists } = usePlayer();
   const { user, logout } = useContext(AuthContext);
   const [showModal, setShowModal] = useState(false);
   const [hovered, setHovered] = useState(false);
   const navigate = useNavigate();
-=======
-  const { currentSong, playlists, allSongs } = usePlayer();
-  const [showModal, setShowModal] = useState(false);
-  const [hovered, setHovered] = useState(false);
->>>>>>> d9b9a7bdd6beca500ceafa680c096f24878e5382
 
   // Desktop: sidebar nổi, chỉ hiện icon, hover mở rộng
   // Mobile: slide-in khi bấm menu
@@ -147,7 +131,6 @@ export default function Sidebar({ isOpen, onClose }) {
                 Playlist
               </p>
               <button
-<<<<<<< HEAD
                 onClick={() => {
                   if(!user) {
                     navigate('/login');
@@ -155,9 +138,6 @@ export default function Sidebar({ isOpen, onClose }) {
                     setShowModal(true);
                   }
                 }}
-=======
-                onClick={() => setShowModal(true)}
->>>>>>> d9b9a7bdd6beca500ceafa680c096f24878e5382
                 className="text-gray-500 hover:text-neon transition-colors"
                 title="Tạo playlist mới"
               >
@@ -167,7 +147,6 @@ export default function Sidebar({ isOpen, onClose }) {
 
             {playlists.length > 0 ? (
               <div className="space-y-0.5">
-<<<<<<< HEAD
                 {playlists.map((pl) => (
                   <NavLink
                     key={pl.id}
@@ -187,62 +166,6 @@ export default function Sidebar({ isOpen, onClose }) {
                     <span className="text-[10px] text-gray-600 ml-auto">{pl.songs.length}</span>
                   </NavLink>
                 ))}
-=======
-                {playlists.map((pl) => {
-                  const resolvedCount = pl.songs.reduce(
-                    (acc, sid) =>
-                      acc + (allSongs.some((s) => String(s.id) === String(sid)) ? 1 : 0),
-                    0
-                  );
-
-                  // #region agent log
-                  if (typeof window !== "undefined") {
-                    fetch("http://127.0.0.1:7340/ingest/7a476181-2b3f-4bea-8a0b-e17fa8639b01", {
-                      method: "POST",
-                      headers: {
-                        "Content-Type": "application/json",
-                        "X-Debug-Session-Id": "6bc027",
-                      },
-                      body: JSON.stringify({
-                        sessionId: "6bc027",
-                        runId: "pre-fix",
-                        hypothesisId: "PL_COUNT",
-                        location: "Sidebar.jsx:140",
-                        message: "Playlist count sidebar vs resolved",
-                        data: {
-                          playlistId: pl.id,
-                          rawCount: pl.songs.length,
-                          resolvedCount,
-                        },
-                        timestamp: Date.now(),
-                      }),
-                    }).catch(() => {});
-                  }
-                  // #endregion
-
-                  return (
-                    <NavLink
-                      key={pl.id}
-                      to={`/playlist/${pl.id}`}
-                      onClick={onClose}
-                      className={({ isActive }) => `
-                        flex items-center gap-3 px-3 py-2 rounded-lg text-[13px]
-                        no-underline transition-all duration-200
-                        ${isActive
-                          ? "bg-white/10 text-white font-semibold"
-                          : "text-gray-400 hover:text-white hover:bg-white/5"
-                        }
-                      `}
-                    >
-                      <HiCollection className="text-sm flex-shrink-0 text-neon/60" />
-                      <span className="truncate">{pl.name}</span>
-                      <span className="text-[10px] text-gray-600 ml-auto">
-                        {resolvedCount}
-                      </span>
-                    </NavLink>
-                  );
-                })}
->>>>>>> d9b9a7bdd6beca500ceafa680c096f24878e5382
               </div>
             ) : (
               <p className="px-3 text-xs text-gray-600 italic">Chưa có playlist nào</p>
@@ -250,7 +173,6 @@ export default function Sidebar({ isOpen, onClose }) {
           </div>
         </div>
 
-<<<<<<< HEAD
         {/* Auth Section */}
         <div className="mt-auto mb-2 px-2">
           {user ? (
@@ -295,9 +217,6 @@ export default function Sidebar({ isOpen, onClose }) {
             </div>
           )}
         </div>
-
-=======
->>>>>>> d9b9a7bdd6beca500ceafa680c096f24878e5382
         {/* Now Playing mini */}
         {currentSong && (
           <div className="p-3 border-t border-white/5 flex-shrink-0">

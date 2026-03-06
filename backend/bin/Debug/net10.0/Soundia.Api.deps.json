@@ -13,10 +13,19 @@
           "Microsoft.AspNetCore.OpenApi": "10.0.3",
           "Microsoft.EntityFrameworkCore.Design": "10.0.3",
           "Microsoft.EntityFrameworkCore.SqlServer": "10.0.3",
-          "Swashbuckle.AspNetCore": "10.1.4"
+          "Swashbuckle.AspNetCore": "10.1.4",
+          "YoutubeExplode": "6.5.3"
         },
         "runtime": {
           "Soundia.Api.dll": {}
+        }
+      },
+      "AngleSharp/1.2.0": {
+        "runtime": {
+          "lib/net8.0/AngleSharp.dll": {
+            "assemblyVersion": "1.2.0.0",
+            "fileVersion": "1.2.0.0"
+          }
         }
       },
       "Azure.Core/1.47.1": {
@@ -824,6 +833,17 @@
             "fileVersion": "9.0.425.16305"
           }
         }
+      },
+      "YoutubeExplode/6.5.3": {
+        "dependencies": {
+          "AngleSharp": "1.2.0"
+        },
+        "runtime": {
+          "lib/net9.0/YoutubeExplode.dll": {
+            "assemblyVersion": "6.5.3.0",
+            "fileVersion": "6.5.3.0"
+          }
+        }
       }
     }
   },
@@ -832,6 +852,13 @@
       "type": "project",
       "serviceable": false,
       "sha512": ""
+    },
+    "AngleSharp/1.2.0": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-uF/PzSCVcb+b2nqVvHZbOqexoJ9R6QLjonugPf0PQl+0h7YKaFZeXyspctbHe5HGlx7/Iuk5BErtk+t63ac/ZA==",
+      "path": "anglesharp/1.2.0",
+      "hashPath": "anglesharp.1.2.0.nupkg.sha512"
     },
     "Azure.Core/1.47.1": {
       "type": "package",
@@ -1189,6 +1216,13 @@
       "sha512": "sha512-o94k2RKuAce3GeDMlUvIXlhVa1kWpJw95E6C9LwW0KlG0nj5+SgCiIxJ2Eroqb9sLtG1mEMbFttZIBZ13EJPvQ==",
       "path": "system.security.cryptography.protecteddata/9.0.4",
       "hashPath": "system.security.cryptography.protecteddata.9.0.4.nupkg.sha512"
+    },
+    "YoutubeExplode/6.5.3": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-QhWnnc5BiELsZ9Ss+YWwgEkKoEzfsyfp0n6px2Tr1Fo0ze+dRWVktwYFFdFMbpBy38JJIRHKd/MTBS+Gt8Db5Q==",
+      "path": "youtubeexplode/6.5.3",
+      "hashPath": "youtubeexplode.6.5.3.nupkg.sha512"
     }
   }
 }

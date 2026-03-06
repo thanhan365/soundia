@@ -25,14 +25,8 @@ export default function PlaylistPage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const {
-<<<<<<< HEAD
-    playlists, allSongs, removeSongFromPlaylist,
-    playSong, currentSong, isPlaying, togglePlay
-=======
     playlists, allSongs, deletePlaylist, removeSongFromPlaylist,
-    playSong, currentSong, isPlaying, togglePlay,
-    renamePlaylist, reorderPlaylistSongs, setPlaylistCover,
->>>>>>> d9b9a7bdd6beca500ceafa680c096f24878e5382
+    playSong, currentSong, isPlaying, togglePlay
   } = usePlayer();
   const { showToast } = useToast();
   const [editing, setEditing] = useState(false);
@@ -93,39 +87,18 @@ export default function PlaylistPage() {
   const toggleAll = () => { isCurrentPl && isPlaying ? togglePlay() : playAll(); };
   const delPlaylist = () => { deletePlaylist(id); showToast(`Đã xóa "${playlist.name}"`, "info"); navigate("/library"); };
   const removeSong = (sid) => { removeSongFromPlaylist(id, sid); showToast("Đã xóa bài khỏi playlist", "info"); };
-<<<<<<< HEAD
   const startEdit = () => { showToast("Tính năng đổi tên đang được cập nhật", "info"); };
   const uploadCover = () => { showToast("Tính năng đổi ảnh bìa đang được cập nhật", "info"); };
   
   // Drag (disabled for now or local only)
-=======
-  const startEdit = () => { setEditName(playlist.name); setEditing(true); };
-  const saveEdit = () => { renamePlaylist(id, editName); setEditing(false); showToast("Đã đổi tên", "success"); };
-
-  const uploadCover = (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (ev) => { setPlaylistCover(id, ev.target.result); showToast("Đã cập nhật ảnh bìa", "success"); };
-    reader.readAsDataURL(file);
-  };
-
-  // Drag
->>>>>>> d9b9a7bdd6beca500ceafa680c096f24878e5382
   const onDragStart = useCallback((e, i) => { setDragIdx(i); e.dataTransfer.effectAllowed = "move"; }, []);
   const onDragOver = useCallback((e) => { e.preventDefault(); e.dataTransfer.dropEffect = "move"; }, []);
   const onDrop = useCallback((e, dropI) => {
     e.preventDefault();
     if (dragIdx === null || dragIdx === dropI) return;
-<<<<<<< HEAD
     showToast("Tính năng sắp xếp đang được cập nhật", "info");
     setDragIdx(null);
   }, [dragIdx, id]);
-=======
-    const arr = [...playlist.songs]; const [m] = arr.splice(dragIdx, 1); arr.splice(dropI, 0, m);
-    reorderPlaylistSongs(id, arr); setDragIdx(null);
-  }, [dragIdx, playlist.songs, id, reorderPlaylistSongs]);
->>>>>>> d9b9a7bdd6beca500ceafa680c096f24878e5382
   const onDragEnd = useCallback(() => setDragIdx(null), []);
 
   return (
@@ -162,7 +135,6 @@ export default function PlaylistPage() {
           <div className="flex-1 min-w-0 text-center md:text-left">
             <p className="text-[10px] font-bold text-neon/70 uppercase tracking-[0.2em] mb-2">Playlist</p>
 
-<<<<<<< HEAD
             <h1
               className="text-2xl sm:text-3xl md:text-5xl font-extrabold text-white mb-3 truncate cursor-pointer group/title hover:text-neon/90 transition-colors"
               onClick={startEdit}
@@ -171,30 +143,6 @@ export default function PlaylistPage() {
               {playlist.name}
               <HiPencil className="inline-block ml-3 text-base text-gray-600 opacity-0 group-hover/title:opacity-100 transition-opacity align-middle" />
             </h1>
-=======
-            {editing ? (
-              <div className="flex items-center gap-2 mb-3 justify-center md:justify-start">
-                <input
-                  value={editName}
-                  onChange={(e) => setEditName(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && saveEdit()}
-                  autoFocus
-                  className="bg-white/5 border border-white/15 rounded-lg px-4 py-2.5 text-2xl font-bold text-white outline-none focus:border-neon/40 w-full max-w-sm"
-                />
-                <button onClick={saveEdit} className="px-4 py-2.5 bg-neon text-dark rounded-lg text-sm font-bold hover:opacity-90 flex-shrink-0">Lưu</button>
-                <button onClick={() => setEditing(false)} className="px-3 py-2.5 text-gray-400 text-sm hover:text-white flex-shrink-0">Hủy</button>
-              </div>
-            ) : (
-              <h1
-                className="text-2xl sm:text-3xl md:text-5xl font-extrabold text-white mb-3 truncate cursor-pointer group/title hover:text-neon/90 transition-colors"
-                onClick={startEdit}
-                title="Bấm để đổi tên"
-              >
-                {playlist.name}
-                <HiPencil className="inline-block ml-3 text-base text-gray-600 opacity-0 group-hover/title:opacity-100 transition-opacity align-middle" />
-              </h1>
-            )}
->>>>>>> d9b9a7bdd6beca500ceafa680c096f24878e5382
 
             <p className="text-[13px] text-gray-400 mb-5">
               <span className="font-semibold text-gray-300">{songs.length}</span> bài hát

@@ -25,3 +25,17 @@ dist-ssr
 
 # Temporary AI files
 tmpclaude-*
+
+# Visual Studio
+.vs/
+bin/
+obj/
+
+# ASP.NET
+*.user
+*.dbmdl
+*.jfm
+
+# Build results
+Debug/
+Release/

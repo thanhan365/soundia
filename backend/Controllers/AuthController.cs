@@ -4,9 +4,9 @@ using Soundia.Api.Data;
 using Soundia.Api.DTOs.Auth;
 using Soundia.Api.Models;
 using Soundia.Api.Services;
-using System.Security.Cryptography;
-using System.Text;
-using System.Threading.Tasks;
+using System.Text.Json;
+using System.IO;
+using Microsoft.Data.SqlClient;
 
 namespace Soundia.Api.Controllers
 {
@@ -26,29 +26,38 @@ namespace Soundia.Api.Controllers
         [HttpPost("register")]
         public async Task<ActionResult<AuthResponse>> Register(RegisterRequest request)
         {
-            if (await _context.Users.AnyAsync(u => u.Username == request.Username.ToLower()))
-                return BadRequest("Username is already taken.");
-
-            if (await _context.Users.AnyAsync(u => u.Email == request.Email.ToLower()))
-                return BadRequest("Email is already taken.");
-
-            var user = new User
+            try
             {
-                Username = request.Username.ToLower(),
-                Email = request.Email.ToLower(),
-                PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.Password)
-            };
 
-            _context.Users.Add(user);
-            await _context.SaveChangesAsync();
 
-            return new AuthResponse
+                if (await _context.Users.AnyAsync(u => u.Username == request.Username.ToLower()))
+                    return BadRequest("Username is already taken.");
+
+                if (await _context.Users.AnyAsync(u => u.Email == request.Email.ToLower()))
+                    return BadRequest("Email is already taken.");
+
+                var user = new User
+                {
+                    Username = request.Username.ToLower(),
+                    Email = request.Email.ToLower(),
+                    PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.Password)
+                };
+
+                _context.Users.Add(user);
+                await _context.SaveChangesAsync();
+
+                return new AuthResponse
+                {
+                    Id = user.Id,
+                    Username = user.Username,
+                    Email = user.Email,
+                    Token = _tokenService.CreateToken(user)
+                };
+            }
+            catch (Exception)
             {
-                Id = user.Id,
-                Username = user.Username,
-                Email = user.Email,
-                Token = _tokenService.CreateToken(user)
-            };
+                throw;
+            }
         }
 
         [HttpPost("login")]

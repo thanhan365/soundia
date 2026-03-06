@@ -15,12 +15,9 @@ import LibraryPage from "./pages/LibraryPage";
 import NewMusicPage from "./pages/NewMusicPage";
 import GenresPage from "./pages/GenresPage";
 import PlaylistPage from "./pages/PlaylistPage";
-<<<<<<< HEAD
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import { AuthProvider } from "./context/AuthContext";
-=======
->>>>>>> d9b9a7bdd6beca500ceafa680c096f24878e5382
 import { HiMenuAlt2, HiArrowLeft } from "react-icons/hi";
 
 function AppContent() {
@@ -66,11 +63,8 @@ function AppContent() {
             <Route path="/new-music" element={<NewMusicPage />} />
             <Route path="/genres" element={<GenresPage />} />
             <Route path="/playlist/:id" element={<PlaylistPage />} />
-<<<<<<< HEAD
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
-=======
->>>>>>> d9b9a7bdd6beca500ceafa680c096f24878e5382
           </Routes>
         </div>
       </main>
@@ -84,7 +78,6 @@ function AppContent() {
 
 export default function App() {
   return (
-<<<<<<< HEAD
     <AuthProvider>
       <ToastProvider>
         <PlayerProvider>
@@ -92,12 +85,5 @@ export default function App() {
         </PlayerProvider>
       </ToastProvider>
     </AuthProvider>
-=======
-    <PlayerProvider>
-      <ToastProvider>
-        <AppContent />
-      </ToastProvider>
-    </PlayerProvider>
->>>>>>> d9b9a7bdd6beca500ceafa680c096f24878e5382
   );
 }

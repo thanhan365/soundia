@@ -18,6 +18,14 @@ namespace Soundia.Api.Controllers
             _context = context;
         }
 
+        [HttpGet("deezer-proxy")]
+        public async Task<ActionResult> DeezerProxy([FromQuery] string query)
+        {
+            using var client = new System.Net.Http.HttpClient();
+            var response = await client.GetStringAsync($"https://api.deezer.com/search?q={System.Net.WebUtility.UrlEncode(query)}");
+            return Content(response, "application/json");
+        }
+
         [HttpGet]
         public async Task<ActionResult<IEnumerable<Song>>> GetSongs()
         {
@@ -29,12 +37,25 @@ namespace Soundia.Api.Controllers
         {
             var song = await _context.Songs.FindAsync(id);
 
-            if (song == null)
-            {
-                return NotFound();
-            }
+            if (song == null) return NotFound();
 
             return song;
+        }
+
+        // Endpoint mới để lưu bài hát từ Deezer vào DB
+        [HttpPost("external")]
+        public async Task<ActionResult<Song>> CreateExternalSong([FromBody] Song song)
+        {
+            var existingSong = await _context.Songs
+                .FirstOrDefaultAsync(s => s.Title == song.Title && s.Artist == song.Artist);
+
+            if (existingSong != null) return Ok(existingSong);
+
+            song.Id = 0; 
+            _context.Songs.Add(song);
+            await _context.SaveChangesAsync();
+
+            return CreatedAtAction(nameof(GetSong), new { id = song.Id }, song);
         }
     }
 }

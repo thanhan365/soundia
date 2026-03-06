@@ -20,9 +20,11 @@ function SongItem({ song, index }) {
 
   const handleFav = useCallback((e) => {
     e.stopPropagation();
-    toggleFavorite(song.id);
+    toggleFavorite(song);
+    // showToast được gọi trong toggleFavorite hoặc giữ ở đây tùy ý, 
+    // nhưng toggleFavorite giờ cần cả object song
     showToast(liked ? "Đã bỏ yêu thích" : "Đã thêm vào yêu thích", liked ? "info" : "success");
-  }, [song.id, liked, toggleFavorite, showToast]);
+  }, [song, liked, toggleFavorite, showToast]);
 
   const handleQueue = useCallback((e) => {
     e.stopPropagation();
