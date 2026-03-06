@@ -139,11 +139,30 @@ export function PlayerProvider({ children }) {
     audio.addEventListener("error", onErr);
     audio.addEventListener("play", onPlay);
     audio.addEventListener("pause", onPause);
-    
-    // Resume animation loop if playing state changes but events don't fire
-    if (isPlaying && !isYTMode) {
+
+    // Dùng loop chung cho cả HTML5 và YouTube để polling thời gian mượt mà
+    const pollTime = () => {
+      if (!isPlaying) return;
+
+      if (isYTMode && ytPlayerRef.current) {
+        // Polling trực tiếp từ YouTube Player object
+        const t = ytPlayerRef.current.getCurrentTime();
+        const d = ytPlayerRef.current.getDuration();
+        if (t !== undefined) setCurrentTime(t);
+        if (d && d > 0 && !isNaN(d)) setDuration(d);
+      } else if (!isYTMode) {
+        // Polling từ thẻ Audio local
+        setCurrentTime(audio.currentTime);
+        const dur = audio.duration;
+        if (dur && !isNaN(dur)) setDuration(dur);
+      }
+
+      animFrameRef.current = requestAnimationFrame(pollTime);
+    };
+
+    if (isPlaying) {
       if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
-      animFrameRef.current = requestAnimationFrame(updateProgress);
+      animFrameRef.current = requestAnimationFrame(pollTime);
     } else {
       if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
     }
@@ -192,7 +211,9 @@ export function PlayerProvider({ children }) {
   const handleYTTimeUpdate = useCallback((t, d) => {
     if (isYTMode) { 
       setCurrentTime(t); 
-      if (d > 0) setDuration(d); 
+      if (d > 0) {
+        setDuration(d); 
+      }
     }
   }, [isYTMode]);
 
@@ -230,7 +251,13 @@ export function PlayerProvider({ children }) {
       setIsPlaying(true); // always true immediately for UI responsiveness
       setIsLoadingStream(true);
       setCurrentTime(0);
-      setDuration(0);
+      
+      // Khởi tạo duration dựa vào metadata của bài hát thay vì 0
+      if (song.duration) {
+        setDuration(song.duration);
+      } else {
+        setDuration(0);
+      }
 
       // Query tìm kiếm: "Artist - Title official audio"
       const query = `${song.artist} - ${song.title} official audio`;

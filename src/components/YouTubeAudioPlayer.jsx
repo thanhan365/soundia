@@ -99,12 +99,16 @@ const YouTubeAudioPlayer = forwardRef(function YouTubeAudioPlayer(
             if (e.data === 1 /* PLAYING */) {
               if (timerRef.current) clearInterval(timerRef.current);
               timerRef.current = setInterval(() => {
-                if (playerRef.current && typeof playerRef.current.getCurrentTime === 'function') {
-                  const t = playerRef.current.getCurrentTime() || 0;
-                  const d = playerRef.current.getDuration() || 0;
-                  callbacksRef.current.onTimeUpdate?.(t, d);
-                }
-              }, 200); // Tăng tần suất update cho mượt hơn
+                try {
+                  if (playerRef.current && typeof playerRef.current.getCurrentTime === 'function') {
+                    const t = playerRef.current.getCurrentTime() || 0;
+                    const d = playerRef.current.getDuration() || 0;
+                    if (d > 0) {
+                      callbacksRef.current.onTimeUpdate?.(t, d);
+                    }
+                  }
+                } catch (err) { }
+              }, 250); // Tăng tần suất update cho mượt hơn
             } else {
               if (timerRef.current) clearInterval(timerRef.current);
             }

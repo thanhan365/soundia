@@ -164,3 +164,4 @@ D:\WORKSPACE\soundia\backend\bin\Debug\net10.0\Soundia.Api.dll
 D:\WORKSPACE\soundia\backend\bin\Debug\net10.0\Soundia.Api.pdb
 D:\WORKSPACE\soundia\backend\obj\Debug\net10.0\Soundia.Api.genruntimeconfig.cache
 D:\WORKSPACE\soundia\backend\obj\Debug\net10.0\ref\Soundia.Api.dll
+D:\WORKSPACE\soundia\backend\obj\Debug\net10.0\staticwebassets.upToDateCheck.txt
