@@ -34,13 +34,13 @@ const YouTubeAudioPlayer = forwardRef(function YouTubeAudioPlayer(
       }
 
       try {
-        console.log('[YT] Fetching videoId for:', query);
+
         const res = await fetch(
           `${BACKEND_URL}/stream/video-id?query=${encodeURIComponent(query)}`
         );
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const { videoId } = await res.json();
-        console.log('[YT] Got videoId:', videoId, '— calling loadVideoById...');
+
 
         // playerRef.current là e.target từ onReady → có đầy đủ method
         playerRef.current.loadVideoById({ videoId, startSeconds: 0 });
@@ -64,6 +64,46 @@ const YouTubeAudioPlayer = forwardRef(function YouTubeAudioPlayer(
     getDuration()    { return playerRef.current?.getDuration?.() ?? 0; },
     isReady()        { return readyRef.current && !!playerRef.current; },
   }));
+
+  // ── Global Polling Interval for Time Update ──────────────────────────────
+  // Tránh việc miss event onStateChange làm kẹt interval và xử lý background throttling
+  useEffect(() => {
+    const startInterval = () => {
+      if (timerRef.current) clearInterval(timerRef.current);
+      timerRef.current = setInterval(() => {
+        try {
+          if (readyRef.current && playerRef.current && typeof playerRef.current.getPlayerState === 'function') {
+            const state = playerRef.current.getPlayerState();
+            // Lấy time/duration liên tục kể cả khi đang Pause(2), Buffering(3), Cued(5) 
+            // Điều này rất quan trọng để có được Duration hiển thị lúc vừa mở tab bị block autoplay
+            if (state === 1 || state === 2 || state === 3 || state === 5) { 
+              const t = playerRef.current.getCurrentTime() || 0;
+              const d = playerRef.current.getDuration() || 0;
+              console.log(`[YT Interval] state=${state}, t=${t}, d=${d}`);
+              callbacksRef.current.onTimeUpdate?.(t, d);
+            }
+          }
+        } catch (err) { }
+      }, 250);
+    };
+
+    // Khởi động lần đầu
+    startInterval();
+
+    const handleVisibilityChange = () => {
+      // Khi tab active trở lại, lập tức đánh thức Interval
+      if (document.visibilityState === 'visible') {
+        startInterval();
+      }
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, []);
 
   // ── Init YouTube IFrame API ──────────────────────────────────────────────
   useEffect(() => {
@@ -90,32 +130,14 @@ const YouTubeAudioPlayer = forwardRef(function YouTubeAudioPlayer(
             // KHÔNG dùng giá trị từ `new YT.Player()` vì nó là object trước khi init
             playerRef.current = e.target;
             readyRef.current = true;
-            console.log('[YT] Player ready ✓ (e.target assigned)');
+
             onReady?.();
           },
           onStateChange: (e) => {
             callbacksRef.current.onStateChange?.(e.data);
-
-            if (e.data === 1 /* PLAYING */) {
-              if (timerRef.current) clearInterval(timerRef.current);
-              timerRef.current = setInterval(() => {
-                try {
-                  if (playerRef.current && typeof playerRef.current.getCurrentTime === 'function') {
-                    const t = playerRef.current.getCurrentTime() || 0;
-                    const d = playerRef.current.getDuration() || 0;
-                    if (d > 0) {
-                      callbacksRef.current.onTimeUpdate?.(t, d);
-                    }
-                  }
-                } catch (err) { }
-              }, 250); // Tăng tần suất update cho mượt hơn
-            } else {
-              if (timerRef.current) clearInterval(timerRef.current);
-            }
           },
           onError: (e) => {
             console.error('[YT] Player error code:', e.data);
-            if (timerRef.current) clearInterval(timerRef.current);
             callbacksRef.current.onError?.();
           },
         },
@@ -142,7 +164,6 @@ const YouTubeAudioPlayer = forwardRef(function YouTubeAudioPlayer(
     }
 
     return () => {
-      clearInterval(timerRef.current);
       readyRef.current = false;
       try { playerRef.current?.destroy(); } catch (_) {}
       playerRef.current = null;

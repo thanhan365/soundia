@@ -1,53 +1,74 @@
-import SongList from "../components/SongList";
-import BannerSlider from "../components/BannerSlider";
-import SongCard from "../components/SongCard";
+import React from "react";
 import { usePlayer } from "../context/PlayerContext";
 
-export default function Home() {
-  const { error, allSongs } = usePlayer();
+// Import Original Sections
+import BannerSlider from "../components/BannerSlider";
 
-  // Pick some songs to show as "cards"
-  const newSongs = allSongs.slice(5, 11);
+// Import New Sections
+import TrendingSection from "../components/home/TrendingSection";
+import MoodGenreSection from "../components/home/MoodGenreSection";
+import PlaylistSection from "../components/home/PlaylistSection";
+import ArtistSection from "../components/home/ArtistSection";
+import RecentlyPlayed from "../components/home/RecentlyPlayed";
+import RandomDiscovery from "../components/home/RandomDiscovery";
+import DeezerTrendingSection from "../components/home/DeezerTrendingSection";
+
+export default function Home() {
+  const { error, allSongs, playSong, recentHistory } = usePlayer();
+
+  // We no longer need featuredSong and trendingSongs since BannerSlider and SongList handle them
+  const newReleaseSongs = allSongs.slice(7, 13);
+  
+  // Use recent history from context
+  const recentSongs = recentHistory || [];
+
+  const handleRandomDiscover = () => {
+    if (allSongs.length > 0) {
+      const randomIndex = Math.floor(Math.random() * allSongs.length);
+      playSong(allSongs[randomIndex]);
+    }
+  };
 
   return (
-    <div className="space-y-4 sm:space-y-6 md:space-y-8">
-      {/* Error */}
+    <div className="bg-[#050511] min-h-screen text-white pb-32">
+      {/* Error Toast */}
       {error && (
-        <div className="bg-red-500/10 border border-red-500/30 text-red-400 px-3 sm:px-4 py-2 sm:py-3 rounded-lg animate-pulse text-xs sm:text-sm">
+        <div className="fixed top-20 left-1/2 -translate-x-1/2 z-50 bg-red-500/80 backdrop-blur-md border border-red-400 text-white px-6 py-3 rounded-full shadow-2xl animate-bounce text-sm font-medium">
           {error}
         </div>
       )}
 
-      {/* Banner Slider */}
-      <div className="-mx-4 sm:mx-0 px-4 sm:px-0">
-        <BannerSlider />
+      {/* Banner / Hero Section using old slider mechanics */}
+      <BannerSlider />
+
+      {/* Main Content Area */}
+      <div className="mx-auto px-4 sm:px-6 md:px-8 max-w-7xl space-y-8 md:space-y-12 mt-8">
+        
+        {/* Random Discovery Widget */}
+        <RandomDiscovery onDiscover={handleRandomDiscover} />
+
+        {/* Real Trending SongList from Deezer Chart */}
+        <DeezerTrendingSection />
+        
+        {/* Moods & Genres Grid */}
+        <MoodGenreSection onPlayRandom={handleRandomDiscover} />
+
+        {/* Playlists */}
+        <PlaylistSection onPlayRandom={handleRandomDiscover} />
+
+        {/* Artists */}
+        <ArtistSection onPlayRandom={handleRandomDiscover} />
+
+        {/* More Songs */}
+        {newReleaseSongs.length > 0 && (
+          <TrendingSection songs={newReleaseSongs} title="Mới Phát Hành" />
+        )}
+
+        {/* Recently Played History */}
+        {recentSongs.length > 0 && <RecentlyPlayed songs={recentSongs} />}
+        
       </div>
-
-      {/* New music cards */}
-      {newSongs.length > 0 && (
-        <div>
-          <h2 className="text-base sm:text-lg md:text-xl font-bold text-white mb-2 sm:mb-3 md:mb-4">Gợi ý cho bạn</h2>
-
-          {/* Mobile: scroll ngang */}
-          <div className="flex gap-2 sm:gap-3 overflow-x-auto pb-2 snap-x snap-mandatory scrollbar-hide sm:hidden -mx-4 px-4">
-            {newSongs.map((song) => (
-              <div key={song.id} className="snap-start flex-shrink-0 w-[120px] sm:w-[140px]">
-                <SongCard song={song} />
-              </div>
-            ))}
-          </div>
-
-          {/* Tablet/Desktop: grid */}
-          <div className="hidden sm:grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-6 gap-2 sm:gap-3 md:gap-4">
-            {newSongs.map((song) => (
-              <SongCard key={song.id} song={song} />
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Trending song list */}
-      <SongList />
     </div>
   );
 }
+

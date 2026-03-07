@@ -1,0 +1,220 @@
+=============== FILE: src/context/PlayerContext.jsx ===============
+import { createContext, useContext, useState, useRef, useEffect, useCallback } from "react";
+import { AuthContext } from "./AuthContext";
+import { useToast } from "./ToastContext";
+import api from "../utils/api";
+import { searchDeezer } from "../services/deezerService";
+
+const PlayerContext = createContext();
+
+export function PlayerProvider({ children }) {
+  const { user } = useContext(AuthContext);
+  const { showToast } = useToast();
+
+  // ── State ─────────────────────────────────────────────────────────────────
+  const [allSongs, setAllSongs] = useState([]);
+  const [currentSong, setCurrentSong] = useState(null);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [duration, setDuration] = useState(0);
+  const [isYTMode, setIsYTMode] = useState(false);
+  const audioRef = useRef(new Audio()); 
+  const ytPlayerRef = useRef(null);
+
+  // Note: timeupdate is handled here for HTML5 audio
+  useEffect(() => {
+    const audio = audioRef.current;
+    
+    // Core timeupdate handler for HTML5 audio
+    const onTimeUpdate = () => {
+      if (!isYTModeRef.current) {
+        setCurrentTime(audio.currentTime);
+        if (audio.duration && !isNaN(audio.duration)) setDuration(audio.duration);
+      }
+    };
+    
+    const onMeta = () => {
+      const dur = audio.duration;
+      if (dur && !isNaN(dur)) setDuration(dur);
+    };
+
+    audio.addEventListener("loadedmetadata", onMeta);
+    audio.addEventListener("timeupdate", onTimeUpdate);
+    
+    return () => {
+      audio.removeEventListener("loadedmetadata", onMeta);
+      audio.removeEventListener("timeupdate", onTimeUpdate);
+    };
+  }, []);
+
+  // Sync refs to avoid stale closures in callbacks
+  const isYTModeRef = useRef(isYTMode);
+  useEffect(() => { isYTModeRef.current = isYTMode; }, [isYTMode]);
+
+  // YouTube time updates are received via callback from YouTubeAudioPlayer
+  const handleYTTimeUpdate = useCallback((t, d) => {
+    if (isYTModeRef.current) {
+      setCurrentTime(t);
+      if (d > 0) setDuration(d);
+    }
+  }, []);
+
+  const seekTo = (t) => {
+    if (isYTMode) {
+      ytPlayerRef.current?.seekTo(t);
+      setCurrentTime(t);
+    } else {
+      audioRef.current.currentTime = t;
+      setCurrentTime(t);
+    }
+  };
+
+  // ... (Full implementation in actual project)
+}
+
+=============== FILE: src/components/ProgressBar.jsx ===============
+import { useRef, useState } from "react";
+import { usePlayer } from "../context/PlayerContext";
+import RangeSlider from "./RangeSlider";
+
+function formatTime(seconds) {
+  if (!seconds || isNaN(seconds) || seconds < 0) return "0:00";
+  const mins = Math.floor(seconds / 60);
+  const secs = Math.floor(seconds % 60);
+  return `${mins}:${secs.toString().padStart(2, "0")}`;
+}
+
+export default function ProgressBar() {
+  const { currentTime, duration, seekTo } = usePlayer();
+
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragValue, setDragValue] = useState(0);
+  const isDraggingRef = useRef(false);
+
+  // logic: 
+  // 1. While dragging: displayTime = dragValue (local state) to prevent jitter
+  // 2. On commit: call seekTo(dragValue) to update the hardware player
+  
+  const handleSeekStart = (e) => {
+    isDraggingRef.current = true;
+    setIsDragging(true);
+    setDragValue(parseFloat(e.target.value));
+  };
+
+  const handleSeekMove = (e) => {
+    if (isDraggingRef.current) setDragValue(parseFloat(e.target.value));
+  };
+
+  const handleSeekEnd = (e) => {
+    const t = parseFloat(e.target.value);
+    isDraggingRef.current = false;
+    setIsDragging(false);
+    seekTo(t);
+  };
+
+  const displayTime = isDragging ? dragValue : currentTime;
+
+  return (
+    <div className="flex items-center gap-3 w-full">
+      <span className="text-xs text-gray-500 font-mono w-10 text-right">
+        {formatTime(displayTime)}
+      </span>
+      <RangeSlider
+        value={displayTime}
+        min={0}
+        max={duration > 0 ? duration : 100}
+        step={0.1}
+        onMouseDown={handleSeekStart}
+        onChange={handleSeekMove}
+        onMouseUp={handleSeekEnd}
+        showGlow={true}
+        className="flex-1 h-1"
+      />
+      <span className="text-xs text-gray-500 font-mono w-10">
+        {formatTime(duration)}
+      </span>
+    </div>
+  );
+}
+
+=============== FILE: src/components/RangeSlider.jsx ===============
+export default function RangeSlider({
+  value,
+  min = 0,
+  max = 100,
+  step = 0.1,
+  onChange,
+  onMouseDown,
+  onMouseUp,
+  showGlow = false,
+  className = "w-full h-1",
+}) {
+  const progress = max > 0 ? (value / max) * 100 : 0;
+
+  return (
+    <div className={`relative flex items-center group ${className}`}>
+      {/* Visual Background Track */}
+      <div className="absolute inset-x-0 h-1 bg-gray-dark rounded-full" />
+      
+      {/* Visual Progress Highlight */}
+      <div
+        className="absolute inset-y-0 left-0 h-1 bg-neon rounded-full"
+        style={{ width: `${progress}%`, top: '50%', transform: 'translateY(-50%)' }}
+      />
+      
+      {/* Interaction Layer (Invisible Range Input) */}
+      <input
+        type="range"
+        min={min}
+        max={max}
+        step={step}
+        value={value || 0}
+        onChange={onChange}
+        onPointerDown={onMouseDown} // Use pointer events for accurate hit-testing
+        onPointerUp={onMouseUp}
+        onPointerCancel={onMouseUp}
+        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer m-0 p-0"
+      />
+    </div>
+  );
+}
+
+=============== FILE: src/components/YouTubeAudioPlayer.jsx ===============
+import { useEffect, useRef, forwardRef, useImperativeHandle } from 'react';
+
+const YouTubeAudioPlayer = forwardRef(function YouTubeAudioPlayer(
+  { onReady, onStateChange, onTimeUpdate, onError },
+  ref
+) {
+  const playerRef = useRef(null);
+  const timerRef = useRef(null);
+  const readyRef = useRef(false);
+  const callbacksRef = useRef({ onTimeUpdate });
+
+  useEffect(() => { callbacksRef.current = { onTimeUpdate }; });
+
+  // YouTube polling interval (250ms) to bypass browser throttling in background tabs
+  useEffect(() => {
+    const startInterval = () => {
+      if (timerRef.current) clearInterval(timerRef.current);
+      timerRef.current = setInterval(() => {
+        if (readyRef.current && playerRef.current) {
+          const state = playerRef.current.getPlayerState();
+          // Status: 1=playing, 2=paused, 3=buffering, 5=cued
+          if ([1, 2, 3, 5].includes(state)) {
+            const t = playerRef.current.getCurrentTime() || 0;
+            const d = playerRef.current.getDuration() || 0;
+            callbacksRef.current.onTimeUpdate?.(t, d);
+          }
+        }
+      }, 250);
+    };
+    
+    startInterval();
+    document.addEventListener("visibilitychange", () => {
+      if (document.visibilityState === 'visible') startInterval();
+    });
+  }, []);
+
+  // ... (Full implementation in actual project)
+}

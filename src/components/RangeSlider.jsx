@@ -4,22 +4,24 @@ export default function RangeSlider({
   max = 100,
   step = 0.1,
   onChange,
+  onMouseDown,
+  onMouseUp,
   showGlow = false,
   className = "w-full h-1",
 }) {
   const progress = max > 0 ? (value / max) * 100 : 0;
 
   return (
-    <div className={`relative flex-1 group ${className}`}>
-      <div className="absolute inset-0 bg-gray-dark rounded-full" />
+    <div className={`relative flex items-center group ${className}`}>
+      <div className="absolute inset-x-0 h-1 bg-gray-dark rounded-full" />
       <div
-        className="absolute top-0 left-0 h-full bg-neon rounded-full transition-all duration-100"
-        style={{ width: `${progress}%` }}
+        className="absolute inset-y-0 left-0 h-1 bg-neon rounded-full"
+        style={{ width: `${progress}%`, top: '50%', transform: 'translateY(-50%)' }}
       />
       {showGlow && (
         <div
-          className="absolute top-0 left-0 h-full bg-neon/30 rounded-full blur-sm"
-          style={{ width: `${progress}%` }}
+          className="absolute inset-y-0 left-0 h-1 bg-neon/30 rounded-full blur-sm"
+          style={{ width: `${progress}%`, top: '50%', transform: 'translateY(-50%)' }}
         />
       )}
       <input
@@ -29,7 +31,10 @@ export default function RangeSlider({
         step={step}
         value={value || 0}
         onChange={onChange}
-        className="absolute inset-0 w-full opacity-0 cursor-pointer"
+        onPointerDown={onMouseDown}
+        onPointerUp={onMouseUp}
+        onPointerCancel={onMouseUp}
+        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer m-0 p-0"
       />
     </div>
   );
