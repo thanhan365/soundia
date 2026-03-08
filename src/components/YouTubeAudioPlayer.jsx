@@ -65,6 +65,9 @@ const YouTubeAudioPlayer = forwardRef(function YouTubeAudioPlayer(
     isReady()        { return readyRef.current && !!playerRef.current; },
   }));
 
+  // Track last polled state to detect state changes (especially ENDED)
+  const lastPolledStateRef = useRef(-99);
+
   // ── Global Polling Interval for Time Update ──────────────────────────────
   // Tránh việc miss event onStateChange làm kẹt interval và xử lý background throttling
   useEffect(() => {
@@ -74,12 +77,18 @@ const YouTubeAudioPlayer = forwardRef(function YouTubeAudioPlayer(
         try {
           if (readyRef.current && playerRef.current && typeof playerRef.current.getPlayerState === 'function') {
             const state = playerRef.current.getPlayerState();
-            // Lấy time/duration liên tục kể cả khi đang Pause(2), Buffering(3), Cued(5) 
-            // Điều này rất quan trọng để có được Duration hiển thị lúc vừa mở tab bị block autoplay
+            
+            // Detect state change qua polling (backup cho onStateChange event)
+            // Đặc biệt quan trọng cho state 0 (ENDED) vì YouTube đôi khi miss event
+            if (state !== lastPolledStateRef.current) {
+              lastPolledStateRef.current = state;
+              callbacksRef.current.onStateChange?.(state);
+            }
+            
+            // Lấy time/duration liên tục
             if (state === 1 || state === 2 || state === 3 || state === 5) { 
               const t = playerRef.current.getCurrentTime() || 0;
               const d = playerRef.current.getDuration() || 0;
-              console.log(`[YT Interval] state=${state}, t=${t}, d=${d}`);
               callbacksRef.current.onTimeUpdate?.(t, d);
             }
           }

@@ -86,6 +86,102 @@ namespace Soundia.Api.Controllers
             }
         }
 
+        [HttpGet("itunes-top")]
+        public async Task<ActionResult> ItunesTop([FromQuery] int limit = 50)
+        {
+            try
+            {
+                using var client = new System.Net.Http.HttpClient();
+                var url = $"https://itunes.apple.com/vn/rss/topsongs/limit={limit}/json";
+                var response = await client.GetStringAsync(url);
+                return Content(response, "application/json");
+            }
+            catch (System.Exception ex)
+            {
+                return StatusCode(500, new { message = "Error fetching from iTunes Top API", details = ex.Message });
+            }
+        }
+
+        [HttpGet("nct-top")]
+        public async Task<ActionResult> NctTop()
+        {
+            try
+            {
+                // Use NCT's internal chart API directly — returns Top 50 with stream URLs
+                using var client = new System.Net.Http.HttpClient();
+                client.DefaultRequestHeaders.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36");
+                
+                var chartUrl = "https://graph.nhaccuatui.com/api/v1/playlist/charts/1-5-d64-2026?key=1-5-d64-2026&isShowLoading=false";
+                var json = await client.GetStringAsync(chartUrl);
+                using var doc = System.Text.Json.JsonDocument.Parse(json);
+
+                var dataNode = doc.RootElement.GetProperty("data");
+                var items = dataNode.GetProperty("items");
+
+                var songs = new List<object>();
+                int count = 0;
+                foreach (var item in items.EnumerateArray())
+                {
+                    if (count >= 20) break; // Only take top 20
+
+                    var name = item.GetProperty("name").GetString() ?? "";
+                    
+                    var artistName = "Unknown";
+                    if (item.TryGetProperty("artistName", out var aName))
+                    {
+                         artistName = aName.GetString() ?? "Unknown";
+                    }
+                    else if (item.TryGetProperty("artist", out var artistArr) && artistArr.GetArrayLength() > 0)
+                    {
+                         artistName = artistArr[0].GetProperty("name").GetString() ?? "Unknown";
+                    }
+                    
+                    var image = item.GetProperty("image").GetString() ?? "";
+                    var key = item.GetProperty("key").GetString() ?? "";
+                    var duration = item.TryGetProperty("duration", out var dur) ? dur.GetInt32() : 0;
+
+                    // Get best non-VIP stream URL (prefer 320kbps)
+                    string streamUrl = "";
+                    if (item.TryGetProperty("streamURL", out var streamUrls) && streamUrls.ValueKind == System.Text.Json.JsonValueKind.Array)
+                    {
+                        // Try 320kbps first, then 128kbps
+                        foreach (var su in streamUrls.EnumerateArray())
+                        {
+                            var onlyVIP = su.TryGetProperty("onlyVIP", out var vip) && vip.GetBoolean();
+                            if (onlyVIP) continue;
+                            
+                            var stream = su.TryGetProperty("stream", out var s) ? s.GetString() : "";
+                            var type = su.TryGetProperty("type", out var t) ? t.GetString() : "";
+                            
+                            if (!string.IsNullOrEmpty(stream))
+                            {
+                                streamUrl = stream;
+                                if (type == "320") break; // Prefer 320kbps
+                            }
+                        }
+                    }
+
+                    songs.Add(new {
+                        id = $"nct_top_{key}",
+                        title = name,
+                        artist = artistName,
+                        cover = image,
+                        key,
+                        audio = string.IsNullOrEmpty(streamUrl) ? "YT_STREAM" : $"/api/stream/proxy-audio?url={System.Net.WebUtility.UrlEncode(streamUrl)}",
+                        source = "nct",
+                        duration
+                    });
+                    count++;
+                }
+
+                return Ok(new { success = true, data = songs });
+            }
+            catch (System.Exception ex)
+            {
+                return StatusCode(500, new { message = "Error fetching from NCT Top", details = ex.Message });
+            }
+        }
+
         // ── Database Song Endpoints ────────────────────────────────────────────
         [HttpGet]
         public async Task<ActionResult<IEnumerable<Song>>> GetSongs()
@@ -93,7 +189,7 @@ namespace Soundia.Api.Controllers
             return await _context.Songs.ToListAsync();
         }
 
-        [HttpGet("{id}")]
+        [HttpGet("{id:int}")]
         public async Task<ActionResult<Song>> GetSong(int id)
         {
             var song = await _context.Songs.FindAsync(id);

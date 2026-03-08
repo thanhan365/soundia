@@ -36,14 +36,14 @@ export default function Sidebar({ isOpen, onClose }) {
     <>
       {/* Mobile overlay */}
       {isOpen && (
-        <div className="fixed inset-0 bg-black/60 z-40 lg:hidden" onClick={onClose} />
+        <div className="fixed inset-0 bg-black/60 z-[55] lg:hidden" onClick={onClose} />
       )}
 
       <aside
         onMouseEnter={() => setHovered(true)}
         onMouseLeave={() => setHovered(false)}
         className={`
-          fixed top-0 left-0 z-50 bottom-[96px] sm:bottom-[72px]
+          fixed top-0 left-0 z-[60] bottom-[96px] sm:bottom-[72px]
           bg-[#170f23]/98 backdrop-blur-2xl border-r border-white/5
           flex flex-col transition-all duration-300 ease-in-out
           ${isExpanded ? "w-64 shadow-2xl shadow-black/50" : "w-[72px]"}

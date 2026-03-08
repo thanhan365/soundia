@@ -37,7 +37,7 @@ export default function MoodGenreSection() {
           <div
             key={mood.id}
             onClick={() => handleMoodClick(mood)}
-            className={`cursor-pointer overflow-hidden rounded-2xl p-5 h-28 md:h-36 relative group transition-all duration-500 hover:-translate-y-1 hover:shadow-[0_15px_30px_rgba(255,255,255,0.08)]`}
+            className={`cursor-pointer overflow-hidden rounded-2xl p-5 h-28 md:h-36 relative group transition-all duration-500 hover:shadow-[0_15px_30px_rgba(255,255,255,0.08)]`}
           >
             {/* Background Gradient */}
             <div className={`absolute inset-0 bg-gradient-to-br ${mood.from} ${mood.to} opacity-75 group-hover:opacity-100 transition-opacity duration-300`} />

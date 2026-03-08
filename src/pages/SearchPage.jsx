@@ -41,7 +41,7 @@ function PlaylistResultCard({ pl }) {
   return (
     <div
       onClick={() => navigate(`/playlist-detail/${pl.id}`)}
-      className="bg-white/[0.03] hover:bg-white/[0.08] border border-white/5 hover:border-neon/30 p-2 md:p-3 rounded-xl transition-all duration-300 group cursor-pointer hover:-translate-y-1 w-32 md:w-40 flex-shrink-0"
+      className="bg-white/[0.03] hover:bg-white/[0.08] border border-white/5 hover:border-neon/30 p-2 md:p-3 rounded-xl transition-all duration-300 group cursor-pointer w-32 md:w-40 flex-shrink-0"
     >
       <div className="relative w-full aspect-square mb-2 rounded-lg overflow-hidden shadow-md">
         {pl.cover ? (
@@ -67,7 +67,7 @@ export default function SearchPage() {
         icon={HiSearch}
         label="Tìm kiếm"
         title={<>Khám phá <span className="text-neon text-glow">Âm nhạc</span></>}
-        description="Kết quả từ Spotify."
+        description="Kết quả từ iTunes & NhacCuaTui."
       />
       
       {searchQuery && (

@@ -117,7 +117,7 @@ export default function LibraryPage() {
                 return (
                   <div
                     key={pl.id}
-                    className="group bg-white/[0.03] rounded-xl p-3 sm:p-4 border border-white/5 hover:border-neon/20 hover:bg-white/[0.05] transition-all duration-300 hover:scale-[1.02]"
+                    className="group bg-white/[0.03] rounded-xl p-3 sm:p-4 border border-white/5 hover:border-neon/20 hover:bg-white/[0.05] transition-all duration-300"
                   >
                     <div className="w-full aspect-square rounded-lg bg-gradient-to-br from-neon/20 to-purple-500/20 flex items-center justify-center mb-3">
                       <HiCollection className="text-4xl text-neon/60" />

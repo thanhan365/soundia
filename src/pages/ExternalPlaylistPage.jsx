@@ -150,7 +150,7 @@ export default function ExternalPlaylistPage() {
               <div
                 key={song.id}
                 onClick={(e) => { e.stopPropagation(); if (isActive) togglePlay(); else playSong(song); }}
-                className={`group grid grid-cols-[40px_1fr_40px] md:grid-cols-[50px_minmax(150px,2fr)_minmax(120px,1fr)_80px] gap-3 md:gap-4 px-2 md:px-6 py-2.5 md:py-3 items-center rounded-xl md:rounded-2xl cursor-pointer hover:-translate-y-0.5 transition-all duration-200 ${
+                className={`group grid grid-cols-[40px_1fr_40px] md:grid-cols-[50px_minmax(150px,2fr)_minmax(120px,1fr)_80px] gap-3 md:gap-4 px-2 md:px-6 py-2.5 md:py-3 items-center rounded-xl md:rounded-2xl cursor-pointer transition-all duration-200 ${
                   isActive ? "bg-cyan-500/10 border border-cyan-500/20" : "hover:bg-white/[0.04] border border-transparent"
                 }`}
               >

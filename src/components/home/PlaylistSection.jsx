@@ -26,7 +26,7 @@ export default function PlaylistSection() {
           <div
             key={pl.id}
             onClick={() => handlePlaylistClick(pl)}
-            className="bg-white/[0.03] hover:bg-white/[0.08] border border-white/5 hover:border-purple-500/30 p-3 rounded-2xl transition-all duration-300 group cursor-pointer hover:-translate-y-1 hover:shadow-[0_10px_25px_rgba(168,85,247,0.12)]"
+            className="bg-white/[0.03] hover:bg-white/[0.08] border border-white/5 hover:border-purple-500/30 p-3 rounded-2xl transition-all duration-300 group cursor-pointer hover:shadow-[0_10px_25px_rgba(168,85,247,0.12)]"
           >
             <div className="relative w-full aspect-square mb-3 rounded-xl overflow-hidden shadow-lg bg-white/5 flex flex-col items-center justify-center">
               {pl.cover ? (

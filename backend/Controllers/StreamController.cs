@@ -48,8 +48,8 @@ namespace Soundia.Api.Controllers
                 var html = await http.GetStringAsync(url);
 
                 // YouTube embeds initial data as JSON in the page - extract video IDs
-                // Pattern: "videoId":"XXXXXXXXXXX"
-                var match = Regex.Match(html, "\"videoId\":\"([a-zA-Z0-9_-]{11})\"");
+                // Pattern: "videoRenderer":{"videoId":"XXXXXXXXXXX"
+                var match = Regex.Match(html, "\"videoRenderer\":\\{\"videoId\":\"([a-zA-Z0-9_-]{11})\"");
                 if (match.Success)
                 {
                     var videoId = match.Groups[1].Value;
@@ -204,6 +204,67 @@ namespace Soundia.Api.Controllers
             }
 
             return null;
+        }
+
+        [HttpGet("proxy-audio")]
+        public async Task ProxyAudio([FromQuery] string url)
+        {
+            if (string.IsNullOrWhiteSpace(url))
+            {
+                Response.StatusCode = 400;
+                await Response.WriteAsync("URL is required");
+                return;
+            }
+
+            try
+            {
+                var request = new HttpRequestMessage(HttpMethod.Get, url);
+                request.Headers.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36");
+                request.Headers.Add("Referer", "https://www.nhaccuatui.com/");
+
+                // Forward range header if present
+                if (Request.Headers.TryGetValue("Range", out var rangeHeader))
+                {
+                    request.Headers.Add("Range", rangeHeader.ToString());
+                }
+
+                using var client = new HttpClient();
+                // SendAsync with HttpCompletionOption.ResponseHeadersRead is CRITICAL for streaming without buffering the whole file
+                using var response = await client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead);
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    Response.StatusCode = (int)response.StatusCode;
+                    return;
+                }
+
+                // Copy relevant response headers to our response
+                Response.StatusCode = (int)response.StatusCode;
+                
+                if (response.Content.Headers.ContentType != null)
+                    Response.ContentType = response.Content.Headers.ContentType.ToString();
+                
+                if (response.Content.Headers.ContentLength.HasValue)
+                    Response.ContentLength = response.Content.Headers.ContentLength.Value;
+
+                if (response.Content.Headers.ContentRange != null)
+                    Response.Headers["Content-Range"] = response.Content.Headers.ContentRange.ToString();
+
+                if (response.Headers.AcceptRanges != null)
+                    Response.Headers["Accept-Ranges"] = response.Headers.AcceptRanges.ToString();
+
+                // Stream the content directly to the client
+                var stream = await response.Content.ReadAsStreamAsync();
+                await stream.CopyToAsync(Response.Body);
+            }
+            catch (Exception ex)
+            {
+                if (!Response.HasStarted)
+                {
+                    Response.StatusCode = 500;
+                    await Response.WriteAsync($"Error proxying audio: {ex.Message}");
+                }
+            }
         }
     }
 }

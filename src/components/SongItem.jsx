@@ -43,7 +43,7 @@ function SongItem({ song, index }) {
         onClick={() => playSong(song)}
         className={`
           w-full flex items-center gap-3 lg:gap-4 px-3 py-2 sm:px-4 sm:py-2.5 rounded-lg
-          transition-all duration-300 group hover:-translate-y-[1px] cursor-pointer text-left relative
+          transition-all duration-300 group cursor-pointer text-left relative
           ${isActive
             ? "bg-neon/10 border border-neon/20 shadow-[0_4px_12px_rgba(0,255,255,0.05)]"
             : "bg-transparent border border-transparent hover:bg-white/[0.04] hover:shadow-lg"

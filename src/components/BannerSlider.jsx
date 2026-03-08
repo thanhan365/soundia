@@ -63,15 +63,7 @@ export default function BannerSlider() {
               key={song.id}
               className="min-w-full relative flex-shrink-0 group overflow-hidden flex items-end p-4 md:p-8 lg:p-10"
             >
-              {/* Background Image w/ Zoom Effect */}
-              <div
-                className="absolute inset-0 bg-cover bg-center transition-transform duration-1000 group-hover:scale-105 opacity-50"
-                style={{ backgroundImage: `url(${song.cover})` }}
-              />
-              {/* Aurora Gradient Overlay */}
-              <div className="absolute inset-0 bg-gradient-to-t from-[#050511] via-[#050511]/80 to-transparent mix-blend-multiply" />
-              <div className="absolute inset-0 bg-gradient-to-r from-purple-900/40 via-transparent to-cyan-900/30" />
-
+              {/* Background removed to make banner transparent */}
               {/* Content wrapper */}
               <div className="relative z-10 flex flex-col md:flex-row items-end gap-8 w-full">
                 {/* Glow behind the cover image */}
