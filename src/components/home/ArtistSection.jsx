@@ -1,48 +1,85 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { usePlayer } from "../../context/PlayerContext";
 
-export default function ArtistSection({ onPlayRandom }) {
-  const artists = [
-    { id: 1, name: "Sơn Tùng M-TP", avatar: "https://i.scdn.co/image/ab6761610000e5ebb53ad37ea21f79f4175ac2ef", followers: "3.2M" },
-    { id: 2, name: "Đen Vâu", avatar: "https://i.scdn.co/image/ab6761610000e5ebeb93701633513b6329e4695e", followers: "2.1M" },
-    { id: 3, name: "Hoàng Thùy Linh", avatar: "https://i.scdn.co/image/ab6761610000e5ebd74f80041ebfaecbf1bfdbf7", followers: "1.5M" },
-    { id: 4, name: "Tlinh", avatar: "https://i.scdn.co/image/ab6761610000e5eba25e3f16d55de31ce98c2ca8", followers: "850K" },
-    { id: 5, name: "MCK", avatar: "https://i.scdn.co/image/ab6761610000e5eb1d2b8b958c2f1f0db9ec614e", followers: "1.1M" },
-    { id: 6, name: "HIEUTHUHAI", avatar: "https://i.scdn.co/image/ab6761610000e5ebe6b8015f617696efb2db4e94", followers: "920K" },
-  ];
+function ArtistCard({ artist, onClick }) {
+  const [imgFailed, setImgFailed] = useState(false);
+  const initial = artist.name.charAt(0).toUpperCase();
 
   return (
-    <section className="mb-12">
-      <h2 className="text-2xl md:text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-pink-300 to-purple-300 mb-6 drop-shadow-sm">
-        Nghệ Sĩ Theo Dõi
-      </h2>
-
-      <div className="flex gap-4 md:gap-8 overflow-x-auto pb-6 snap-x snap-mandatory scrollbar-hide md:overflow-visible md:pb-0">
-        {artists.map((artist) => (
-          <div
-            key={artist.id}
-            onClick={onPlayRandom}
-            className="flex flex-col items-center gap-3 snap-start flex-shrink-0 cursor-pointer group w-28 md:w-36"
-          >
-            <div className="relative w-24 h-24 md:w-36 md:h-36 rounded-full p-1 bg-gradient-to-br from-white/10 to-white/5 backdrop-blur-sm shadow-[0_10px_30px_rgba(0,0,0,0.5)] transition-all duration-500 group-hover:from-cyan-400 group-hover:to-pink-500 group-hover:shadow-[0_0_25px_rgba(236,72,153,0.4)]">
-              <img
-                src={artist.avatar}
-                alt={artist.name}
-                className="w-full h-full object-cover rounded-full border-[3px] border-[#0a0a14] group-hover:border-transparent transition-all duration-500"
-              />
-              <div className="absolute inset-0 rounded-full bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                 {/* Decorative glow inside */}
-              </div>
-            </div>
-            
-            <div className="text-center w-full">
-              <h3 className="text-white font-bold text-sm md:text-base truncate group-hover:text-pink-300 transition-colors">
-                {artist.name}
-              </h3>
-              <p className="text-xs text-purple-200/50 mt-1">
-                {artist.followers} Quan tâm
-              </p>
-            </div>
+    <div
+      onClick={() => onClick(artist)}
+      className="flex flex-col items-center gap-2.5 flex-shrink-0 cursor-pointer group w-24 md:w-auto"
+    >
+      <div className={`relative w-20 h-20 md:w-28 md:h-28 rounded-full overflow-hidden shadow-lg ring-2 ring-white/10 group-hover:ring-4 group-hover:ring-pink-400/60 transition-all duration-300`}>
+        {artist.picture && !imgFailed ? (
+          <img
+            src={artist.picture}
+            alt={artist.name}
+            className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+            onError={() => setImgFailed(true)}
+          />
+        ) : (
+          <div className={`w-full h-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center`}>
+            <span className="text-3xl md:text-4xl font-black text-white drop-shadow-lg">
+              {initial}
+            </span>
           </div>
+        )}
+        <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-full" />
+      </div>
+
+      <h3 className="text-white font-semibold text-xs md:text-sm text-center leading-tight truncate max-w-[90px] md:max-w-none group-hover:text-pink-300 transition-colors">
+        {artist.name}
+      </h3>
+    </div>
+  );
+}
+
+export default function ArtistSection() {
+  const { allSongs } = usePlayer();
+  const [artists, setArtists] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (allSongs.length > 0) {
+      // Extract unique artists from local songs
+      const artistMap = {};
+      allSongs.forEach(song => {
+        if (song.artist && !artistMap[song.artist]) {
+          artistMap[song.artist] = {
+            id: song.artist, // using name as ID for local routing
+            name: song.artist,
+            picture: song.cover || null
+          };
+        }
+      });
+      const uniqueArtists = Object.values(artistMap).slice(0, 12);
+      setArtists(uniqueArtists);
+      setLoading(false);
+    }
+  }, [allSongs]);
+
+  const handleArtistClick = (artist) => {
+    // For now, since it's local, we could route to search or a local artist page
+    navigate(`/search?q=${encodeURIComponent(artist.name)}`);
+  };
+
+  if (loading) return null; // Or add a skeleton loader here if desired
+
+  if (artists.length === 0) return null;
+
+  return (
+    <section className="mb-8">
+      <div className="flex items-center gap-3 mb-4">
+        <div className="w-1 h-6 bg-gradient-to-b from-pink-400 to-purple-500 rounded-full" />
+        <h2 className="text-xl font-bold text-white">Nghệ Sĩ Nổi Bật</h2>
+      </div>
+
+      <div className="flex gap-5 md:gap-8 overflow-x-auto pb-4 scrollbar-hide md:grid md:grid-cols-6 lg:grid-cols-8 md:overflow-visible md:pb-0">
+        {artists.map((artist) => (
+          <ArtistCard key={artist.id} artist={artist} onClick={handleArtistClick} />
         ))}
       </div>
     </section>

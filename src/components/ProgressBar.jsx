@@ -12,7 +12,7 @@ function formatTime(seconds) {
 export default function ProgressBar() {
   const {
     seekTo, duration: ctxDuration, currentSong,
-    ytPlayerRef, audioRef, isPlaying
+    ytPlayerRef, audioRef, isPlaying, isYTModeRef
   } = usePlayer();
 
   const [time, setTime] = useState(0);
@@ -39,23 +39,24 @@ export default function ProgressBar() {
         let t = 0, d = 0;
         let isRealTimeRead = false;
 
-        // 1) Thử YouTube player trước
-        try {
-          const ytT = ytPlayerRef.current?.getCurrentTime?.() || 0;
-          const ytD = ytPlayerRef.current?.getDuration?.() || 0;
-          if (ytT > 0.1 || ytD > 0) {
-            t = ytT;
-            d = ytD;
-            isRealTimeRead = true;
-          }
-        } catch (e) {}
-
-        // 2) Nếu không có data YouTube, thử HTML5 audio
-        if (!isRealTimeRead && audioRef.current?.src && !audioRef.current?.paused) {
+        // 1) Thử YouTube player trước nếu đang ở chế độ YT
+        if (isYTModeRef?.current) {
+          try {
+            const ytT = ytPlayerRef.current?.getCurrentTime?.() || 0;
+            const ytD = ytPlayerRef.current?.getDuration?.() || 0;
+            if (ytD > 0) {
+              t = ytT;
+              d = ytD;
+              isRealTimeRead = true;
+            }
+          } catch (e) {}
+        }
+        // 2) Nếu không có data YouTube hoặc ở chế độ audio, thử HTML5 audio
+        if (!isRealTimeRead && !isYTModeRef?.current && audioRef.current?.src) {
           try {
             const audioT = audioRef.current.currentTime || 0;
             const audioD = audioRef.current.duration && !isNaN(audioRef.current.duration) ? audioRef.current.duration : 0;
-            if (audioT > 0 || audioD > 0) {
+            if (audioT >= 0 && audioD > 0) {
               t = audioT;
               d = audioD;
               isRealTimeRead = true;
@@ -63,18 +64,21 @@ export default function ProgressBar() {
           } catch (e) {}
         }
 
-        // 3) Gỡ kẹt (Hyper-Robust Fallback): Nếu API trả về thời gian bị đóng băng nhưng nhạc đang PHÁT
-        if (isRealTimeRead && t > 0) {
+        // 3) Detect repeat: thời gian nhảy ngược (bài lặp lại từ đầu)
+        if (isRealTimeRead && lastRealTimeRef.current > 3 && t < lastRealTimeRef.current - 3) {
+          // Bài hát đã repeat → reset synthetic time
+          syntheticTimeRef.current = t;
+        }
+
+        // 4) Gỡ kẹt (Hyper-Robust Fallback)
+        if (isRealTimeRead) {
           lastRealTimeRef.current = t;
           syntheticTimeRef.current = t;
         } else if (isPlaying && ctxDuration > 0) {
-          // Không đọc được API hoặc API treo ở 0:00 (do bug ads của YouTube block bridge)
-          // Tiến hành giả lập time tự động tăng (synthetic time)
           syntheticTimeRef.current += deltaSec;
           if (syntheticTimeRef.current > ctxDuration) syntheticTimeRef.current = ctxDuration;
           t = syntheticTimeRef.current;
         } else {
-          // Bắt đầu hoặc người dùng bấm Pause -> Giữ nguyên vị trí hiện tại
           t = syntheticTimeRef.current;
         }
 
@@ -103,7 +107,9 @@ export default function ProgressBar() {
   // ── Reset khi đổi bài ──
   useEffect(() => {
     setTime(0);
+    setDur(0);
     syntheticTimeRef.current = 0;
+    lastRealTimeRef.current = 0;
   }, [currentSong?.id]);
 
   // ── Seek handlers ──
@@ -118,10 +124,18 @@ export default function ProgressBar() {
   };
 
   const handleSeekEnd = (e) => {
-    const t = parseFloat(e.target.value);
     isDraggingRef.current = false;
     setIsDragging(false);
-    seekTo(t);
+    
+    // RẤT QUAN TRỌNG: Cập nhật biến time ảo (syntheticTime) bằng giá trị chuẩn 
+    // để nhịp poll tiếp theo không bị giật (snap-back) về quá khứ 
+    // trong khi chờ Player API (YouTube/Audio) trả về real time mới.
+    const newTime = parseFloat(dragValue);
+    syntheticTimeRef.current = newTime;
+    lastRealTimeRef.current = newTime;
+    setTime(newTime);
+    
+    seekTo(newTime);
   };
 
   const displayTime = isDragging ? dragValue : time;

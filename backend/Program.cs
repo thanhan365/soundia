@@ -69,6 +69,8 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
+builder.Services.AddHttpClient<Soundia.Api.Services.ISpotifyService, Soundia.Api.Services.SpotifyService>();
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
@@ -110,3 +112,4 @@ using (var scope = app.Services.CreateScope())
 app.MapControllers();
 
 app.Run();
+

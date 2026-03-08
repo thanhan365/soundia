@@ -29,7 +29,7 @@ export default function GenresPage() {
             className={`
               bg-gradient-to-br ${g.color} rounded-xl p-4 sm:p-6 text-left
               border border-white/5 hover:border-white/15
-              hover:scale-[1.03] transition-all duration-300
+              transition-all duration-300
             `}
           >
             <p className="text-2xl sm:text-3xl mb-1 sm:mb-2">{g.emoji}</p>

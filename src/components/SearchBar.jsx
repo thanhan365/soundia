@@ -1,11 +1,13 @@
 import { useState, useRef, useEffect } from "react";
 import { HiSearch, HiX, HiClock } from "react-icons/hi";
+import { useNavigate } from "react-router-dom";
 import { usePlayer } from "../context/PlayerContext";
 
 export default function SearchBar() {
   const { searchQuery, setSearchQuery, searchHistory, addSearchHistory, clearSearchHistory, allSongs } = usePlayer();
   const [focused, setFocused] = useState(false);
   const ref = useRef(null);
+  const navigate = useNavigate();
 
   // Close dropdown on outside click
   useEffect(() => {
@@ -31,12 +33,14 @@ export default function SearchBar() {
     setSearchQuery(query);
     addSearchHistory(query);
     setFocused(false);
+    navigate("/search");
   };
 
   const handleKeyDown = (e) => {
     if (e.key === "Enter" && searchQuery.trim()) {
       addSearchHistory(searchQuery.trim());
       setFocused(false);
+      navigate("/search");
     }
   };
 

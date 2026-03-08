@@ -58,10 +58,10 @@ export default function QueuePanel() {
           </div>
         )}
 
-        {/* Auto queue */}
+        {/* Auto queue - trending suggestions */}
         <div className="flex-1 overflow-y-auto pb-28">
           <p className="px-3 sm:px-4 pt-2 sm:pt-3 pb-1 text-[9px] sm:text-[10px] font-bold text-gray-500 uppercase tracking-widest">
-            Tiếp theo ({queue.length - manualQueue.length})
+            {manualQueue.length > 0 ? "Tiếp theo" : "Gợi ý cho bạn"} ({queue.length - manualQueue.length})
           </p>
           <div className="px-2">
             {queue.filter((_, i) => i >= manualQueue.length).map((song, i) => (

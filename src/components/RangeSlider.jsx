@@ -31,9 +31,10 @@ export default function RangeSlider({
         step={step}
         value={value || 0}
         onChange={onChange}
-        onPointerDown={onMouseDown}
-        onPointerUp={onMouseUp}
-        onPointerCancel={onMouseUp}
+        onMouseDown={onMouseDown}
+        onMouseUp={onMouseUp}
+        onTouchStart={onMouseDown}
+        onTouchEnd={onMouseUp}
         className="absolute inset-0 w-full h-full opacity-0 cursor-pointer m-0 p-0"
       />
     </div>

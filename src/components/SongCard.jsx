@@ -7,7 +7,7 @@ function SongCard({ song }) {
   return (
     <button
       onClick={() => playSong(song)}
-      className="group text-left bg-white/[0.03] rounded-lg sm:rounded-xl p-2 sm:p-3 border border-transparent hover:border-white/10 hover:bg-white/[0.06] transition-all duration-300 hover:scale-[1.03] w-full"
+      className="group text-left bg-white/[0.03] rounded-lg sm:rounded-xl p-2 sm:p-3 border border-transparent hover:border-white/10 hover:bg-white/[0.06] transition-all duration-300 w-full"
     >
       <div className="relative aspect-square rounded-lg overflow-hidden mb-2 sm:mb-3">
         <img

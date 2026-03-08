@@ -56,9 +56,17 @@ export default function SongList() {
         <SkeletonLoader />
       ) : songList.length > 0 ? (
         <>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-1 sm:gap-1.5 lg:gap-2">
+          {/* Header Row dành cho desktop/tablet để hiển thị tựa đề cột */}
+          <div className="hidden md:flex items-center gap-3 lg:gap-4 px-4 py-2 border-b border-white/5 mb-2 text-xs font-semibold text-gray-400 uppercase tracking-widest">
+             <div className="flex-1">Bài Hát</div>
+             <div className="w-16 text-center">Thời Gian</div>
+             {/* Không gian dành cho các nút Action bên phải */}
+             <div className="w-[100px] opacity-0">Actions</div>
+          </div>
+
+          <div className="flex flex-col gap-1">
             {songList.slice(0, displayCount).map((song, index) => (
-              <SongItem key={`${song.id}-${index}`} song={song} index={index} />
+              <SongItem key={`${song.id}-${Math.random()}`} song={song} index={index} />
             ))}
           </div>
           
