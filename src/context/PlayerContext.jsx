@@ -1,8 +1,10 @@
+
 import { createContext, useContext, useState, useRef, useEffect, useCallback } from "react";
 import { AuthContext } from "./AuthContext";
 import { useToast } from "./ToastContext";
 import api from "../utils/api";
-import { searchDeezer } from "../services/deezerService";
+import { searchItunes, searchItunesArtist, getItunesArtistTopTracks } from "../services/iTunesService";
+import { normalizeVietnamese } from "../utils/textUtils";
 
 const PlayerContext = createContext();
 
@@ -33,10 +35,9 @@ export function PlayerProvider({ children }) {
   const [isLoadingStream, setIsLoadingStream] = useState(false);
   const [isYTMode, setIsYTMode] = useState(false); // true khi đang phát YouTube
   const [searchQuery, setSearchQuery] = useState("");
-  const [searchHistory, setSearchHistory] = useState(() => {
-    const saved = localStorage.getItem("soundia_search_history");
-    return saved ? JSON.parse(saved) : [];
-  });
+  const [searchHistory, setSearchHistory] = useState(() => JSON.parse(localStorage.getItem("soundia_search_history")) || []);
+  const [searchArtistsResult, setSearchArtistsResult] = useState([]);
+  const [searchPlaylistsResult, setSearchPlaylistsResult] = useState([]);
 
   // ── Refs ──────────────────────────────────────────────────────────────────
   const audioRef = useRef(new Audio()); // HTML5 audio – dùng cho bài trong DB
@@ -77,13 +78,31 @@ export function PlayerProvider({ children }) {
   // ── Search ────────────────────────────────────────────────────────────────
   useEffect(() => {
     const handle = async () => {
-      const q = searchQuery.toLowerCase().trim();
+      const rawQ = searchQuery.trim();
+      const q = rawQ.toLowerCase();
       if (!q) { setFilteredSongs(allSongs); return; }
+      
       const local = allSongs.filter(
         (s) => s.title.toLowerCase().includes(q) || s.artist.toLowerCase().includes(q)
       );
-      const deezer = await searchDeezer(q);
-      setFilteredSongs([...local, ...deezer.filter((d) => !local.some((l) => l.title === d.title && l.artist === d.artist))]);
+
+      // 1. Normalize query for highest API strike rate
+      const normQ = normalizeVietnamese(rawQ);
+      
+      // 2. Fetch from iTunes Search API
+      const itunesResults = await searchItunes(rawQ);
+
+      // 3. Merge Tracks (iTunes results)
+      const mergedTracks = itunesResults.tracks || [];
+
+      // 4. Merge Artists (from iTunes + artist search)
+      const mergedArtists = itunesResults.artists || [];
+
+      const mergedPlaylists = [];
+
+      setFilteredSongs([...local, ...mergedTracks]);
+      setSearchArtistsResult(mergedArtists);
+      setSearchPlaylistsResult(mergedPlaylists);
     };
     const t = setTimeout(handle, 500);
     return () => clearTimeout(t);
@@ -171,7 +190,7 @@ export function PlayerProvider({ children }) {
     // Fallback: Tự động cứu vãn bằng cách phát qua YouTube nếu lỗi HTML5 audio
     const song = currentSongRef.current;
     if (song && song.audio !== "YT_STREAM") {
-      toast.error("Link bài hát đã hết hạn, đang thử phát bằng YouTube...");
+      showToast("Link bài hát đã hết hạn, đang thử phát bằng YouTube...", "error");
       // Gọi playSong qua YouTube
       playSong({ ...song, audio: "YT_STREAM" });
       return;
@@ -214,13 +233,10 @@ export function PlayerProvider({ children }) {
 
   const handleYTTimeUpdate = useCallback((t, d) => {
     // YouTube IFrame gửi thời gian qua callback - cập nhật state
-    if (isYTModeRef.current) {
-      console.log(`[Context handleYTTimeUpdate] t=${t}, d=${d}`);
-      setCurrentTime(t);
-      if (d > 0) setDuration(d);
-    } else {
-      console.log(`[Context handleYTTimeUpdate] BLOCKED because isYTMode. t=${t}, d=${d}`);
-    }
+    // Bỏ check isYTModeRef ở đây vì nhiều khi player load nhanh hơn React state update
+    // dẫn đến bị kẹt Total Duration.
+    setCurrentTime(t);
+    if (d > 0) setDuration(d);
   }, []);
 
   const handleYTError = useCallback(() => {
@@ -243,6 +259,11 @@ export function PlayerProvider({ children }) {
         else { setIsPlaying(true); audio.play().catch(() => handleAudioError()); }
       }
       return;
+    }
+
+    // Resolve Spotify songs without audio preview directly to YouTube fallback
+    if (song.source === 'spotify' && !song.audio) {
+         song.audio = "YT_STREAM"; // Fallback directly to Youtube Stream since Deezer is removed
     }
 
     const needsYT = song.isExternal || !song.audio || song.audio === "YT_STREAM";
@@ -477,6 +498,7 @@ export function PlayerProvider({ children }) {
         ytPlayerRef, audioRef, isYTModeRef,   // Dùng để đăng ký YT player từ App và đọc thời gian trực tiếp
         handleYTReady, handleYTStateChange, handleYTTimeUpdate, handleYTError,
         playSong, togglePlay, playNext, playPrev, seekTo, changeVolume,
+        searchArtistsResult, searchPlaylistsResult,
       }}
     >
       {children}

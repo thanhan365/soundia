@@ -1,0 +1,11 @@
+{
+  "name": "backend-nct",
+  "version": "1.0.0",
+  "description": "NCT API Proxy",
+  "main": "index.js",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.19.2",
+    "nhaccuatui-api-full": "^2.0.0"
+  }
+}

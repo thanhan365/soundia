@@ -11,8 +11,6 @@ import PlaylistSection from "../components/home/PlaylistSection";
 import ArtistSection from "../components/home/ArtistSection";
 import RecentlyPlayed from "../components/home/RecentlyPlayed";
 import RandomDiscovery from "../components/home/RandomDiscovery";
-import DeezerTrendingSection from "../components/home/DeezerTrendingSection";
-
 export default function Home() {
   const { error, allSongs, playSong, recentHistory } = usePlayer();
 
@@ -42,22 +40,19 @@ export default function Home() {
       <BannerSlider />
 
       {/* Main Content Area */}
-      <div className="mx-auto px-4 sm:px-6 md:px-8 max-w-7xl space-y-8 md:space-y-12 mt-8">
+      <div className="mx-auto px-4 sm:px-6 md:px-8 max-w-7xl space-y-6 md:space-y-8 mt-4">
         
         {/* Random Discovery Widget */}
         <RandomDiscovery onDiscover={handleRandomDiscover} />
-
-        {/* Real Trending SongList from Deezer Chart */}
-        <DeezerTrendingSection />
         
         {/* Moods & Genres Grid */}
-        <MoodGenreSection onPlayRandom={handleRandomDiscover} />
+        <MoodGenreSection />
 
         {/* Playlists */}
-        <PlaylistSection onPlayRandom={handleRandomDiscover} />
+        <PlaylistSection />
 
         {/* Artists */}
-        <ArtistSection onPlayRandom={handleRandomDiscover} />
+        <ArtistSection />
 
         {/* More Songs */}
         {newReleaseSongs.length > 0 && (

@@ -1,28 +1,39 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { usePlayer } from "../context/PlayerContext";
-import { FaPlay, FaPause, FaPlus, FaChevronLeft, FaChevronRight } from "react-icons/fa";
+import { FaPlay, FaPause, FaHeart, FaChevronLeft, FaChevronRight, FaPlus } from "react-icons/fa";
+import { searchItunes } from "../services/iTunesService";
 
 export default function BannerSlider() {
-  const { allSongs, playSong, currentSong, isPlaying, togglePlay } = usePlayer();
-  const bannerSongs = allSongs.slice(0, 5);
-  const [current, setCurrent] = useState(0);
+  const { playSong, currentSong, isPlaying, togglePlay } = usePlayer();
+  const [songs, setSongs] = useState([]);
+  const [currentIndex, setCurrentIndex] = useState(0);
   const [paused, setPaused] = useState(false);
 
+  useEffect(() => {
+    const fetchBanners = async () => {
+      const results = await searchItunes("nhạc hot việt nam");
+      if (results?.tracks?.length > 0) {
+        setSongs(results.tracks.slice(0, 5));
+      }
+    };
+    fetchBanners();
+  }, []);
+
   const nextSlide = useCallback(() => {
-    setCurrent((p) => (p + 1) % bannerSongs.length);
-  }, [bannerSongs.length]);
+    setCurrentIndex((p) => (p + 1) % songs.length);
+  }, [songs.length]);
 
   const prevSlide = useCallback(() => {
-    setCurrent((p) => (p - 1 + bannerSongs.length) % bannerSongs.length);
-  }, [bannerSongs.length]);
+    setCurrentIndex((p) => (p - 1 + songs.length) % songs.length);
+  }, [songs.length]);
 
   useEffect(() => {
-    if (paused) return;
+    if (paused || songs.length === 0) return;
     const timer = setInterval(nextSlide, 5000);
     return () => clearInterval(timer);
-  }, [nextSlide, paused]);
+  }, [nextSlide, paused, songs.length]);
 
-  if (bannerSongs.length === 0) return null;
+  if (songs.length === 0) return null;
 
   const handlePlayPause = (e, song) => {
     e.stopPropagation();
@@ -35,16 +46,16 @@ export default function BannerSlider() {
 
   return (
     <div 
-      className="relative w-full max-w-[100vw] overflow-hidden rounded-b-3xl md:rounded-3xl mt-0 md:mt-4 shadow-[0_10px_40px_rgba(0,0,0,0.5)] group/slider mb-10"
+      className="relative mx-auto max-w-7xl w-[calc(100%-2rem)] overflow-hidden rounded-2xl md:rounded-3xl mt-0 md:mt-4 shadow-[0_10px_40px_rgba(0,0,0,0.5)] group/slider mb-4"
       onMouseEnter={() => setPaused(true)}
       onMouseLeave={() => setPaused(false)}
     >
       {/* Slides wrapper */}
       <div
         className="flex transition-transform duration-700 ease-out h-[260px] md:h-[300px] lg:h-[340px]"
-        style={{ transform: `translateX(-${current * 100}%)` }}
+        style={{ transform: `translateX(-${currentIndex * 100}%)` }}
       >
-        {bannerSongs.map((song) => {
+        {songs.map((song) => {
           const isActivePlaying = currentSong?.id === song.id && isPlaying;
           
           return (
@@ -161,14 +172,14 @@ export default function BannerSlider() {
 
       {/* Dots indicators */}
       <div className="absolute bottom-4 z-30 flex justify-center w-full gap-2">
-        {bannerSongs.map((_, i) => (
+        {songs.map((_, i) => (
           <button
             key={i}
-            onClick={(e) => { e.stopPropagation(); setCurrent(i); }}
+            onClick={(e) => { e.stopPropagation(); setCurrentIndex(i); }}
             aria-label={`Go to slide ${i + 1}`}
             className={`
               h-2 rounded-full transition-all duration-300
-              ${i === current 
+              ${i === currentIndex 
                 ? "w-8 md:w-10 bg-[#14b8a6] shadow-[0_0_8px_rgba(20,184,166,0.8)]" 
                 : "w-2.5 bg-white/40 hover:bg-white/70"}
             `}

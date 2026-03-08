@@ -118,10 +118,18 @@ export default function ProgressBar() {
   };
 
   const handleSeekEnd = (e) => {
-    const t = parseFloat(e.target.value);
     isDraggingRef.current = false;
     setIsDragging(false);
-    seekTo(t);
+    
+    // RẤT QUAN TRỌNG: Cập nhật biến time ảo (syntheticTime) bằng giá trị chuẩn 
+    // để nhịp poll tiếp theo không bị giật (snap-back) về quá khứ 
+    // trong khi chờ Player API (YouTube/Audio) trả về real time mới.
+    const newTime = parseFloat(dragValue);
+    syntheticTimeRef.current = newTime;
+    lastRealTimeRef.current = newTime;
+    setTime(newTime);
+    
+    seekTo(newTime);
   };
 
   const displayTime = isDragging ? dragValue : time;

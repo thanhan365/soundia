@@ -42,16 +42,16 @@ function SongItem({ song, index }) {
       <div
         onClick={() => playSong(song)}
         className={`
-          w-full flex items-center gap-1 sm:gap-2 lg:gap-3 p-2 sm:p-2.5 lg:p-3 rounded-lg sm:rounded-xl
-          transition-all duration-300 group text-left relative
+          w-full flex items-center gap-3 lg:gap-4 px-3 py-2 sm:px-4 sm:py-2.5 rounded-lg
+          transition-all duration-300 group hover:-translate-y-[1px] cursor-pointer text-left relative
           ${isActive
-            ? "bg-neon/10 border border-neon/20"
-            : "bg-white/[0.02] border border-transparent hover:bg-white/[0.05] hover:border-white/5"
+            ? "bg-neon/10 border border-neon/20 shadow-[0_4px_12px_rgba(0,255,255,0.05)]"
+            : "bg-transparent border border-transparent hover:bg-white/[0.04] hover:shadow-lg"
           }
         `}
       >
         {/* Cover + Play overlay */}
-        <div className="relative w-8 h-8 sm:w-10 sm:h-10 rounded-lg overflow-hidden flex-shrink-0 group/cover">
+        <div className="relative w-10 h-10 lg:w-11 lg:h-11 rounded-md overflow-hidden flex-shrink-0 group/cover">
           <img
             src={song.cover}
             alt={song.title}
@@ -75,20 +75,22 @@ function SongItem({ song, index }) {
         </div>
 
         {/* Info */}
-        <div className="flex-1 min-w-0">
-          <p className={`text-[12px] sm:text-sm lg:text-base font-semibold truncate transition-colors ${isActive ? "text-neon" : "text-white"}`}>
+        <div className="flex-1 min-w-0 pr-4 flex flex-col justify-center">
+          <p className={`text-sm lg:text-[15px] font-semibold truncate transition-colors ${isActive ? "text-neon" : "text-white"}`}>
             {song.title}
           </p>
-          <p className="text-[10px] sm:text-xs lg:text-sm text-gray-500 truncate">{song.artist}</p>
+          <p className="text-xs lg:text-sm text-gray-400 mt-0.5 truncate flex items-center gap-1.5">
+            {song.artist}
+          </p>
         </div>
 
         {/* Duration */}
-        <span className="text-[10px] sm:text-xs lg:text-sm text-gray-600 font-mono flex-shrink-0 hidden sm:block">
-          {song.duration}
-        </span>
+        <div className="w-16 text-center text-xs lg:text-sm text-gray-500 font-mono flex-shrink-0 hidden sm:block">
+          {song.duration || "--:--"}
+        </div>
 
         {/* Actions — ẩn khi hover trên desktop, luôn hiển thị trên mobile */}
-        <div className="flex items-center gap-0.5 sm:gap-1 flex-shrink-0 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity duration-200">
+        <div className="w-auto sm:w-[100px] flex items-center justify-end gap-1 flex-shrink-0 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity duration-200">
           {/* Add to queue */}
           <button
             onClick={handleQueue}
