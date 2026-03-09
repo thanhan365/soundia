@@ -19,6 +19,8 @@ import PlaylistPage from "./pages/PlaylistPage";
 import ArtistDetail from "./pages/ArtistDetail";
 import ExternalPlaylistPage from "./pages/ExternalPlaylistPage";
 import ProfilePage from "./pages/ProfilePage";
+import AllArtists from "./pages/AllArtists";
+import SuggestedPlaylistDetail from "./pages/SuggestedPlaylistDetail";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import { AuthProvider } from "./context/AuthContext";
@@ -84,6 +86,8 @@ function AppContent() {
             <Route path="/profile" element={<ProfilePage />} />
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
+            <Route path="/artists" element={<AllArtists />} />
+            <Route path="/suggested-playlist" element={<SuggestedPlaylistDetail />} />
           </Routes>
         </div>
       </main>

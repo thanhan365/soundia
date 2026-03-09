@@ -10,6 +10,7 @@ import TopTrendingSection from "../components/home/TopTrendingSection";
 import MoodGenreSection from "../components/home/MoodGenreSection";
 import PlaylistSection from "../components/home/PlaylistSection";
 import ArtistSection from "../components/home/ArtistSection";
+import SuggestedPlaylistSection from "../components/home/SuggestedPlaylistSection";
 import RecentlyPlayed from "../components/home/RecentlyPlayed";
 import RandomDiscovery from "../components/home/RandomDiscovery";
 export default function Home() {
@@ -17,7 +18,7 @@ export default function Home() {
 
   // We no longer need featuredSong and trendingSongs since BannerSlider and SongList handle them
   const newReleaseSongs = allSongs.slice(7, 13);
-  
+
   // Use recent history from context
   const recentSongs = recentHistory || [];
 
@@ -42,10 +43,10 @@ export default function Home() {
 
       {/* Main Content Area */}
       <div className="mx-auto px-4 sm:px-6 md:px-8 max-w-7xl space-y-6 md:space-y-8 mt-4">
-        
+
         {/* Random Discovery Widget */}
         <RandomDiscovery onDiscover={handleRandomDiscover} />
-        
+
         {/* Moods & Genres Grid */}
         <MoodGenreSection />
 
@@ -54,6 +55,9 @@ export default function Home() {
 
         {/* Playlists */}
         <PlaylistSection />
+
+        {/* Playlist Gợi Ý */}
+        <SuggestedPlaylistSection />
 
         {/* Artists */}
         <ArtistSection />
@@ -65,7 +69,7 @@ export default function Home() {
 
         {/* Recently Played History */}
         {recentSongs.length > 0 && <RecentlyPlayed songs={recentSongs} />}
-        
+
       </div>
     </div>
   );
