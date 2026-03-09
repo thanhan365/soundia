@@ -60,11 +60,12 @@ export default function SearchBar() {
           onKeyDown={handleKeyDown}
           className="
             w-full pl-10 pr-10 py-2 rounded-full
-            bg-[#0a1628]/80 border border-neon/15
+            bg-slate-900/60 border border-cyan-400/20 backdrop-blur-md
             text-white text-sm placeholder-gray-500
-            focus:outline-none focus:border-neon/40 focus:bg-[#0a1628]
-            focus:shadow-[0_0_15px_rgba(29,185,144,0.15)]
-            shadow-[0_0_8px_rgba(29,185,144,0.06)]
+            hover:border-cyan-400/40
+            focus:outline-none focus:border-cyan-400/40 focus:bg-slate-900/80
+            focus:shadow-[0_0_15px_rgba(56,189,248,0.15)]
+            shadow-[0_0_8px_rgba(56,189,248,0.06)]
             transition-all duration-200
           "
         />

@@ -449,6 +449,107 @@ namespace Soundia.Api.Controllers
             }
         }
 
+        // ── NCT Graph API Endpoints ─────────────────────────────────────────
+        private static readonly Soundia.Api.Services.NctApiService _nctApi = new();
+
+        [HttpGet("nct-search")]
+        public async Task<ActionResult> NctSearch([FromQuery] string keyword, [FromQuery] int limit = 20)
+        {
+            if (string.IsNullOrWhiteSpace(keyword))
+                return BadRequest(new { message = "keyword is required" });
+
+            var songs = await _nctApi.SearchSongsAsync(keyword, 1, limit);
+            var result = songs.Select(s => new
+            {
+                id = $"nct_{s.Key}",
+                title = s.Name,
+                artist = s.ArtistName,
+                cover = s.Image,
+                audio = !string.IsNullOrEmpty(s.StreamUrl) ? s.StreamUrl : "YT_STREAM",
+                isExternal = true,
+                source = "nct",
+                duration = s.Duration,
+                nctKey = s.Key,
+            });
+            return Ok(new { success = true, data = result, total = songs.Count });
+        }
+
+        [HttpGet("nct-stream/{key}")]
+        public async Task<ActionResult> NctStream(string key)
+        {
+            var url = await _nctApi.GetStreamUrlAsync(key);
+            if (url == null) return NotFound(new { message = "Stream not found" });
+            // Proxy through backend to bypass CORS
+            var proxyUrl = $"/api/stream/proxy-audio?url={System.Net.WebUtility.UrlEncode(url)}";
+            return Ok(new { success = true, streamUrl = proxyUrl });
+        }
+
+        [HttpGet("nct-resolve")]
+        public async Task<ActionResult> NctResolve([FromQuery] string title, [FromQuery] string artist)
+        {
+            if (string.IsNullOrWhiteSpace(title))
+                return BadRequest(new { message = "title is required" });
+            var url = await _nctApi.ResolveStreamByTitleAsync(title, artist ?? "");
+            if (url == null) return NotFound(new { message = "Not found on NCT" });
+            // Proxy through backend to bypass CORS
+            var proxyUrl = $"/api/stream/proxy-audio?url={System.Net.WebUtility.UrlEncode(url)}";
+            return Ok(new { success = true, streamUrl = proxyUrl });
+        }
+
+        [HttpGet("nct-charts")]
+        public async Task<ActionResult> NctCharts()
+        {
+            var charts = await _nctApi.GetChartsAsync();
+            if (charts == null) return StatusCode(500, new { message = "Failed to fetch charts" });
+            return Ok(new { success = true, data = charts });
+        }
+
+        [HttpGet("nct-top100")]
+        public async Task<ActionResult> NctTop100()
+        {
+            var top100 = await _nctApi.GetTop100Async();
+            if (top100 == null) return StatusCode(500, new { message = "Failed to fetch top 100" });
+            return Ok(new { success = true, data = top100 });
+        }
+
+        [HttpGet("nct-artist/{artistId}/songs")]
+        public async Task<ActionResult> NctArtistSongs(string artistId, [FromQuery] int limit = 20)
+        {
+            var songs = await _nctApi.GetArtistSongsAsync(artistId, 1, limit);
+            var result = songs.Select(s => new
+            {
+                id = $"nct_{s.Key}",
+                title = s.Name,
+                artist = s.ArtistName,
+                cover = s.Image,
+                audio = "YT_STREAM",
+                isExternal = true,
+                source = "nct",
+                duration = s.Duration,
+                nctKey = s.Key,
+            });
+            return Ok(new { success = true, data = result, total = songs.Count });
+        }
+
+        [HttpGet("nct-similar/{key}")]
+        public async Task<ActionResult> NctSimilar(string key, [FromQuery] int limit = 10)
+        {
+            var songs = await _nctApi.GetSimilarSongsAsync(key, limit);
+            var result = songs.Select(s => new
+            {
+                id = $"nct_{s.Key}",
+                title = s.Name,
+                artist = s.ArtistName,
+                cover = s.Image,
+                audio = "YT_STREAM",
+                isExternal = true,
+                source = "nct",
+                duration = s.Duration,
+                nctKey = s.Key,
+            });
+            return Ok(new { success = true, data = result, total = songs.Count });
+        }
+
         // ── Database Song Endpoints ────────────────────────────────────────────
         [HttpGet]
         public async Task<ActionResult<IEnumerable<Song>>> GetSongs()

@@ -4,7 +4,7 @@ import { AuthContext } from "./AuthContext";
 import { useToast } from "./ToastContext";
 import api from "../utils/api";
 import { searchItunes, searchItunesArtist, getItunesArtistTopTracks } from "../services/iTunesService";
-import { searchNCT } from "../services/nctService";
+import { searchNctSongs, getNctStreamUrl, resolveNctStream } from "../services/nctService";
 import { normalizeVietnamese } from "../utils/textUtils";
 
 const PlayerContext = createContext();
@@ -92,17 +92,16 @@ export function PlayerProvider({ children }) {
       // 1. Normalize query
       const normQ = normalizeVietnamese(rawQ);
 
-      // 2. Fetch parallel from iTunes and NCT
-      const [itunesResults, nctResults] = await Promise.all([
-        searchItunes(rawQ),
-        searchNCT(rawQ)
+      // 2. Fetch parallel from NCT (priority) and iTunes
+      const [nctResults, itunesResults] = await Promise.all([
+        searchNctSongs(rawQ, 15),
+        searchItunes(rawQ)
       ]);
 
-      console.log(`[Search] iTunes: ${(itunesResults.tracks || []).length} tracks, NCT: ${(nctResults.tracks || []).length} tracks`);
+      console.log(`[Search] NCT: ${(nctResults.tracks || []).length} tracks, iTunes: ${(itunesResults.tracks || []).length} tracks`);
 
-      // 3. Merge Tracks: Anti-duplicate mechanism
-      // Use "Title_Artist" as unique key string
-      const mergedTracks = [...(itunesResults.tracks || [])];
+      // 3. Merge Tracks: NCT first (better Vietnamese library + stream URLs), then iTunes
+      const mergedTracks = [...(nctResults.tracks || [])];
 
       const generateKey = (track) => {
         const title = normalizeVietnamese(track.title).replace(/[^a-z0-9]/g, "");
@@ -112,15 +111,15 @@ export function PlayerProvider({ children }) {
 
       const existingKeys = new Set(mergedTracks.map(t => generateKey(t)));
 
-      (nctResults.tracks || []).forEach(nctTrack => {
-        const key = generateKey(nctTrack);
+      (itunesResults.tracks || []).forEach(itunesTrack => {
+        const key = generateKey(itunesTrack);
         if (!existingKeys.has(key)) {
-          mergedTracks.push(nctTrack);
+          mergedTracks.push(itunesTrack);
           existingKeys.add(key);
         }
       });
 
-      // 4. Merge Artists (from iTunes + artist search, NCT does not provide artists directly here yet)
+      // 4. Merge Artists (from iTunes)
       const mergedArtists = itunesResults.artists || [];
 
       const mergedPlaylists = [];
@@ -290,10 +289,38 @@ export function PlayerProvider({ children }) {
 
     // Resolve Spotify songs without audio preview directly to YouTube fallback
     if (song.source === 'spotify' && !song.audio) {
-      song.audio = "YT_STREAM"; // Fallback directly to Youtube Stream since Deezer is removed
+      song.audio = "YT_STREAM";
     }
 
-    const needsYT = song.isExternal || !song.audio || song.audio === "YT_STREAM";
+    // ── 3-in-1 Audio Strategy ──────────────────────────────────────────
+    // Priority: NCT stream → iTunes preview → YouTube (fallback)
+    // Try to resolve NCT stream for ANY song with YT_STREAM
+    if (!song.audio || song.audio === 'YT_STREAM') {
+      try {
+        let streamUrl = null;
+        // If NCT song with key → direct stream lookup
+        if (song.nctKey) {
+          streamUrl = await getNctStreamUrl(song.nctKey);
+        }
+        // Otherwise → search NCT by title+artist
+        if (!streamUrl && song.title) {
+          streamUrl = await resolveNctStream(song.title, song.artist);
+        }
+        if (streamUrl) {
+          song.audio = streamUrl;
+          console.log(`[3-in-1] ✅ NCT stream resolved for: ${song.title}`);
+        } else {
+          console.log(`[3-in-1] ⚠️ NCT not found, will use YouTube: ${song.title}`);
+        }
+      } catch (err) {
+        console.log(`[3-in-1] NCT resolve failed, fallback to YT:`, err.message);
+      }
+    }
+
+    // Determine if we have a direct audio URL (NCT proxy, NCT stream, or iTunes preview)
+    const hasDirectUrl = song.audio && song.audio !== "YT_STREAM" && (song.audio.startsWith("http") || song.audio.startsWith("/api/"));
+    // YouTube is ONLY a fallback — if we have a direct URL, use HTML5 Audio
+    const needsYT = !hasDirectUrl && (!song.audio || song.audio === "YT_STREAM");
 
     if (needsYT) {
       // ── Chế độ YouTube IFrame ─────────────────────────────────────────────
@@ -347,12 +374,10 @@ export function PlayerProvider({ children }) {
         setCurrentSong(song);
         addToRecent(song);
         setIsLoadingStream(false);
-        setIsPlaying(true); // Set to true immediately so play/pause button is accurate
+        setIsPlaying(true);
         setCurrentTime(0);
-        setDuration(0); // Reset duration để không hiện duration bài cũ
+        setDuration(0);
 
-        // If audio URL is a relative backend path (e.g. /api/stream/proxy-audio?...),
-        // prepend the backend base URL so <audio> fetches from the correct server
         const audioUrl = song.audio.startsWith('/api/')
           ? `http://localhost:5066${song.audio}`
           : song.audio;
@@ -360,9 +385,17 @@ export function PlayerProvider({ children }) {
         audio.load();
         await audio.play();
       } catch (err) {
-        console.error("Playback error", err);
-        handleAudioError("Không thể phát bài này.");
-        setIsPlaying(false);
+        console.warn("[3-in-1] HTML5 Audio failed, falling back to YouTube:", err.message);
+        // ── Auto-fallback to YouTube ─────────────────────────────────
+        setIsYTMode(true);
+        isYTModeRef.current = true;
+        audio.pause();
+        audio.src = "";
+        setIsPlaying(true);
+        setIsLoadingStream(true);
+        setCurrentTime(0);
+        const query = `${song.artist} - ${song.title} official audio`;
+        ytPlayerRef.current?.loadAndPlay(query);
       }
     }
   };

@@ -21,15 +21,26 @@ export default function SuggestedPlaylistDetail() {
         if (!keyword) return;
         const fetchSongs = async () => {
             try {
-                const res = await fetch(
-                    `http://localhost:5066/api/songs/playlist-songs?keyword=${encodeURIComponent(keyword)}&limit=30`
-                );
-                if (res.ok) {
-                    const data = await res.json();
-                    if (data.success && data.data) {
-                        setSongs(data.data);
+                // Fetch NCT + iTunes in parallel, NCT priority
+                const [nctRes, itunesRes] = await Promise.all([
+                    fetch(`http://localhost:5066/api/songs/nct-search?keyword=${encodeURIComponent(keyword)}&limit=20`).then(r => r.ok ? r.json() : null).catch(() => null),
+                    fetch(`http://localhost:5066/api/songs/playlist-songs?keyword=${encodeURIComponent(keyword)}&limit=20`).then(r => r.ok ? r.json() : null).catch(() => null),
+                ]);
+
+                const nctSongs = nctRes?.success ? nctRes.data : [];
+                const itunesSongs = itunesRes?.success ? itunesRes.data : [];
+
+                // Merge: NCT first, then iTunes (dedup by title+artist)
+                const merged = [...nctSongs];
+                const seen = new Set(nctSongs.map(s => `${(s.title || '').toLowerCase()}|${(s.artist || '').split(',')[0].trim().toLowerCase()}`));
+                for (const s of itunesSongs) {
+                    const key = `${(s.title || '').toLowerCase()}|${(s.artist || '').split(',')[0].trim().toLowerCase()}`;
+                    if (!seen.has(key)) {
+                        merged.push(s);
+                        seen.add(key);
                     }
                 }
+                setSongs(merged.slice(0, 30));
             } catch (err) {
                 console.error("Failed to fetch playlist songs:", err);
             } finally {
