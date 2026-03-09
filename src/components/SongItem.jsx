@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, memo } from "react";
 import { usePlayer } from "../context/PlayerContext";
 import { useToast } from "../context/ToastContext";
 import { useClickOutside } from "../hooks/useClickOutside";
@@ -7,7 +7,7 @@ import { HiHeart, HiDotsHorizontal } from "react-icons/hi";
 import { HiQueueList } from "react-icons/hi2";
 import SongContextMenu from "./SongContextMenu";
 
-function SongItem({ song, index }) {
+const SongItem = memo(function SongItem({ song, index }) {
   const { currentSong, isPlaying, playSong, toggleFavorite, isFavorite, addToQueue } = usePlayer();
   const { showToast } = useToast();
   const isActive = currentSong?.id === song.id;
@@ -43,10 +43,10 @@ function SongItem({ song, index }) {
         onClick={() => playSong(song)}
         className={`
           w-full flex items-center gap-3 lg:gap-4 px-3 py-2 sm:px-4 sm:py-2.5 rounded-lg
-          transition-all duration-300 group cursor-pointer text-left relative
+          transition-colors duration-300 group cursor-pointer text-left relative
           ${isActive
             ? "bg-neon/10 border border-neon/20 shadow-[0_4px_12px_rgba(0,255,255,0.05)]"
-            : "bg-transparent border border-transparent hover:bg-white/[0.04] hover:shadow-lg"
+            : "bg-transparent border border-white/0 hover:bg-white/[0.04] hover:border-white/5"
           }
         `}
       >
@@ -57,21 +57,21 @@ function SongItem({ song, index }) {
             alt={song.title}
             className={`w-full h-full object-cover transition-all duration-300 ${isActive ? "shadow-neon-sm" : ""}`}
           />
-        <div className={`absolute inset-0 transition-all duration-300 flex items-center justify-center rounded-lg ${isActive && isPlaying ? "bg-black/40" : "bg-black/0 group-hover/cover:bg-black/30"}`}>
-          <div onClick={(e) => { e.stopPropagation(); playSong(song); }} className="cursor-pointer w-full h-full flex items-center justify-center">
-            {isActive && isPlaying ? (
-              <div className="flex items-center gap-[2px]">
-                <span className="w-[2px] bg-neon rounded-full animate-bounce" style={{ height: "8px", animationDelay: "0ms" }} />
-                <span className="w-[2px] bg-neon rounded-full animate-bounce" style={{ height: "12px", animationDelay: "150ms" }} />
-                <span className="w-[2px] bg-neon rounded-full animate-bounce" style={{ height: "6px", animationDelay: "300ms" }} />
-              </div>
-            ) : (
-              <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-neon flex items-center justify-center transform scale-0 group-hover/cover:scale-100 transition-transform duration-300 shadow-neon">
-                <svg className="w-3.5 h-3.5 text-dark ml-0.5" fill="currentColor" viewBox="0 0 20 20"><path d="M6.3 2.841A1.5 1.5 0 004 4.11V15.89a1.5 1.5 0 002.3 1.269l9.344-5.89a1.5 1.5 0 000-2.538L6.3 2.84z"/></svg>
-              </div>
-            )}
+          <div className={`absolute inset-0 transition-all duration-300 flex items-center justify-center rounded-lg ${isActive && isPlaying ? "bg-black/40" : "bg-black/0 group-hover/cover:bg-black/30"}`}>
+            <div onClick={(e) => { e.stopPropagation(); playSong(song); }} className="cursor-pointer w-full h-full flex items-center justify-center">
+              {isActive && isPlaying ? (
+                <div className="flex items-center gap-[2px]">
+                  <span className="w-[2px] bg-neon rounded-full animate-bounce" style={{ height: "8px", animationDelay: "0ms" }} />
+                  <span className="w-[2px] bg-neon rounded-full animate-bounce" style={{ height: "12px", animationDelay: "150ms" }} />
+                  <span className="w-[2px] bg-neon rounded-full animate-bounce" style={{ height: "6px", animationDelay: "300ms" }} />
+                </div>
+              ) : (
+                <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-neon flex items-center justify-center transform scale-0 group-hover/cover:scale-100 transition-transform duration-300 shadow-neon">
+                  <svg className="w-3.5 h-3.5 text-dark ml-0.5" fill="currentColor" viewBox="0 0 20 20"><path d="M6.3 2.841A1.5 1.5 0 004 4.11V15.89a1.5 1.5 0 002.3 1.269l9.344-5.89a1.5 1.5 0 000-2.538L6.3 2.84z" /></svg>
+                </div>
+              )}
+            </div>
           </div>
-        </div>
         </div>
 
         {/* Info */}
@@ -127,6 +127,6 @@ function SongItem({ song, index }) {
       )}
     </>
   );
-}
+});
 
 export default SongItem;

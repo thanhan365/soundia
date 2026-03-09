@@ -84,26 +84,26 @@ export function PlayerProvider({ children }) {
       const rawQ = searchQuery.trim();
       const q = rawQ.toLowerCase();
       if (!q) { setFilteredSongs(allSongs); return; }
-      
+
       const local = allSongs.filter(
         (s) => s.title.toLowerCase().includes(q) || s.artist.toLowerCase().includes(q)
       );
 
       // 1. Normalize query
       const normQ = normalizeVietnamese(rawQ);
-      
+
       // 2. Fetch parallel from iTunes and NCT
       const [itunesResults, nctResults] = await Promise.all([
         searchItunes(rawQ),
         searchNCT(rawQ)
       ]);
 
-      console.log(`[Search] iTunes: ${(itunesResults.tracks||[]).length} tracks, NCT: ${(nctResults.tracks||[]).length} tracks`);
+      console.log(`[Search] iTunes: ${(itunesResults.tracks || []).length} tracks, NCT: ${(nctResults.tracks || []).length} tracks`);
 
       // 3. Merge Tracks: Anti-duplicate mechanism
       // Use "Title_Artist" as unique key string
       const mergedTracks = [...(itunesResults.tracks || [])];
-      
+
       const generateKey = (track) => {
         const title = normalizeVietnamese(track.title).replace(/[^a-z0-9]/g, "");
         const artist = normalizeVietnamese(track.artist).replace(/[^a-z0-9]/g, "");
@@ -113,11 +113,11 @@ export function PlayerProvider({ children }) {
       const existingKeys = new Set(mergedTracks.map(t => generateKey(t)));
 
       (nctResults.tracks || []).forEach(nctTrack => {
-         const key = generateKey(nctTrack);
-         if (!existingKeys.has(key)) {
-            mergedTracks.push(nctTrack);
-            existingKeys.add(key);
-         }
+        const key = generateKey(nctTrack);
+        if (!existingKeys.has(key)) {
+          mergedTracks.push(nctTrack);
+          existingKeys.add(key);
+        }
       });
 
       // 4. Merge Artists (from iTunes + artist search, NCT does not provide artists directly here yet)
@@ -176,13 +176,14 @@ export function PlayerProvider({ children }) {
         playNextRef.current?.();
       }
     };
-    const onErr  = () => handleAudioError("Không thể phát bài này.");
+    const onErr = () => handleAudioError("Không thể phát bài này.");
     const onPlay = () => { if (!isYTModeRef.current) setIsPlaying(true); };
     const onPause = () => { if (!isYTModeRef.current) setIsPlaying(false); };
 
     const onTimeUpdate = () => {
       if (!isYTModeRef.current) {
-        setCurrentTime(audio.currentTime);
+        // KHÔNG set state currentTime ở đây — ProgressBar/LyricsView dùng rAF polling
+        // setCurrentTime sẽ gây re-render 30+ components mỗi frame!
         if (audio.duration && !isNaN(audio.duration)) setDuration(audio.duration);
       }
     };
@@ -214,7 +215,7 @@ export function PlayerProvider({ children }) {
     if (isYTModeRef.current) return;
 
     setIsPlaying(false); // Sửa lỗi kẹt nút Pause vĩnh viễn khi Zing URL bị 403
-    
+
     // Fallback: Tự động cứu vãn bằng cách phát qua YouTube nếu lỗi HTML5 audio
     const song = currentSongRef.current;
     if (song && song.audio !== "YT_STREAM") {
@@ -248,10 +249,10 @@ export function PlayerProvider({ children }) {
       }
     }
     else if (state === 3) { setIsLoadingStream(true); } // buffering
-    else if (state === 5) { 
+    else if (state === 5) {
       // CUED nghĩa là sẵn sàng nhưng chưa phát (VD: Bị Browser chặn Autoplay)
-      setIsPlaying(false); 
-      setIsLoadingStream(false); 
+      setIsPlaying(false);
+      setIsLoadingStream(false);
     }
     else if (state === -1) {
       // UNSTARTED nghĩa là đã load xong data nhưng chưa gọi autoplay hoặc lỗi
@@ -260,10 +261,8 @@ export function PlayerProvider({ children }) {
   }, []); // eslint-disable-line
 
   const handleYTTimeUpdate = useCallback((t, d) => {
-    // YouTube IFrame gửi thời gian qua callback - cập nhật state
-    // Bỏ check isYTModeRef ở đây vì nhiều khi player load nhanh hơn React state update
-    // dẫn đến bị kẹt Total Duration.
-    setCurrentTime(t);
+    // KHÔNG set state currentTime — ProgressBar/LyricsView đọc trực tiếp từ ref
+    // Chỉ cập nhật duration (thay đổi ít, không gây re-render liên tục)
     if (d > 0) setDuration(d);
   }, []);
 
@@ -291,7 +290,7 @@ export function PlayerProvider({ children }) {
 
     // Resolve Spotify songs without audio preview directly to YouTube fallback
     if (song.source === 'spotify' && !song.audio) {
-         song.audio = "YT_STREAM"; // Fallback directly to Youtube Stream since Deezer is removed
+      song.audio = "YT_STREAM"; // Fallback directly to Youtube Stream since Deezer is removed
     }
 
     const needsYT = song.isExternal || !song.audio || song.audio === "YT_STREAM";
@@ -314,7 +313,7 @@ export function PlayerProvider({ children }) {
       setIsPlaying(true);
       setIsLoadingStream(true);
       setCurrentTime(0);
-      
+
       const parseDurationStr = (str) => {
         if (typeof str === 'number') return str;
         if (!str || typeof str !== 'string') return 0;
@@ -418,7 +417,7 @@ export function PlayerProvider({ children }) {
       playSong(next);
       return;
     }
-    
+
     // 2. Phát tiếp từ autoQueue (trending songs) nếu có
     const autoFiltered = autoQueue.filter(s => s.id !== currentSong?.id);
     if (autoFiltered.length > 0) {
@@ -429,10 +428,10 @@ export function PlayerProvider({ children }) {
       playSong(next);
       return;
     }
-    
+
     // 3. Nếu hết cả autoQueue, phát từ danh sách hiện tại
     const list = filteredSongs.length > 0 ? filteredSongs : allSongs;
-    
+
     if (shuffle) {
       const sourceList = list.length > 1 ? list : allSongs;
       let idx;
@@ -462,7 +461,7 @@ export function PlayerProvider({ children }) {
   };
 
   const toggleShuffle = () => setShuffle((p) => !p);
-  const toggleRepeat  = () => setRepeatMode((m) => m === "none" ? "all" : m === "all" ? "one" : "none");
+  const toggleRepeat = () => setRepeatMode((m) => m === "none" ? "all" : m === "all" ? "one" : "none");
 
   const seekTo = (t) => {
     if (isYTMode) { ytPlayerRef.current?.seekTo(t); setCurrentTime(t); }
@@ -553,7 +552,7 @@ export function PlayerProvider({ children }) {
     <PlayerContext.Provider
       value={{
         songList: filteredSongs, allSongs, currentSong, isPlaying,
-        currentTime, duration, volume, searchQuery, setSearchQuery,
+        duration, volume, searchQuery, setSearchQuery,
         error, shuffle, toggleShuffle, repeatMode, toggleRepeat,
         favorites, toggleFavorite, isFavorite,
         recentHistory, queueOpen, setQueueOpen, lyricsOpen, setLyricsOpen,

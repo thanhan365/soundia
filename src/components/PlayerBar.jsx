@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { usePlayer } from "../context/PlayerContext";
 import { useToast } from "../context/ToastContext";
 import { useClickOutside } from "../hooks/useClickOutside";
@@ -15,7 +15,7 @@ export default function PlayerBar() {
     shuffle, toggleShuffle, repeatMode, toggleRepeat,
     toggleFavorite, isFavorite, queueOpen, setQueueOpen,
     lyricsOpen, setLyricsOpen, addToQueue,
-    playlists, addSongToPlaylist,
+    playlists, addSongToPlaylist, isLoadingStream,
   } = usePlayer();
   const { showToast } = useToast();
   const [menuOpen, setMenuOpen] = useState(false);
@@ -61,6 +61,15 @@ export default function PlayerBar() {
     setMenuOpen(false);
   }, [currentSong, handleCopyLink]);
 
+  // Update Dynamic Document Title
+  useEffect(() => {
+    if (currentSong) {
+      document.title = `${isPlaying ? "▶ " : ""}${currentSong.title} - ${currentSong.artist} | Soundia`;
+    } else {
+      document.title = "Soundia - Web Player";
+    }
+  }, [currentSong, isPlaying]);
+
   /* ─────────── MOBILE < 480px: layout 2 hàng ─────────── */
   /* Hàng 1: Cover + Title + Like + 3 chấm                */
   /* Hàng 2: Progress + Prev/Play/Next                     */
@@ -70,9 +79,10 @@ export default function PlayerBar() {
     <div
       className={`
         fixed bottom-0 left-0 right-0 z-30
-        bg-[#130c1c]/95 backdrop-blur-xl border-t border-white/5
+        bg-[#0a1628]/95 backdrop-blur-xl border-t border-neon/15
         transition-all duration-500
-        ${isPlaying ? "shadow-[0_-2px_20px_rgba(29,185,144,0.08)]" : ""}
+        shadow-[0_-4px_30px_rgba(29,185,144,0.12)]
+        ${isPlaying ? "shadow-[0_-4px_30px_rgba(29,185,144,0.25)]" : ""}
       `}
     >
       <div className="max-w-screen-2xl mx-auto">
@@ -148,10 +158,12 @@ export default function PlayerBar() {
                 </button>
                 <button
                   onClick={togglePlay}
-                  disabled={!currentSong}
-                  className={`w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 ${currentSong ? "bg-white text-dark active:scale-90" : "bg-white/10 text-gray-600"}`}
+                  disabled={!currentSong || isLoadingStream}
+                  className={`w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 ${currentSong ? "bg-white text-dark active:scale-90" : "bg-white/10 text-gray-600"} ${isLoadingStream ? "opacity-70 cursor-wait" : ""}`}
                 >
-                  {isPlaying ? <HiPause className="text-base" /> : <HiPlay className="text-base ml-0.5" />}
+                  {isLoadingStream ? (
+                    <div className="w-4 h-4 rounded-full border-2 border-dark border-t-transparent animate-spin" />
+                  ) : isPlaying ? <HiPause className="text-base" /> : <HiPlay className="text-base ml-0.5" />}
                 </button>
                 <button onClick={playNext} className="text-gray-400 active:text-white p-1 flex-shrink-0 rounded-full hover:text-gray-300">
                   <HiForward className="text-base" />
@@ -243,8 +255,14 @@ export default function PlayerBar() {
                 <button onClick={playPrev} className="text-gray-400 hover:text-white transition-colors">
                   <HiBackward className="text-lg sm:text-xl" />
                 </button>
-                <button onClick={togglePlay} disabled={!currentSong} className={`w-10 h-10 rounded-full flex items-center justify-center transition-all ${currentSong ? "bg-white text-dark hover:scale-110" : "bg-white/10 text-gray-600 cursor-not-allowed"}`}>
-                  {isPlaying ? <HiPause className="text-lg" /> : <HiPlay className="text-lg ml-0.5" />}
+                <button
+                  onClick={togglePlay}
+                  disabled={!currentSong || isLoadingStream}
+                  className={`w-10 h-10 rounded-full flex items-center justify-center transition-all ${currentSong ? "bg-white text-dark hover:scale-110" : "bg-white/10 text-gray-600 cursor-not-allowed"} ${isLoadingStream ? "opacity-70 cursor-wait hover:scale-100" : ""}`}
+                >
+                  {isLoadingStream ? (
+                    <div className="w-5 h-5 rounded-full border-[2px] border-dark border-t-transparent animate-spin" />
+                  ) : isPlaying ? <HiPause className="text-lg" /> : <HiPlay className="text-lg ml-0.5" />}
                 </button>
                 <button onClick={playNext} className="text-gray-400 hover:text-white transition-colors">
                   <HiForward className="text-lg sm:text-xl" />

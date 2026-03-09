@@ -21,12 +21,12 @@ export default function SearchBar() {
   // Smart suggestions based on current input
   const suggestions = searchQuery.length >= 1
     ? allSongs
-        .filter(
-          (s) =>
-            s.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            s.artist.toLowerCase().includes(searchQuery.toLowerCase())
-        )
-        .slice(0, 5)
+      .filter(
+        (s) =>
+          s.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          s.artist.toLowerCase().includes(searchQuery.toLowerCase())
+      )
+      .slice(0, 5)
     : [];
 
   const handleSearch = (query) => {
@@ -60,9 +60,11 @@ export default function SearchBar() {
           onKeyDown={handleKeyDown}
           className="
             w-full pl-10 pr-10 py-2 rounded-full
-            bg-white/5 border border-white/10
+            bg-[#0a1628]/80 border border-neon/15
             text-white text-sm placeholder-gray-500
-            focus:outline-none focus:border-neon/30 focus:bg-white/[0.08]
+            focus:outline-none focus:border-neon/40 focus:bg-[#0a1628]
+            focus:shadow-[0_0_15px_rgba(29,185,144,0.15)]
+            shadow-[0_0_8px_rgba(29,185,144,0.06)]
             transition-all duration-200
           "
         />

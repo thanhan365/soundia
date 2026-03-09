@@ -132,7 +132,7 @@ export default function Sidebar({ isOpen, onClose }) {
               </p>
               <button
                 onClick={() => {
-                  if(!user) {
+                  if (!user) {
                     navigate('/login');
                   } else {
                     setShowModal(true);
@@ -177,14 +177,16 @@ export default function Sidebar({ isOpen, onClose }) {
         <div className="mt-auto mb-2 px-2">
           {user ? (
             <div className="flex flex-col gap-1">
-              <div
-                className={`flex items-center gap-3 px-3 py-2 rounded-lg text-[13px] font-semibold text-white bg-white/5 transition-all duration-200 whitespace-nowrap overflow-hidden`}
+              <NavLink
+                to="/profile"
+                onClick={onClose}
+                className={({ isActive }) => `flex items-center gap-3 px-3 py-2 rounded-lg text-[13px] font-semibold transition-all duration-200 whitespace-nowrap overflow-hidden ${isActive ? "bg-neon/10 text-neon" : "text-white bg-white/5 hover:bg-white/10"}`}
               >
                 <HiUser className="text-lg text-neon flex-shrink-0" />
                 <span className={`transition-all duration-300 ${isExpanded ? "opacity-100" : "opacity-0 w-0"}`}>
                   {user.username}
                 </span>
-              </div>
+              </NavLink>
               <button
                 onClick={() => {
                   logout();

@@ -26,7 +26,8 @@ export default function PlaylistPage() {
   const navigate = useNavigate();
   const {
     playlists, allSongs, deletePlaylist, removeSongFromPlaylist,
-    playSong, currentSong, isPlaying, togglePlay
+    playSong, currentSong, isPlaying, togglePlay,
+    reorderPlaylistSongs, renamePlaylist, setPlaylistCover
   } = usePlayer();
   const { showToast } = useToast();
   const [editing, setEditing] = useState(false);
@@ -35,37 +36,6 @@ export default function PlaylistPage() {
   const fileInputRef = useRef(null);
 
   const playlist = playlists.find((pl) => pl.id === id);
-
-  useEffect(() => {
-    if (!playlist || typeof window === "undefined") return;
-    const resolvedCount = playlist.songs.reduce(
-      (acc, sid) =>
-        acc + (allSongs.some((s) => String(s.id) === String(sid)) ? 1 : 0),
-      0
-    );
-    // #region agent log
-    fetch("http://127.0.0.1:7340/ingest/7a476181-2b3f-4bea-8a0b-e17fa8639b01", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-Debug-Session-Id": "6bc027",
-      },
-      body: JSON.stringify({
-        sessionId: "6bc027",
-        runId: "pre-fix",
-        hypothesisId: "PL_COUNT",
-        location: "PlaylistPage.jsx:44",
-        message: "PlaylistPage playlist vs resolved songs",
-        data: {
-          playlistId: playlist.id,
-          rawCount: playlist.songs.length,
-          resolvedCount,
-        },
-        timestamp: Date.now(),
-      }),
-    }).catch(() => {});
-    // #endregion
-  }, [playlist, allSongs]);
 
   if (!playlist) {
     return (
@@ -87,18 +57,49 @@ export default function PlaylistPage() {
   const toggleAll = () => { isCurrentPl && isPlaying ? togglePlay() : playAll(); };
   const delPlaylist = () => { deletePlaylist(id); showToast(`Đã xóa "${playlist.name}"`, "info"); navigate("/library"); };
   const removeSong = (sid) => { removeSongFromPlaylist(id, sid); showToast("Đã xóa bài khỏi playlist", "info"); };
-  const startEdit = () => { showToast("Tính năng đổi tên đang được cập nhật", "info"); };
-  const uploadCover = () => { showToast("Tính năng đổi ảnh bìa đang được cập nhật", "info"); };
-  
-  // Drag (disabled for now or local only)
+  const startEdit = () => {
+    setEditName(playlist.name);
+    setEditing(true);
+  };
+
+  const saveEdit = () => {
+    if (editName.trim() && editName !== playlist.name) {
+      renamePlaylist(id, editName);
+      showToast("Đã đổi tên playlist", "success");
+    }
+    setEditing(false);
+  };
+
+  const cancelEdit = () => setEditing(false);
+
+  const uploadCover = (e) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        setPlaylistCover(id, event.target.result);
+        showToast("Đã thay đổi ảnh bìa", "success");
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  // Drag
   const onDragStart = useCallback((e, i) => { setDragIdx(i); e.dataTransfer.effectAllowed = "move"; }, []);
   const onDragOver = useCallback((e) => { e.preventDefault(); e.dataTransfer.dropEffect = "move"; }, []);
   const onDrop = useCallback((e, dropI) => {
     e.preventDefault();
     if (dragIdx === null || dragIdx === dropI) return;
-    showToast("Tính năng sắp xếp đang được cập nhật", "info");
+
+    // Create new array of song IDs
+    const newSongs = [...playlist.songs];
+    const [draggedSong] = newSongs.splice(dragIdx, 1);
+    newSongs.splice(dropI, 0, draggedSong);
+
+    reorderPlaylistSongs(id, newSongs);
+    showToast("Đã thay đổi vị trí", "success");
     setDragIdx(null);
-  }, [dragIdx, id]);
+  }, [dragIdx, id, playlist, reorderPlaylistSongs, showToast]);
   const onDragEnd = useCallback(() => setDragIdx(null), []);
 
   return (
@@ -135,14 +136,33 @@ export default function PlaylistPage() {
           <div className="flex-1 min-w-0 text-center md:text-left">
             <p className="text-[10px] font-bold text-neon/70 uppercase tracking-[0.2em] mb-2">Playlist</p>
 
-            <h1
-              className="text-2xl sm:text-3xl md:text-5xl font-extrabold text-white mb-3 truncate cursor-pointer group/title hover:text-neon/90 transition-colors"
-              onClick={startEdit}
-              title="Bấm để đổi tên"
-            >
-              {playlist.name}
-              <HiPencil className="inline-block ml-3 text-base text-gray-600 opacity-0 group-hover/title:opacity-100 transition-opacity align-middle" />
-            </h1>
+            {editing ? (
+              <div className="flex items-center gap-2 mb-3 max-w-sm justify-center md:justify-start">
+                <input
+                  type="text"
+                  value={editName}
+                  onChange={(e) => setEditName(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && saveEdit()}
+                  className="bg-white/10 text-white font-bold text-xl md:text-2xl rounded-lg px-3 py-1 outline-none border border-neon/50 focus:border-neon w-full"
+                  autoFocus
+                />
+                <button onClick={saveEdit} className="text-neon hover:text-white font-semibold text-sm bg-neon/10 hover:bg-neon/30 px-3 py-1.5 rounded-lg transition-colors">
+                  Lưu
+                </button>
+                <button onClick={cancelEdit} className="text-gray-400 hover:text-white font-semibold text-sm bg-white/5 hover:bg-white/10 px-3 py-1.5 rounded-lg transition-colors">
+                  Hủy
+                </button>
+              </div>
+            ) : (
+              <h1
+                className="text-2xl sm:text-3xl md:text-5xl font-extrabold text-white mb-3 truncate cursor-pointer group/title hover:text-neon/90 transition-colors inline-block"
+                onClick={startEdit}
+                title="Bấm để đổi tên"
+              >
+                {playlist.name}
+                <HiPencil className="inline-block ml-3 text-base text-gray-600 opacity-0 group-hover/title:opacity-100 transition-opacity align-middle" />
+              </h1>
+            )}
 
             <p className="text-[13px] text-gray-400 mb-5">
               <span className="font-semibold text-gray-300">{songs.length}</span> bài hát

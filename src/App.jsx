@@ -18,6 +18,7 @@ import GenresPage from "./pages/GenresPage";
 import PlaylistPage from "./pages/PlaylistPage";
 import ArtistDetail from "./pages/ArtistDetail";
 import ExternalPlaylistPage from "./pages/ExternalPlaylistPage";
+import ProfilePage from "./pages/ProfilePage";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import { AuthProvider } from "./context/AuthContext";
@@ -80,6 +81,7 @@ function AppContent() {
             <Route path="/playlist/:id" element={<PlaylistPage />} />
             <Route path="/artist-detail/:id" element={<ArtistDetail />} />
             <Route path="/playlist-detail/:id" element={<ExternalPlaylistPage />} />
+            <Route path="/profile" element={<ProfilePage />} />
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
           </Routes>

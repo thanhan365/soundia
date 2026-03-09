@@ -1,23 +1,51 @@
-import { useState } from "react";
-import { HiCollection, HiSearch } from "react-icons/hi";
+import { useState, useEffect } from "react";
+import { HiCollection, HiSearch, HiPlay, HiMusicNote, HiVideoCamera } from "react-icons/hi";
 import { usePlayer } from "../context/PlayerContext";
 import SongItem from "../components/SongItem";
 import HeroSection from "../components/HeroSection";
+import SkeletonLoader from "../components/SkeletonLoader";
+import api from "../utils/api";
 
-const tabs = ["Bài hát", "Playlist", "Album", "MV"];
+const tabs = ["Yêu thích", "Playlist", "Album", "MV"];
 
 export default function LibraryPage() {
-  const { allSongs, playlists, deletePlaylist } = usePlayer();
-  const [activeTab, setActiveTab] = useState("Bài hát");
+  const { allSongs, playlists, deletePlaylist, playSong } = usePlayer();
+  const [activeTab, setActiveTab] = useState("Yêu thích");
   const [localSearch, setLocalSearch] = useState("");
+  const [albums, setAlbums] = useState([]);
+  const [mvs, setMvs] = useState([]);
+  const [loadingExtras, setLoadingExtras] = useState(false);
+
+  useEffect(() => {
+    if (activeTab === "Album" && albums.length === 0) {
+      setLoadingExtras(true);
+      api.get("/songs/itunes-proxy?term=vpop&entity=album&limit=20")
+        .then(res => setAlbums(res.data.results || []))
+        .catch(console.error)
+        .finally(() => setLoadingExtras(false));
+    } else if (activeTab === "MV" && mvs.length === 0) {
+      setLoadingExtras(true);
+      api.get("/songs/itunes-proxy?term=vpop&entity=musicVideo&limit=20")
+        .then(res => setMvs(res.data.results || []))
+        .catch(console.error)
+        .finally(() => setLoadingExtras(false));
+    }
+  }, [activeTab]);
+
+  const favoriteList = allSongs.filter(s => s.isFavorite); // Assuming PlayerContext provides isFavorite or we use the favorites array if it exists.
+  // Correction: Soundia uses the favorites array in context or we should map it
+  const { favorites } = usePlayer();
+  const favoriteSongs = favorites && favorites.length > 0
+    ? allSongs.filter(s => favorites.includes(s.id))
+    : [];
 
   const filteredLibSongs = localSearch
-    ? allSongs.filter(
-        (s) =>
-          s.title.toLowerCase().includes(localSearch.toLowerCase()) ||
-          s.artist.toLowerCase().includes(localSearch.toLowerCase())
-      )
-    : allSongs;
+    ? favoriteSongs.filter(
+      (s) =>
+        s.title.toLowerCase().includes(localSearch.toLowerCase()) ||
+        s.artist.toLowerCase().includes(localSearch.toLowerCase())
+    )
+    : favoriteSongs;
 
   return (
     <div className="space-y-6">
@@ -48,7 +76,7 @@ export default function LibraryPage() {
       </div>
 
       {/* Tab Content */}
-      {activeTab === "Bài hát" && (
+      {activeTab === "Yêu thích" && (
         <div className="space-y-4 pb-10 sm:pb-16">
           {/* Local search */}
           <div className="relative max-w-sm">
@@ -63,7 +91,7 @@ export default function LibraryPage() {
           </div>
 
           <p className="text-sm text-gray-500">
-            {filteredLibSongs.length} bài hát
+            {filteredLibSongs.length} bài hát yêu thích
           </p>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-2">
@@ -85,34 +113,6 @@ export default function LibraryPage() {
                     (allSongs.some((s) => String(s.id) === String(sid)) ? 1 : 0),
                   0
                 );
-
-                // #region agent log
-                if (typeof window !== "undefined") {
-                  fetch(
-                    "http://127.0.0.1:7340/ingest/7a476181-2b3f-4bea-8a0b-e17fa8639b01",
-                    {
-                      method: "POST",
-                      headers: {
-                        "Content-Type": "application/json",
-                        "X-Debug-Session-Id": "6bc027",
-                      },
-                      body: JSON.stringify({
-                        sessionId: "6bc027",
-                        runId: "pre-fix",
-                        hypothesisId: "PL_COUNT_LIB",
-                        location: "LibraryPage.jsx:80",
-                        message: "Library playlist card count",
-                        data: {
-                          playlistId: pl.id,
-                          rawCount: pl.songs.length,
-                          resolvedCount,
-                        },
-                        timestamp: Date.now(),
-                      }),
-                    }
-                  ).catch(() => {});
-                }
-                // #endregion
 
                 return (
                   <div
@@ -147,11 +147,51 @@ export default function LibraryPage() {
         </div>
       )}
 
-      {(activeTab === "Album" || activeTab === "MV") && (
-        <div className="text-center py-16">
-          <p className="text-2xl mb-2">🎵</p>
-          <h3 className="text-lg font-semibold text-gray-400 mb-1">Sắp ra mắt</h3>
-          <p className="text-sm text-gray-600">Tính năng {activeTab} sẽ có trong phiên bản tiếp theo!</p>
+      {activeTab === "Album" && (
+        <div className="pb-10 sm:pb-16">
+          {loadingExtras ? <SkeletonLoader /> : albums.length > 0 ? (
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+              {albums.map((album) => (
+                <div key={album.collectionId} className="group bg-white/[0.03] rounded-xl p-3 sm:p-4 border border-white/5 hover:border-white/10 transition-all">
+                  <div className="w-full aspect-square rounded-lg overflow-hidden mb-3 relative">
+                    <img src={album.artworkUrl100?.replace('100x100', '300x300')} alt={album.collectionName} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                      <HiPlay className="text-4xl text-white" />
+                    </div>
+                  </div>
+                  <h3 className="text-sm font-semibold text-white truncate">{album.collectionName}</h3>
+                  <p className="text-xs text-gray-500 truncate">{album.artistName}</p>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-12"><HiMusicNote className="text-5xl text-gray-700 mx-auto mb-3" /><p className="text-gray-500">Chưa có album nào.</p></div>
+          )}
+        </div>
+      )}
+
+      {activeTab === "MV" && (
+        <div className="pb-10 sm:pb-16">
+          {loadingExtras ? <SkeletonLoader /> : mvs.length > 0 ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+              {mvs.map((mv) => (
+                <div key={mv.trackId} className="group bg-white/[0.03] rounded-xl overflow-hidden border border-white/5 hover:border-white/10 transition-all cursor-pointer">
+                  <div className="w-full aspect-video relative overflow-hidden bg-black flex items-center justify-center">
+                    <img src={mv.artworkUrl100?.replace('100x100', '600x400')} alt={mv.trackName} className="w-full object-cover group-hover:scale-105 transition-transform duration-500 opacity-60 group-hover:opacity-100" />
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <HiVideoCamera className="text-4xl text-white drop-shadow-lg" />
+                    </div>
+                  </div>
+                  <div className="p-3">
+                    <h3 className="text-sm font-semibold text-white truncate">{mv.trackName}</h3>
+                    <p className="text-xs text-gray-400 truncate mt-1">{mv.artistName}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-12"><HiVideoCamera className="text-5xl text-gray-700 mx-auto mb-3" /><p className="text-gray-500">Chưa có MV nào.</p></div>
+          )}
         </div>
       )}
     </div>
