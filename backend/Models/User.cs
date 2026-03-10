@@ -27,6 +27,10 @@ namespace Soundia.Api.Models
         [MaxLength(500)]
         public string? AvatarUrl { get; set; }
 
+        // Role: "user" or "admin"
+        [MaxLength(20)]
+        public string Role { get; set; } = "user";
+
         // Refresh Token
         public string? RefreshToken { get; set; }
         public DateTime? RefreshTokenExpiry { get; set; }

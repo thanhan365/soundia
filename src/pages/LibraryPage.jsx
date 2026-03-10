@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
-import { HiCollection, HiSearch, HiPlay, HiMusicNote, HiVideoCamera } from "react-icons/hi";
+import { useState, useEffect, useCallback } from "react";
+import { HiCollection, HiSearch, HiPlay, HiMusicNote, HiVideoCamera, HiRefresh } from "react-icons/hi";
 import { usePlayer } from "../context/PlayerContext";
 import SongItem from "../components/SongItem";
 import HeroSection from "../components/HeroSection";
@@ -9,12 +9,31 @@ import api from "../utils/api";
 const tabs = ["Yêu thích", "Playlist", "Album", "MV"];
 
 export default function LibraryPage() {
-  const { allSongs, playlists, deletePlaylist, playSong } = usePlayer();
+  const { allSongs, playlists, deletePlaylist, playSong, favorites } = usePlayer();
   const [activeTab, setActiveTab] = useState("Yêu thích");
   const [localSearch, setLocalSearch] = useState("");
   const [albums, setAlbums] = useState([]);
   const [mvs, setMvs] = useState([]);
   const [loadingExtras, setLoadingExtras] = useState(false);
+  const [favoriteSongs, setFavoriteSongs] = useState([]);
+  const [loadingFavs, setLoadingFavs] = useState(false);
+
+  // Fetch favorites from API
+  const fetchFavs = useCallback(async () => {
+    setLoadingFavs(true);
+    try {
+      const res = await api.get("/favorites");
+      setFavoriteSongs((res.data || []).map(s => ({
+        id: s.id, title: s.title, artist: s.artist, duration: s.duration,
+        cover: s.coverUrl || s.cover || '', audio: s.audioUrl || s.audio || 'YT_STREAM',
+      })));
+    } catch { }
+    finally { setLoadingFavs(false); }
+  }, []);
+
+  useEffect(() => {
+    if (activeTab === "Yêu thích") fetchFavs();
+  }, [activeTab, favorites, fetchFavs]);
 
   useEffect(() => {
     if (activeTab === "Album" && albums.length === 0) {
@@ -31,13 +50,6 @@ export default function LibraryPage() {
         .finally(() => setLoadingExtras(false));
     }
   }, [activeTab]);
-
-  const favoriteList = allSongs.filter(s => s.isFavorite); // Assuming PlayerContext provides isFavorite or we use the favorites array if it exists.
-  // Correction: Soundia uses the favorites array in context or we should map it
-  const { favorites } = usePlayer();
-  const favoriteSongs = favorites && favorites.length > 0
-    ? allSongs.filter(s => favorites.includes(s.id))
-    : [];
 
   const filteredLibSongs = localSearch
     ? favoriteSongs.filter(
@@ -94,7 +106,7 @@ export default function LibraryPage() {
             {filteredLibSongs.length} bài hát yêu thích
           </p>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-2">
+          <div className="grid grid-cols-1 lg:grid-cols-2 2xl:grid-cols-3 gap-1.5 sm:gap-2">
             {filteredLibSongs.map((song, i) => (
               <SongItem key={song.id} song={song} index={i} />
             ))}

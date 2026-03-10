@@ -16,21 +16,33 @@ export function useFavorites({ user, showToast, allSongs, setAllSongs }) {
                 setFavorites(favRes.data.map((s) => s.id));
             } catch (e) { console.error("Failed to load favorites", e); }
         };
-        if (allSongs.length > 0) load();
-    }, [user, allSongs.length]);
+        load();
+    }, [user]);
 
     const toggleFavorite = async (song) => {
         if (!user) { showToast("Vui lòng đăng nhập để sử dụng tính năng này", "error"); return; }
         let songToSave = { ...song };
         try {
-            if (song.isExternal) {
-                const res = await api.post("/songs/external", { title: song.title, artist: song.artist, duration: song.duration, coverUrl: song.cover, audioUrl: "YT_STREAM" });
+            // Detect external song: either has isExternal flag, or id is not a pure integer
+            const isExternal = song.isExternal || (typeof song.id === 'string' && !/^\d+$/.test(song.id));
+            if (isExternal) {
+                // Save external song to DB first, then get its integer DB id
+                const res = await api.post("/songs/external", {
+                    title: song.title,
+                    artist: song.artist,
+                    duration: String(song.duration || "0:00"),
+                    coverUrl: song.cover || song.coverUrl || "",
+                    audioUrl: song.audio || song.audioUrl || "YT_STREAM"
+                });
                 songToSave = res.data;
             }
             const songId = songToSave.id;
             await api.post("/favorites", { songId });
             setFavorites((p) => p.includes(songId) ? p.filter((id) => id !== songId) : [...p, songId]);
-            if (song.isExternal) setAllSongs((prev) => [...prev, { ...songToSave, cover: songToSave.coverUrl, audio: songToSave.audioUrl }]);
+            if (isExternal) setAllSongs((prev) => {
+                if (prev.some(s => s.id === songToSave.id)) return prev;
+                return [...prev, { ...songToSave, cover: songToSave.coverUrl || songToSave.cover, audio: songToSave.audioUrl || songToSave.audio }];
+            });
         } catch (e) { console.error("Failed to toggle favorite", e); }
     };
 

@@ -11,18 +11,62 @@ export default function SuggestedPlaylistDetail() {
     const description = searchParams.get("desc") || "";
     const cover = searchParams.get("cover") || "";
     const gradient = searchParams.get("gradient") || "from-purple-500 to-pink-500";
+    const nctKey = searchParams.get("nctKey") || "";
+    const zingId = searchParams.get("zingId") || "";
 
     const [songs, setSongs] = useState([]);
+    const [playlistCover, setPlaylistCover] = useState(cover);
+    const [playlistDesc, setPlaylistDesc] = useState(description);
     const [loading, setLoading] = useState(true);
     const navigate = useNavigate();
     const { playSong, currentSong, isPlaying, togglePlay, isFavorite, toggleFavorite, addToQueue } = usePlayer();
 
     useEffect(() => {
-        if (!keyword) return;
         const fetchSongs = async () => {
             try {
-                // Fetch NCT + iTunes in parallel, NCT priority
                 const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5066/api';
+
+                // Ưu tiên Zing MP3 playlist
+                if (zingId) {
+                    const res = await fetch(`${apiUrl}/songs/zing-playlist/${zingId}`);
+                    if (res.ok) {
+                        const data = await res.json();
+                        if (data.success && data.data?.tracks) {
+                            const normalized = data.data.tracks.map(t => ({
+                                ...t,
+                                cover: t.cover || t.artwork || '',
+                                audio: t.audio || 'YT_STREAM',
+                            }));
+                            setSongs(normalized);
+                            if (data.data.image) setPlaylistCover(data.data.image);
+                            if (data.data.description) setPlaylistDesc(data.data.description);
+                            return;
+                        }
+                    }
+                }
+
+                // Sau đó NCT playlist key
+                if (nctKey) {
+                    const res = await fetch(`${apiUrl}/songs/nct-playlist-detail/${nctKey}`);
+                    if (res.ok) {
+                        const data = await res.json();
+                        if (data.success && data.data?.tracks) {
+                            // Normalize NCT fields → app standard fields
+                            const normalized = data.data.tracks.map(t => ({
+                                ...t,
+                                cover: t.artwork || t.cover || '',
+                                audio: t.audio || t.streamUrl || t.previewUrl || '',
+                            }));
+                            setSongs(normalized);
+                            if (data.data.image) setPlaylistCover(data.data.image);
+                            if (data.data.description) setPlaylistDesc(data.data.description);
+                            return;
+                        }
+                    }
+                }
+
+                // Fallback: search via keyword
+                if (!keyword) return;
                 const [nctRes, itunesRes] = await Promise.all([
                     fetch(`${apiUrl}/songs/nct-search?keyword=${encodeURIComponent(keyword)}&limit=20`).then(r => r.ok ? r.json() : null).catch(() => null),
                     fetch(`${apiUrl}/songs/playlist-songs?keyword=${encodeURIComponent(keyword)}&limit=20`).then(r => r.ok ? r.json() : null).catch(() => null),
@@ -31,7 +75,6 @@ export default function SuggestedPlaylistDetail() {
                 const nctSongs = nctRes?.success ? nctRes.data : [];
                 const itunesSongs = itunesRes?.success ? itunesRes.data : [];
 
-                // Merge: NCT first, then iTunes (dedup by title+artist)
                 const merged = [...nctSongs];
                 const seen = new Set(nctSongs.map(s => `${(s.title || '').toLowerCase()}|${(s.artist || '').split(',')[0].trim().toLowerCase()}`));
                 for (const s of itunesSongs) {
@@ -49,7 +92,7 @@ export default function SuggestedPlaylistDetail() {
             }
         };
         fetchSongs();
-    }, [keyword]);
+    }, [nctKey, keyword]);
 
     const handlePlayAll = () => {
         if (songs.length > 0) {
@@ -65,8 +108,11 @@ export default function SuggestedPlaylistDetail() {
         playSong(song);
     };
 
-    const formatDuration = (sec) => {
-        if (!sec) return "--:--";
+    const formatDuration = (val) => {
+        if (!val) return "--:--";
+        // NCT API returns ms (duration * 1000), iTunes returns ms too
+        // If > 10000 assume milliseconds, else seconds
+        const sec = val > 10000 ? val / 1000 : val;
         const m = Math.floor(sec / 60);
         const s = Math.floor(sec % 60);
         return `${m}:${s.toString().padStart(2, "0")}`;
@@ -194,7 +240,7 @@ export default function SuggestedPlaylistDetail() {
                                     {/* Cover */}
                                     <div className="w-12 h-12 rounded-lg overflow-hidden flex-shrink-0">
                                         <img
-                                            src={song.cover}
+                                            src={song.artwork || song.cover}
                                             alt=""
                                             className="w-full h-full object-cover"
                                             onError={(e) => {
@@ -220,7 +266,7 @@ export default function SuggestedPlaylistDetail() {
                                     <button
                                         onClick={(e) => {
                                             e.stopPropagation();
-                                            toggleFavorite(song.id);
+                                            toggleFavorite(song);
                                         }}
                                         className={`opacity-0 group-hover:opacity-100 transition-opacity p-1 ${liked ? "!opacity-100 text-red-500" : "text-gray-600"
                                             }`}

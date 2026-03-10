@@ -1,11 +1,39 @@
-import { HiHeart } from "react-icons/hi";
+import { useState, useEffect, useCallback } from "react";
+import { HiHeart, HiRefresh } from "react-icons/hi";
 import { usePlayer } from "../context/PlayerContext";
 import SongItem from "../components/SongItem";
 import HeroSection from "../components/HeroSection";
+import api from "../utils/api";
 
 export default function FavoritesPage() {
-  const { allSongs, favorites } = usePlayer();
-  const favoriteSongs = allSongs.filter((song) => favorites.includes(song.id));
+  const { favorites } = usePlayer();
+  const [favoriteSongs, setFavoriteSongs] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  const fetchFavorites = useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await api.get("/favorites");
+      const songs = (res.data || []).map(s => ({
+        id: s.id,
+        title: s.title,
+        artist: s.artist,
+        duration: s.duration,
+        cover: s.coverUrl || s.cover || '',
+        audio: s.audioUrl || s.audio || 'YT_STREAM',
+      }));
+      setFavoriteSongs(songs);
+    } catch (e) {
+      console.error("Failed to load favorites", e);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  // Reload khi favorites thay đổi (toggle thêm/bỏ)
+  useEffect(() => {
+    fetchFavorites();
+  }, [fetchFavorites, favorites]);
 
   const description = favoriteSongs.length > 0
     ? `Bạn có ${favoriteSongs.length} bài yêu thích`
@@ -22,7 +50,11 @@ export default function FavoritesPage() {
       />
 
       {/* Favorites list */}
-      {favoriteSongs.length > 0 ? (
+      {loading ? (
+        <div className="flex justify-center py-16">
+          <HiRefresh className="text-3xl text-gray-500 animate-spin" />
+        </div>
+      ) : favoriteSongs.length > 0 ? (
         <div>
           <div className="flex items-center justify-between mb-3 sm:mb-6">
             <div>
@@ -32,7 +64,7 @@ export default function FavoritesPage() {
               </p>
             </div>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-1.5 sm:gap-3">
+          <div className="grid grid-cols-1 lg:grid-cols-2 2xl:grid-cols-3 gap-1.5 sm:gap-2">
             {favoriteSongs.map((song, index) => (
               <SongItem key={song.id} song={song} index={index} />
             ))}

@@ -9,5 +9,6 @@ namespace Soundia.Api.DTOs.Auth
         public string? RefreshToken { get; set; }
         public string? DisplayName { get; set; }
         public string? AvatarUrl { get; set; }
+        public string Role { get; set; } = "user";
     }
 }

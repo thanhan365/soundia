@@ -78,6 +78,8 @@ export default function SuggestedPlaylistSection() {
             desc: playlist.description,
             cover: playlist.cover || "",
             gradient: playlist.gradient || "",
+            nctKey: playlist.nctPlaylistKey || "",
+            zingId: playlist.zingPlaylistId || "",
         });
         navigate(`/suggested-playlist?${params.toString()}`);
     };

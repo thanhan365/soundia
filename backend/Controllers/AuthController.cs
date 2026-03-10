@@ -53,15 +53,17 @@ namespace Soundia.Api.Controllers
                 Token = _tokenService.CreateToken(user),
                 RefreshToken = refreshToken,
                 DisplayName = user.DisplayName,
-                AvatarUrl = user.AvatarUrl
+                AvatarUrl = user.AvatarUrl,
+                Role = user.Role
             };
         }
 
         [HttpPost("login")]
         public async Task<ActionResult<AuthResponse>> Login(LoginRequest request)
         {
+            var input = request.Username.ToLower();
             var user = await _context.Users
-                .FirstOrDefaultAsync(u => u.Username == request.Username.ToLower());
+                .FirstOrDefaultAsync(u => u.Username == input || u.Email == input);
 
             if (user == null)
                 return Unauthorized("Invalid username or password.");
@@ -83,7 +85,8 @@ namespace Soundia.Api.Controllers
                 Token = _tokenService.CreateToken(user),
                 RefreshToken = user.RefreshToken,
                 DisplayName = user.DisplayName,
-                AvatarUrl = user.AvatarUrl
+                AvatarUrl = user.AvatarUrl,
+                Role = user.Role
             };
         }
 
@@ -109,7 +112,8 @@ namespace Soundia.Api.Controllers
                 Token = _tokenService.CreateToken(user),
                 RefreshToken = user.RefreshToken,
                 DisplayName = user.DisplayName,
-                AvatarUrl = user.AvatarUrl
+                AvatarUrl = user.AvatarUrl,
+                Role = user.Role
             };
         }
 
@@ -145,6 +149,37 @@ namespace Soundia.Api.Controllers
 
             await _context.SaveChangesAsync();
             return Ok(new { user.DisplayName, user.AvatarUrl });
+        }
+
+        [HttpGet("check-admin")]
+        public async Task<ActionResult> CheckAdmin()
+        {
+            var hasAdmin = await _context.Users.AnyAsync(u => u.Role == "admin");
+            return Ok(new { hasAdmin });
+        }
+
+        [HttpPost("seed-admin")]
+        public async Task<ActionResult> SeedAdmin([FromBody] RegisterRequest request)
+        {
+            // Remove existing admin(s) first
+            var existingAdmins = await _context.Users.Where(u => u.Role == "admin").ToListAsync();
+            if (existingAdmins.Any())
+                _context.Users.RemoveRange(existingAdmins);
+
+            if (await _context.Users.AnyAsync(u => u.Username == request.Username.ToLower() && u.Role != "admin"))
+                return BadRequest("Username is already taken by a regular user.");
+
+            var admin = new User
+            {
+                Username = request.Username.ToLower(),
+                Email = request.Email.ToLower(),
+                PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.Password),
+                Role = "admin",
+                DisplayName = "Administrator"
+            };
+            _context.Users.Add(admin);
+            await _context.SaveChangesAsync();
+            return Ok(new { message = "Admin account created successfully.", username = admin.Username });
         }
 
         private static string GenerateRefreshToken()

@@ -296,40 +296,83 @@ namespace Soundia.Api.Controllers
                 }
                 catch { }
 
-                // Danh sách playlist gợi ý
-                var playlists = new (string name, string desc, string query, string gradient)[]
+                // Danh sách playlists — hỗ trợ cả NCT và Zing MP3
+                var playlists = new (string key, string fallbackName, string gradient, string source)[]
                 {
-                    ("Trending TikTok", "Những bài hot nhất trên TikTok", "trending tiktok", "from-rose-500 to-orange-500"),
-                    ("Nhạc Trung Lời Việt", "Nhạc Hoa lời Việt bất hủ", "nhạc trung lời việt", "from-red-500 to-yellow-600"),
-                    ("Hôm Nay Tôi Suy", "Khi tâm trạng cần bình yên", "ballad buồn", "from-blue-500 to-purple-600"),
-                    ("Rap Việt Chill", "Rap Việt nhẹ nhàng chill sad", "rap việt chill", "from-emerald-500 to-teal-600"),
-                    ("Nhạc Remix Hot", "EDM remix bản hit V-Pop", "remix hot", "from-pink-500 to-violet-600"),
-                    ("Nhạc Động Lực", "Tiếp thêm năng lượng mỗi ngày", "nhạc động lực", "from-amber-500 to-red-500"),
-                    ("Chữa Lành Tâm Hồn", "Acoustic nhẹ nhàng thư giãn", "acoustic chữa lành", "from-cyan-500 to-blue-500"),
-                    ("Dân Ca Đương Đại", "Dân ca mang hơi thở mới", "dân ca đương đại", "from-green-500 to-lime-500"),
-                    ("K-Pop Hits", "Bản hit K-Pop hot nhất", "kpop hit", "from-fuchsia-500 to-pink-500"),
-                    ("Lofi Chill Study", "Nhạc lofi học bài tập trung", "lofi chill", "from-indigo-500 to-slate-600"),
-                    ("Nhạc Phim Hay", "Nhạc phim Việt & quốc tế hay nhất", "nhạc phim hay", "from-sky-500 to-indigo-600"),
-                    ("V-Pop Mới Nhất", "Cập nhật V-Pop mới ra mắt", "vpop mới nhất 2024", "from-violet-500 to-fuchsia-600"),
+                    ("lv0G8HlIW0Vq", "TikTok Trending", "from-rose-500 to-orange-500", "nct"),
+                    ("2JtgoYqhvgHL", "V-Pop Thịnh Hành", "from-violet-500 to-fuchsia-500", "nct"),
+                    ("xFQ2g5ZHKFTp", "TikTok Remix Việt", "from-pink-500 to-violet-600", "nct"),
+                    ("6C0WOI7D", "Rap Buồn Tâm Trạng", "from-slate-600 to-gray-800", "zing"),
+                    ("jjF1M79lX8JD", "Cùng Lấy Động Lực", "from-amber-500 to-orange-500", "nct"),
+                    ("iY1AnIsXedqE", "Rap Việt Hot", "from-emerald-500 to-teal-600", "nct"),
+                    ("dOwhaum9O8W4", "Acoustic Indie", "from-cyan-500 to-blue-500", "nct"),
+                    ("ZPOg5wVczPko", "K-Pop Hot Hits", "from-amber-500 to-red-500", "nct"),
+                    ("6C8O0A66", "Nhạc Trung", "from-red-600 to-amber-500", "zing"),
+                    ("YHu8Xj6dFxYJ", "Ballad Việt Quốc Dân", "from-indigo-500 to-slate-600", "nct"),
+                    ("C6GaVhpbvkI4", "Lofi & Chill", "from-violet-500 to-fuchsia-600", "nct"),
+                    ("6BF9EAFI", "Hôm Nay Suy Tí", "from-blue-500 to-indigo-600", "zing"),
                 };
 
                 var result = new List<object>();
-                for (int i = 0; i < playlists.Length; i++)
+                var tasks = playlists.Select(async (p, i) =>
                 {
-                    var p = playlists[i];
-                    // Lấy cover từ pool trending songs (mỗi playlist dùng 1 cover khác nhau)
-                    var cover = covers.Count > i ? covers[i * 2 % covers.Count] : "";
-                    
-                    result.Add(new
+                    try
                     {
-                        id = $"suggested_{i}",
-                        name = p.name,
-                        description = p.desc,
-                        searchQuery = p.query,
-                        cover,
-                        gradient = p.gradient
-                    });
-                }
+                        if (p.source == "zing")
+                        {
+                            // Zing MP3 playlist — chỉ lấy metadata, songs sẽ fetch khi user click vào
+                            return new
+                            {
+                                id = $"zing_{p.key}_{i}",
+                                name = p.fallbackName,
+                                description = p.fallbackName,
+                                searchQuery = p.fallbackName,
+                                cover = "",
+                                gradient = p.gradient,
+                                nctPlaylistKey = "",
+                                zingPlaylistId = p.key,
+                                songCount = 0,
+                                order = i
+                            };
+                        }
+                        else
+                        {
+                            var (name, image, description, totalSongs, songs) = await _nctApi.GetPlaylistAsync(p.key, 5);
+                            return new
+                            {
+                                id = $"nct_{p.key}_{i}",
+                                name = p.fallbackName,
+                                description = !string.IsNullOrEmpty(description) ? description : p.fallbackName,
+                                searchQuery = p.fallbackName,
+                                cover = !string.IsNullOrEmpty(image) ? image : "",
+                                gradient = p.gradient,
+                                nctPlaylistKey = p.key,
+                                zingPlaylistId = "",
+                                songCount = totalSongs,
+                                order = i
+                            };
+                        }
+                    }
+                    catch
+                    {
+                        return new
+                        {
+                            id = $"{p.source}_{p.key}_{i}",
+                            name = p.fallbackName,
+                            description = p.fallbackName,
+                            searchQuery = p.fallbackName,
+                            cover = "",
+                            gradient = p.gradient,
+                            nctPlaylistKey = p.source == "nct" ? p.key : "",
+                            zingPlaylistId = p.source == "zing" ? p.key : "",
+                            songCount = 0,
+                            order = i
+                        };
+                    }
+                }).ToArray();
+
+                var results = await Task.WhenAll(tasks);
+                result = results.OrderBy(r => r.order).Cast<object>().ToList();
 
                 _cachedSuggestedPlaylists = result;
                 _suggestedPlaylistsCacheTime = DateTime.UtcNow.AddHours(6);
@@ -342,15 +385,69 @@ namespace Soundia.Api.Controllers
             }
         }
 
+        // GET /api/songs/nct-playlist-detail/{key} — Lấy chi tiết playlist từ NCT
+        [HttpGet("nct-playlist-detail/{key}")]
+        public async Task<IActionResult> GetNctPlaylistDetail(string key)
+        {
+            try
+            {
+                var (name, image, description, totalSongs, songs) = await _nctApi.GetPlaylistAsync(key, 50);
+                
+                if (string.IsNullOrEmpty(name))
+                    return NotFound(new { message = "Playlist not found" });
+
+                var tracks = songs.Select(s =>
+                {
+                    var proxiedUrl = !string.IsNullOrEmpty(s.StreamUrl)
+                        ? $"/api/stream/proxy-audio?url={System.Net.WebUtility.UrlEncode(s.StreamUrl)}"
+                        : "";
+                    return new
+                    {
+                        id = $"nct_{s.Key}",
+                        title = s.Name,
+                        artist = s.ArtistName,
+                        album = name,
+                        cover = s.Image,
+                        artwork = s.Image,
+                        duration = s.Duration,
+                        audio = !string.IsNullOrEmpty(proxiedUrl) ? proxiedUrl : "YT_STREAM",
+                        previewUrl = proxiedUrl,
+                        streamUrl = proxiedUrl,
+                        nctKey = s.Key,
+                        source = "nct",
+                        isExternal = true
+                    };
+                }).ToList();
+
+                return Ok(new
+                {
+                    success = true,
+                    data = new
+                    {
+                        name,
+                        image,
+                        description,
+                        totalSongs,
+                        tracks
+                    }
+                });
+            }
+            catch (System.Exception ex)
+            {
+                return StatusCode(500, new { message = "Error fetching NCT playlist", details = ex.Message });
+            }
+        }
+
         // Curated search queries per playlist category for relevant results
         private static readonly Dictionary<string, string[]> _playlistQueries = new(StringComparer.OrdinalIgnoreCase)
         {
             ["trending tiktok"] = new[] { "Trọng Nhân vạn sự như ý", "Jack J97", "Quang Hùng MasterD dễ đến dễ đi", "HIEUTHUHAI ngủ một mình", "Obito có hẹn với thanh xuân", "Wren Evans", "Ricky Star", "VSTRA", "Pháo 2 phút hơn", "tiktok việt nam hot" },
-            ["nhạc trung lời việt"] = new[] { "nhạc hoa lời việt", "Lệ Lưu Ly", "Tây Vấn", "Ly Cà Phê Cho Em", "Dạ Vũ Bến Thượng Hải", "Trương Tam Muội", "nhạc trung buồn", "Độ Ta Không Độ Nàng", "Người Lạ Ơi", "Sai Cách Yêu" },
+            ["nhạc trung"] = new[] { "nhạc hoa lời việt", "Lệ Lưu Ly", "Tây Vấn", "Ly Cà Phê Cho Em", "Dạ Vũ Bến Thượng Hải", "Trương Tam Muội", "nhạc trung buồn", "Độ Ta Không Độ Nàng", "Người Lạ Ơi", "Sai Cách Yêu" },
             ["ballad buồn"] = new[] { "Phan Mạnh Quỳnh có chàng trai", "Vũ. lạ lùng", "Hà Anh Tuấn", "ballad việt nam buồn", "Nơi Này Có Anh", "Nàng Thơ", "Từ Đó", "Đức Phúc hơn cả yêu", "Bùi Anh Tuấn", "ballad vpop 2024" },
             ["rap việt chill"] = new[] { "Đen Vâu", "HIEUTHUHAI", "Low G", "Obito", "tlinh", "Wren Evans", "Karik", "Binz", "rap việt chill", "MCK" },
-            ["remix hot"] = new[] { "remix vpop", "Masew", "nhạc trẻ remix", "Orinn Remix", "Hãy Trao Cho Anh remix", "vinahouse", "nonstop việt mix", "EDM việt nam", "DJ việt nam", "nhạc remix tiktok" },
-            ["nhạc động lực"] = new[] { "Sơn Tùng MTP hãy trao cho anh", "Noo Phước Thịnh", "nhạc trẻ sôi động", "Erik đừng lý do", "nhạc vpop vui", "MIN", "Chi Pu", "Bích Phương đi đu đưa đi", "nhạc động lực việt", "Trúc Nhân sáng mắt chưa" },
+            ["rap buồn tâm trạng"] = new[] { "rap buồn tâm trạng", "Đạt G", "B Ray buồn", "Karik", "rap việt buồn thất tình", "Phước DKNY", "Lil Knight", "Rhy Dick", "MCK buồn", "rap tâm trạng việt" },
+            ["cùng lấy động lực"] = new[] { "nhạc động lực", "Sơn Tùng MTP hãy trao cho anh", "Noo Phước Thịnh", "nhạc trẻ sôi động", "Erik đừng lý do", "Bích Phương đi đu đưa đi", "MIN", "Trúc Nhân sáng mắt chưa", "nhạc vpop vui", "Chi Pu" },
+            ["hôm nay suy tí"] = new[] { "nhạc buồn nhẹ nhàng", "Vũ. lạ lùng", "Phan Mạnh Quỳnh", "nhạc trẻ tâm trạng", "Thái Đinh", "Ngọt band", "nhạc indie buồn", "Hà Anh Tuấn", "ballad việt nhẹ nhàng", "nhạc suy tư" },
             ["acoustic chữa lành"] = new[] { "acoustic việt nam", "Vũ. acoustic", "Thái Đinh", "Ngọt band", "Cá Hồi Hoang", "Da LAB", "Tăng Duy Tân", "Chillies band", "indie việt nam", "guitar acoustic chill" },
             ["dân ca đương đại"] = new[] { "Hoàng Thùy Linh để mị nói cho mà nghe", "dân ca việt nam modern", "bolero trẻ", "Quang Lê", "Phi Nhung", "nhạc quê hương", "dân ca đương đại việt", "Lệ Quyên", "nhạc trữ tình", "Đan Nguyên" },
             ["kpop hit"] = new[] { "BTS dynamite", "BLACKPINK", "NewJeans", "IVE", "aespa", "Stray Kids", "TWICE", "(G)I-DLE", "LE SSERAFIM", "SEVENTEEN" },
@@ -503,6 +600,110 @@ namespace Soundia.Api.Controllers
             catch (System.Exception ex)
             {
                 return StatusCode(500, new { message = "Error fetching playlist songs", details = ex.Message });
+            }
+        }
+
+        // ── Zing MP3 Playlist Import (via Node.js helper) ─────────────────────
+        private static readonly Dictionary<string, (object data, DateTime expiry)> _zingPlaylistCache = new();
+
+        [HttpGet("zing-playlist/{id}")]
+        public async Task<ActionResult> ZingPlaylist(string id)
+        {
+            // Cache 1 hour
+            if (_zingPlaylistCache.TryGetValue(id, out var cached) && DateTime.UtcNow < cached.expiry)
+                return Ok(cached.data);
+
+            try
+            {
+                // Call Node.js helper script that uses zingmp3-api-full package
+                var scriptPath = Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "scripts", "zing-playlist.cjs");
+                if (!System.IO.File.Exists(scriptPath))
+                    scriptPath = Path.Combine(Directory.GetCurrentDirectory(), "scripts", "zing-playlist.cjs");
+
+                Console.WriteLine($"[ZingPlaylist] Running: node {scriptPath} {id}");
+
+                var psi = new System.Diagnostics.ProcessStartInfo
+                {
+                    FileName = "node",
+                    Arguments = $"\"{scriptPath}\" {id}",
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                    UseShellExecute = false,
+                    CreateNoWindow = true,
+                    WorkingDirectory = Path.Combine(Directory.GetCurrentDirectory(), "..")
+                };
+
+                using var process = System.Diagnostics.Process.Start(psi);
+                if (process == null)
+                    return StatusCode(500, new { success = false, message = "Failed to start Node.js process" });
+
+                var output = await process.StandardOutput.ReadToEndAsync();
+                var error = await process.StandardError.ReadToEndAsync();
+                await process.WaitForExitAsync();
+
+                if (process.ExitCode != 0 || string.IsNullOrEmpty(output))
+                {
+                    Console.WriteLine($"[ZingPlaylist] Node.js error: {error}");
+                    return StatusCode(500, new { success = false, message = "Failed to fetch playlist", details = error });
+                }
+
+                Console.WriteLine($"[ZingPlaylist] Got {output.Length} chars from Node.js");
+
+                // Parse JSON output from Node.js script
+                using var doc = System.Text.Json.JsonDocument.Parse(output);
+                var root = doc.RootElement;
+
+                if (root.TryGetProperty("error", out var errEl))
+                {
+                    return StatusCode(400, new { success = false, message = errEl.GetString() });
+                }
+
+                var playlistName = root.TryGetProperty("name", out var n) ? n.GetString() ?? "" : "";
+                var playlistImage = root.TryGetProperty("image", out var img) ? img.GetString() ?? "" : "";
+                var totalSongs = root.TryGetProperty("totalSongs", out var ts) ? ts.GetInt32() : 0;
+
+                var songs = new List<object>();
+                if (root.TryGetProperty("tracks", out var tracks) && tracks.ValueKind == System.Text.Json.JsonValueKind.Array)
+                {
+                    foreach (var item in tracks.EnumerateArray())
+                    {
+                        songs.Add(new
+                        {
+                            id = item.TryGetProperty("id", out var sid) ? sid.GetString() ?? "" : "",
+                            title = item.TryGetProperty("title", out var st) ? st.GetString() ?? "" : "",
+                            artist = item.TryGetProperty("artist", out var sa) ? sa.GetString() ?? "Unknown" : "Unknown",
+                            cover = item.TryGetProperty("cover", out var sc) ? sc.GetString() ?? "" : "",
+                            audio = "YT_STREAM",
+                            source = "zing",
+                            isExternal = true,
+                            duration = item.TryGetProperty("duration", out var sd) ? sd.GetInt32() : 0,
+                            nctKey = (string?)null
+                        });
+                    }
+                }
+
+                Console.WriteLine($"[ZingPlaylist] Extracted {songs.Count} songs");
+
+                var result = new
+                {
+                    success = true,
+                    data = new
+                    {
+                        name = playlistName,
+                        image = playlistImage,
+                        description = "Imported from Zing MP3",
+                        totalSongs = songs.Count,
+                        tracks = songs
+                    }
+                };
+
+                _zingPlaylistCache[id] = (result, DateTime.UtcNow.AddHours(1));
+                return Ok(result);
+            }
+            catch (System.Exception ex)
+            {
+                Console.WriteLine($"[ZingPlaylist] ERROR: {ex}");
+                return StatusCode(500, new { success = false, message = "Error fetching Zing MP3 playlist", details = ex.ToString() });
             }
         }
 

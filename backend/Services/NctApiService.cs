@@ -292,6 +292,59 @@ namespace Soundia.Api.Services
             catch { return new List<NctSong>(); }
         }
 
+        // ─── Playlist Detail ──────────────────────────────────────────────
+        public async Task<(string name, string image, string description, int totalSongs, List<NctSong> songs)> GetPlaylistAsync(string playlistKey, int limit = 30)
+        {
+            var cacheKey = $"nct_playlist_{playlistKey}_{limit}";
+            if (TryGetCache<(string, string, string, int, List<NctSong>)>(cacheKey, out var cached))
+                return cached;
+
+            try
+            {
+                var url = $"{GRAPH_API}/playlist/detail/{playlistKey}?pn=1&rn={limit}&key={playlistKey}";
+                var json = await _http.GetStringAsync(url);
+                using var doc = JsonDocument.Parse(json);
+                var data = doc.RootElement.GetProperty("data");
+
+                var name = data.TryGetProperty("name", out var n) ? n.GetString() ?? "" : "";
+                var image = data.TryGetProperty("image", out var img) ? img.GetString() ?? "" : "";
+                var description = data.TryGetProperty("description", out var desc) ? desc.GetString() ?? "" : "";
+                var totalSongs = data.TryGetProperty("totalSongs", out var ts) ? ts.GetInt32() : 0;
+
+                var songs = new List<NctSong>();
+                if (data.TryGetProperty("listSong", out var listSong))
+                {
+                    foreach (var s in listSong.EnumerateArray())
+                    {
+                        var song = ParseSong(s);
+                        // Extract 128kbps stream URL
+                        if (s.TryGetProperty("streamURL", out var streams))
+                        {
+                            foreach (var stream in streams.EnumerateArray())
+                            {
+                                if (stream.TryGetProperty("type", out var t) && t.GetString() == "128"
+                                    && stream.TryGetProperty("stream", out var streamUrl))
+                                {
+                                    song.StreamUrl = streamUrl.GetString() ?? "";
+                                    break;
+                                }
+                            }
+                        }
+                        songs.Add(song);
+                    }
+                }
+
+                var result = (name, image, description, totalSongs, songs);
+                SetCache(cacheKey, result, TimeSpan.FromMinutes(30));
+                return result;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"GetPlaylist error: {ex.Message}");
+                return ("", "", "", 0, new List<NctSong>());
+            }
+        }
+
         // ─── Helpers ───────────────────────────────────────────────────────
         private NctSong ParseSong(JsonElement s)
         {

@@ -20,8 +20,8 @@ export const AuthProvider = ({ children }) => {
   const login = async (username, password) => {
     try {
       const response = await api.post('/auth/login', { username, password });
-      const { token, refreshToken, id, email, displayName, avatarUrl } = response.data;
-      const userData = { id, username: response.data.username, email, displayName, avatarUrl };
+      const { token, refreshToken, id, email, displayName, avatarUrl, role } = response.data;
+      const userData = { id, username: response.data.username, email, displayName, avatarUrl, role: role || 'user' };
 
       localStorage.setItem('token', token);
       localStorage.setItem('refreshToken', refreshToken);
@@ -37,7 +37,7 @@ export const AuthProvider = ({ children }) => {
     try {
       const response = await api.post('/auth/register', { username, email, password });
       const { token, refreshToken, id } = response.data;
-      const userData = { id, username: response.data.username, email: response.data.email, displayName: response.data.displayName, avatarUrl: response.data.avatarUrl };
+      const userData = { id, username: response.data.username, email: response.data.email, displayName: response.data.displayName, avatarUrl: response.data.avatarUrl, role: response.data.role || 'user' };
 
       localStorage.setItem('token', token);
       localStorage.setItem('refreshToken', refreshToken);

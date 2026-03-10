@@ -28,7 +28,7 @@ export default function PlayerBar() {
 
   const handleLike = useCallback(() => {
     if (!currentSong) return;
-    toggleFavorite(currentSong.id);
+    toggleFavorite(currentSong);
     showToast(liked ? "Đã bỏ yêu thích" : "Đã thêm vào yêu thích", liked ? "info" : "success");
   }, [currentSong, liked, toggleFavorite, showToast]);
 

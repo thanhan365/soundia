@@ -29,6 +29,8 @@ const AllArtists = React.lazy(() => import("./pages/AllArtists"));
 const SuggestedPlaylistDetail = React.lazy(() => import("./pages/SuggestedPlaylistDetail"));
 const Login = React.lazy(() => import("./pages/Login"));
 const Register = React.lazy(() => import("./pages/Register"));
+const AdminPage = React.lazy(() => import("./pages/AdminPage"));
+const SetupAdmin = React.lazy(() => import("./pages/SetupAdmin"));
 const NotFound = React.lazy(() => import("./pages/NotFound"));
 
 // Loading fallback
@@ -141,6 +143,8 @@ function AppContent() {
               <Route path="/profile" element={<ProfilePage />} />
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />
+              <Route path="/admin" element={<AdminPage />} />
+              <Route path="/admin/setup" element={<SetupAdmin />} />
               <Route path="/artists" element={<AllArtists />} />
               <Route path="/suggested-playlist" element={<SuggestedPlaylistDetail />} />
               <Route path="*" element={<NotFound />} />

@@ -61,7 +61,8 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             ValidateIssuerSigningKey = true,
             ValidIssuer = jwtIssuer,
             ValidAudience = jwtAudience,
-            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey!))
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey!)),
+            RoleClaimType = System.Security.Claims.ClaimTypes.Role
         };
     });
 
@@ -91,6 +92,7 @@ app.UseCors("AllowReactApp");
 
 app.UseAuthentication();
 app.UseAuthorization();
+app.UseStaticFiles(); // Serve uploaded files from wwwroot/
 
 // 6. Auto-Migrate Database
 using (var scope = app.Services.CreateScope())

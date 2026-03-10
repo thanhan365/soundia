@@ -59,7 +59,7 @@ export default function SearchBar() {
           onFocus={() => setFocused(true)}
           onKeyDown={handleKeyDown}
           className="
-            w-full pl-10 pr-10 py-2 rounded-full
+            w-full pl-10 pr-10 py-3 rounded-full
             bg-slate-900/60 border border-cyan-400/20 backdrop-blur-md
             text-white text-sm placeholder-gray-500
             hover:border-cyan-400/40

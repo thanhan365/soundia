@@ -76,6 +76,7 @@ api.interceptors.response.use(
             email: response.data.email,
             displayName: response.data.displayName,
             avatarUrl: response.data.avatarUrl,
+            role: response.data.role || 'user',
           };
           localStorage.setItem('user', JSON.stringify(userData));
         }

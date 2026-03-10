@@ -5,7 +5,7 @@ import { AuthContext } from "../context/AuthContext";
 import {
   HiHome, HiHeart, HiClock,
   HiCollection, HiPlus,
-  HiSparkles, HiViewGrid, HiUser, HiLogout, HiLogin
+  HiSparkles, HiViewGrid, HiUser, HiLogout, HiLogin, HiCog
 } from "react-icons/hi";
 import CreatePlaylistModal from "./CreatePlaylistModal";
 
@@ -187,6 +187,18 @@ export default function Sidebar({ isOpen, onClose }) {
                   {user.username}
                 </span>
               </NavLink>
+              {user.role === 'admin' && (
+                <NavLink
+                  to="/admin"
+                  onClick={onClose}
+                  className={({ isActive }) => `flex items-center gap-3 px-3 py-2 rounded-lg text-[13px] font-semibold transition-all duration-200 whitespace-nowrap overflow-hidden ${isActive ? "bg-amber-500/10 text-amber-400" : "text-amber-500/70 hover:text-amber-400 hover:bg-amber-500/10"}`}
+                >
+                  <HiCog className="text-lg flex-shrink-0" />
+                  <span className={`transition-all duration-300 ${isExpanded ? "opacity-100" : "opacity-0 w-0"}`}>
+                    Quản trị
+                  </span>
+                </NavLink>
+              )}
               <button
                 onClick={() => {
                   logout();
