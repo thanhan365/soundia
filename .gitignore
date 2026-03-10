@@ -39,3 +39,7 @@ obj/
 # Build results
 Debug/
 Release/
+
+# Environment variables (KHÔNG commit lên git!)
+.env
+backend/.env

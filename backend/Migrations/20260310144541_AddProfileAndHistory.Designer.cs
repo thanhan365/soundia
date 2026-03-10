@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Soundia.Api.Data;
 
@@ -11,9 +12,11 @@ using Soundia.Api.Data;
 namespace Soundia.Api.Migrations
 {
     [DbContext(typeof(SoundiaDbContext))]
-    partial class SoundiaDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260310144541_AddProfileAndHistory")]
+    partial class AddProfileAndHistory
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder

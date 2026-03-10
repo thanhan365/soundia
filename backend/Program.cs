@@ -96,16 +96,17 @@ app.UseAuthorization();
 using (var scope = app.Services.CreateScope())
 {
     var services = scope.ServiceProvider;
+    var logger = services.GetRequiredService<ILogger<Program>>();
     try
     {
         var context = services.GetRequiredService<SoundiaDbContext>();
-        // Apply migrations will create the DB and tables if they don't exist
+        logger.LogInformation("Applying migrations...");
         context.Database.Migrate();
+        logger.LogInformation("Migrations applied successfully.");
     }
     catch (Exception ex)
     {
-        var logger = services.GetRequiredService<ILogger<Program>>();
-        logger.LogError(ex, "An error occurred during migration.");
+        logger.LogError(ex, "An error occurred during migration. The app will continue without migration.");
     }
 }
 

@@ -47,7 +47,8 @@ export default function AllArtists() {
     useEffect(() => {
         const fetchArtists = async () => {
             try {
-                const res = await fetch("http://localhost:5066/api/songs/nct-artists");
+                const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5066/api';
+                const res = await fetch(`${apiUrl}/songs/nct-artists`);
                 if (res.ok) {
                     const data = await res.json();
                     if (data.success && data.data) {

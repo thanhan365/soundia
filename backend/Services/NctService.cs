@@ -5,6 +5,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
 using System.Linq;
+using Microsoft.Extensions.Configuration;
 
 namespace Soundia.Api.Services
 {
@@ -21,26 +22,29 @@ namespace Soundia.Api.Services
     public class NctService : INctService
     {
         private readonly HttpClient _httpClient;
-        private const string API_URL = "https://beta.nhaccuatui.com/api";
-        private const string API_KEY = "e3afd4b6c89147258a56a641af16cc79";
-        private const string SECRET_KEY = "6847f1a4fc2f4eb6ab13f9084e082ef4";
+        private readonly string _apiUrl;
+        private readonly string _apiKey;
+        private readonly string _secretKey;
 
-        public NctService(HttpClient httpClient)
+        public NctService(HttpClient httpClient, IConfiguration config)
         {
             _httpClient = httpClient;
+            _apiUrl = config["Nct:ApiUrl"] ?? "https://beta.nhaccuatui.com/api";
+            _apiKey = config["Nct:ApiKey"] ?? "";
+            _secretKey = config["Nct:SecretKey"] ?? "";
         }
 
         private async Task<string> SendRequestAsync(string endpoint, Dictionary<string, string> queryParams = null)
         {
             var now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds().ToString();
             
-            var secretKeyBytes = Encoding.UTF8.GetBytes(SECRET_KEY);
+            var secretKeyBytes = Encoding.UTF8.GetBytes(_secretKey);
             var dataBytes = Encoding.UTF8.GetBytes(now);
             using var hmac = new HMACSHA512(secretKeyBytes);
             var hashBytes = hmac.ComputeHash(dataBytes);
             var hash = BitConverter.ToString(hashBytes).Replace("-", "").ToLowerInvariant();
 
-            var requestUri = $"{API_URL}/{endpoint}?a={API_KEY}&t={now}&s={hash}";
+            var requestUri = $"{_apiUrl}/{endpoint}?a={_apiKey}&t={now}&s={hash}";
 
             HttpContent content = null;
             if (queryParams != null && queryParams.Count > 0)

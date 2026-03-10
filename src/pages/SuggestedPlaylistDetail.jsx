@@ -22,9 +22,10 @@ export default function SuggestedPlaylistDetail() {
         const fetchSongs = async () => {
             try {
                 // Fetch NCT + iTunes in parallel, NCT priority
+                const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5066/api';
                 const [nctRes, itunesRes] = await Promise.all([
-                    fetch(`http://localhost:5066/api/songs/nct-search?keyword=${encodeURIComponent(keyword)}&limit=20`).then(r => r.ok ? r.json() : null).catch(() => null),
-                    fetch(`http://localhost:5066/api/songs/playlist-songs?keyword=${encodeURIComponent(keyword)}&limit=20`).then(r => r.ok ? r.json() : null).catch(() => null),
+                    fetch(`${apiUrl}/songs/nct-search?keyword=${encodeURIComponent(keyword)}&limit=20`).then(r => r.ok ? r.json() : null).catch(() => null),
+                    fetch(`${apiUrl}/songs/playlist-songs?keyword=${encodeURIComponent(keyword)}&limit=20`).then(r => r.ok ? r.json() : null).catch(() => null),
                 ]);
 
                 const nctSongs = nctRes?.success ? nctRes.data : [];

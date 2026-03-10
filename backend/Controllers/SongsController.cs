@@ -370,72 +370,127 @@ namespace Soundia.Api.Controllers
 
             try
             {
-                using var client = new System.Net.Http.HttpClient();
-                client.DefaultRequestHeaders.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64)");
-
                 // Get curated queries for this category
                 var queries = _playlistQueries.TryGetValue(keyword, out var q) ? q : new[] { keyword };
-                var perQuery = Math.Max(5, limit / queries.Length + 2);
+                var perQuery = Math.Max(3, limit / queries.Length + 1);
 
-                // ★ Parallel fetch all queries at once
-                var tasks = queries.Select(async query =>
+                var songs = new List<object>();
+                var seenTitles = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+                // ★ Ưu tiên NCT search — full stream URLs!
+                try
+                {
+                    var nctTasks = queries.Select(async query =>
+                    {
+                        try { return await _nctApi.SearchSongsWithStreamAsync(query, perQuery); }
+                        catch { return new List<Soundia.Api.Services.NctSong>(); }
+                    }).ToArray();
+
+                    var nctResults = await Task.WhenAll(nctTasks);
+                    var seenKeys = new HashSet<string>();
+
+                    foreach (var batch in nctResults)
+                    {
+                        foreach (var s in batch)
+                        {
+                            if (songs.Count >= limit) break;
+                            if (string.IsNullOrEmpty(s.Key) || seenKeys.Contains(s.Key)) continue;
+
+                            var baseName = System.Text.RegularExpressions.Regex.Replace(s.Name ?? "", @"\s*[\(\[\{].*?[\)\]\}]", "").Trim();
+                            var dedupeKey = $"{baseName}|{s.ArtistName?.Split(',')[0]?.Split('&')[0]?.Trim()}".ToLowerInvariant();
+                            if (seenTitles.Contains(dedupeKey)) continue;
+
+                            seenTitles.Add(dedupeKey);
+                            seenKeys.Add(s.Key);
+
+                            var audio = !string.IsNullOrEmpty(s.StreamUrl)
+                                ? $"/api/stream/proxy-audio?url={System.Net.WebUtility.UrlEncode(s.StreamUrl)}"
+                                : "YT_STREAM";
+
+                            songs.Add(new
+                            {
+                                id = $"nct_{s.Key}",
+                                title = s.Name,
+                                artist = s.ArtistName,
+                                cover = s.Image,
+                                audio,
+                                isExternal = true,
+                                source = "nct",
+                                duration = s.Duration,
+                                nctKey = s.Key
+                            });
+                        }
+                        if (songs.Count >= limit) break;
+                    }
+                }
+                catch { /* NCT search thất bại — fallback iTunes bên dưới */ }
+
+                // ★ Fallback iTunes + YT_STREAM nếu NCT không đủ kết quả
+                if (songs.Count < limit)
                 {
                     try
                     {
-                        var itunesUrl = $"https://itunes.apple.com/search?term={Uri.EscapeDataString(query)}&media=music&entity=song&limit={perQuery}&country=VN&lang=vi_vn";
-                        var itunesJson = await client.GetStringAsync(itunesUrl);
-                        using var doc = System.Text.Json.JsonDocument.Parse(itunesJson);
-                        var results = doc.RootElement.GetProperty("results");
-                        var items = new List<(long trackId, string title, string artist, string artwork, long duration, string previewUrl)>();
-                        foreach (var item in results.EnumerateArray())
+                        using var client = new System.Net.Http.HttpClient();
+                        client.DefaultRequestHeaders.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64)");
+                        var itunesPerQuery = Math.Max(5, (limit - songs.Count) / queries.Length + 2);
+
+                        var itunesTasks = queries.Select(async query =>
                         {
-                            var trackId = item.TryGetProperty("trackId", out var ti) ? ti.GetInt64() : 0;
-                            var trackName = item.TryGetProperty("trackName", out var tn) ? tn.GetString() ?? "" : "";
-                            var artistName = item.TryGetProperty("artistName", out var an) ? an.GetString() ?? "" : "";
-                            var artwork = item.TryGetProperty("artworkUrl100", out var aw) ? aw.GetString() ?? "" : "";
-                            var duration = item.TryGetProperty("trackTimeMillis", out var dur) ? dur.GetInt64() / 1000 : 0;
-                            var previewUrl = item.TryGetProperty("previewUrl", out var pv) ? pv.GetString() ?? "" : "";
-                            if (!string.IsNullOrEmpty(artwork)) artwork = artwork.Replace("100x100", "600x600");
-                            if (trackId > 0) items.Add((trackId, trackName, artistName, artwork, duration, previewUrl));
+                            try
+                            {
+                                var itunesUrl = $"https://itunes.apple.com/search?term={Uri.EscapeDataString(query)}&media=music&entity=song&limit={itunesPerQuery}&country=VN&lang=vi_vn";
+                                var itunesJson = await client.GetStringAsync(itunesUrl);
+                                using var doc = System.Text.Json.JsonDocument.Parse(itunesJson);
+                                var results = doc.RootElement.GetProperty("results");
+                                var items = new List<(long trackId, string title, string artist, string artwork, long duration)>();
+                                foreach (var item in results.EnumerateArray())
+                                {
+                                    var trackId = item.TryGetProperty("trackId", out var ti) ? ti.GetInt64() : 0;
+                                    var trackName = item.TryGetProperty("trackName", out var tn) ? tn.GetString() ?? "" : "";
+                                    var artistName = item.TryGetProperty("artistName", out var an) ? an.GetString() ?? "" : "";
+                                    var artwork = item.TryGetProperty("artworkUrl100", out var aw) ? aw.GetString() ?? "" : "";
+                                    var duration = item.TryGetProperty("trackTimeMillis", out var dur) ? dur.GetInt64() / 1000 : 0;
+                                    if (!string.IsNullOrEmpty(artwork)) artwork = artwork.Replace("100x100", "600x600");
+                                    if (trackId > 0) items.Add((trackId, trackName, artistName, artwork, duration));
+                                }
+                                return items;
+                            }
+                            catch { return new List<(long, string, string, string, long)>(); }
+                        }).ToArray();
+
+                        var itunesResults = await Task.WhenAll(itunesTasks);
+                        var seenIds = new HashSet<long>();
+
+                        foreach (var batch in itunesResults)
+                        {
+                            foreach (var (trackId, title, artist, artwork, duration) in batch)
+                            {
+                                if (songs.Count >= limit) break;
+                                if (seenIds.Contains(trackId)) continue;
+
+                                var baseName = System.Text.RegularExpressions.Regex.Replace(title, @"\s*[\(\[\{].*?[\)\]\}]", "").Trim();
+                                var dedupeKey = $"{baseName}|{artist.Split(',')[0].Split('&')[0].Trim()}".ToLowerInvariant();
+                                if (seenTitles.Contains(dedupeKey)) continue;
+
+                                seenTitles.Add(dedupeKey);
+                                seenIds.Add(trackId);
+                                songs.Add(new
+                                {
+                                    id = $"itunes_{trackId}",
+                                    title,
+                                    artist,
+                                    cover = artwork,
+                                    audio = "YT_STREAM", // Không dùng preview 30s — stream YouTube
+                                    isExternal = true,
+                                    source = "itunes",
+                                    duration,
+                                    nctKey = (string)null
+                                });
+                            }
+                            if (songs.Count >= limit) break;
                         }
-                        return items;
                     }
-                    catch { return new List<(long, string, string, string, long, string)>(); }
-                }).ToArray();
-
-                var allResults = await Task.WhenAll(tasks);
-
-                // Merge + deduplicate
-                var songs = new List<object>();
-                var seen = new HashSet<long>();
-                var seenTitles = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-
-                foreach (var batch in allResults)
-                {
-                    foreach (var (trackId, title, artist, artwork, duration, previewUrl) in batch)
-                    {
-                        if (songs.Count >= limit) break;
-                        if (seen.Contains(trackId)) continue;
-
-                        var baseName = System.Text.RegularExpressions.Regex.Replace(title, @"\s*[\(\[\{].*?[\)\]\}]", "").Trim();
-                        var dedupeKey = $"{baseName}|{artist.Split(',')[0].Split('&')[0].Trim()}".ToLowerInvariant();
-                        if (seenTitles.Contains(dedupeKey)) continue;
-
-                        seenTitles.Add(dedupeKey);
-                        seen.Add(trackId);
-                        songs.Add(new
-                        {
-                            id = $"itunes_{trackId}",
-                            title,
-                            artist,
-                            cover = artwork,
-                            audio = !string.IsNullOrEmpty(previewUrl) ? previewUrl : "YT_STREAM",
-                            isExternal = true,
-                            source = "itunes",
-                            duration
-                        });
-                    }
-                    if (songs.Count >= limit) break;
+                    catch { /* iTunes cũng hỏng — trả kết quả NCT đã có */ }
                 }
 
                 // Cache for 2 hours

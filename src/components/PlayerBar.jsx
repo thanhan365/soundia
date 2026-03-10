@@ -153,10 +153,11 @@ export default function PlayerBar() {
                 <button onClick={toggleShuffle} className={`p-1 flex-shrink-0 ${shuffle ? "text-neon" : "text-gray-600"}`}>
                   <IoShuffle className="text-[14px]" />
                 </button>
-                <button onClick={playPrev} className="text-gray-400 active:text-white p-1 flex-shrink-0 rounded-full hover:text-gray-300">
+                <button data-player-prev-btn onClick={playPrev} className="text-gray-400 active:text-white p-1 flex-shrink-0 rounded-full hover:text-gray-300">
                   <HiBackward className="text-base" />
                 </button>
                 <button
+                  data-player-play-btn
                   onClick={togglePlay}
                   disabled={!currentSong || isLoadingStream}
                   className={`w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 ${currentSong ? "bg-white text-dark active:scale-90" : "bg-white/10 text-gray-600"} ${isLoadingStream ? "opacity-70 cursor-wait" : ""}`}
@@ -165,14 +166,14 @@ export default function PlayerBar() {
                     <div className="w-4 h-4 rounded-full border-2 border-dark border-t-transparent animate-spin" />
                   ) : isPlaying ? <HiPause className="text-base" /> : <HiPlay className="text-base ml-0.5" />}
                 </button>
-                <button onClick={playNext} className="text-gray-400 active:text-white p-1 flex-shrink-0 rounded-full hover:text-gray-300">
+                <button data-player-next-btn onClick={playNext} className="text-gray-400 active:text-white p-1 flex-shrink-0 rounded-full hover:text-gray-300">
                   <HiForward className="text-base" />
                 </button>
                 <button onClick={toggleRepeat} className={`p-1 flex-shrink-0 ${repeatMode !== "none" ? "text-neon" : "text-gray-600"}`}>
                   <IoRepeat className="text-[14px]" />
                   {repeatMode === "one" && <span className="inline-block text-[7px] ml-0.5">1</span>}
                 </button>
-                <button onClick={() => setLyricsOpen(!lyricsOpen)} className={`p-1 text-xs font-bold flex-shrink-0 ${lyricsOpen ? "text-neon" : "text-gray-600"}`}>
+                <button data-player-lyrics-btn onClick={() => setLyricsOpen(!lyricsOpen)} className={`p-1 text-xs font-bold flex-shrink-0 ${lyricsOpen ? "text-neon" : "text-gray-600"}`}>
                   LRC
                 </button>
               </div>
@@ -252,10 +253,11 @@ export default function PlayerBar() {
                   <IoShuffle className="text-[16px] sm:text-[17px]" />
                   {shuffle && <span className="absolute -bottom-0.5 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-neon" />}
                 </button>
-                <button onClick={playPrev} className="text-gray-400 hover:text-white transition-colors">
+                <button data-player-prev-btn onClick={playPrev} className="text-gray-400 hover:text-white transition-colors">
                   <HiBackward className="text-lg sm:text-xl" />
                 </button>
                 <button
+                  data-player-play-btn
                   onClick={togglePlay}
                   disabled={!currentSong || isLoadingStream}
                   className={`w-10 h-10 rounded-full flex items-center justify-center transition-all ${currentSong ? "bg-white text-dark hover:scale-110" : "bg-white/10 text-gray-600 cursor-not-allowed"} ${isLoadingStream ? "opacity-70 cursor-wait hover:scale-100" : ""}`}
@@ -264,7 +266,7 @@ export default function PlayerBar() {
                     <div className="w-5 h-5 rounded-full border-[2px] border-dark border-t-transparent animate-spin" />
                   ) : isPlaying ? <HiPause className="text-lg" /> : <HiPlay className="text-lg ml-0.5" />}
                 </button>
-                <button onClick={playNext} className="text-gray-400 hover:text-white transition-colors">
+                <button data-player-next-btn onClick={playNext} className="text-gray-400 hover:text-white transition-colors">
                   <HiForward className="text-lg sm:text-xl" />
                 </button>
                 <button onClick={toggleRepeat} className={`relative p-1 transition-all hidden sm:block ${repeatMode !== "none" ? "text-neon" : "text-gray-600 hover:text-gray-300"}`}>
@@ -278,7 +280,7 @@ export default function PlayerBar() {
 
             {/* RIGHT: Extras */}
             <div className="flex items-center justify-end gap-2 w-[28%] sm:w-[25%] lg:w-[28%]">
-              <button onClick={() => setLyricsOpen(!lyricsOpen)} className={`p-1 rounded-lg text-xs font-bold transition-all hidden sm:block ${lyricsOpen ? "text-neon bg-neon/10" : "text-gray-600 hover:text-gray-300"}`}>
+              <button data-player-lyrics-btn onClick={() => setLyricsOpen(!lyricsOpen)} className={`p-1 rounded-lg text-xs font-bold transition-all hidden sm:block ${lyricsOpen ? "text-neon bg-neon/10" : "text-gray-600 hover:text-gray-300"}`}>
                 <span className="text-[10px] sm:text-[11px]">LRC</span>
               </button>
               <div className="hidden md:block"><VolumeControl /></div>

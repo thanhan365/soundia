@@ -20,10 +20,22 @@ namespace Soundia.Api.Models
         [Required]
         public string PasswordHash { get; set; } = string.Empty;
 
+        // Profile fields
+        [MaxLength(100)]
+        public string? DisplayName { get; set; }
+
+        [MaxLength(500)]
+        public string? AvatarUrl { get; set; }
+
+        // Refresh Token
+        public string? RefreshToken { get; set; }
+        public DateTime? RefreshTokenExpiry { get; set; }
+
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
         // Navigation Properties
         public ICollection<Favorite> Favorites { get; set; } = new List<Favorite>();
         public ICollection<Playlist> Playlists { get; set; } = new List<Playlist>();
+        public ICollection<ListeningHistory> ListeningHistories { get; set; } = new List<ListeningHistory>();
     }
 }

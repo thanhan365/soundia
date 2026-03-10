@@ -60,7 +60,8 @@ export default function LyricsView() {
         // Nếu bài từ NCT → truyền nctKey để backend dùng NCT lyrics API (ưu tiên)
         const nctKeyParam = currentSong.key && currentSong.source === 'nct'
           ? `&nctKey=${encodeURIComponent(currentSong.key)}` : '';
-        const res = await fetch(`http://localhost:5066/api/lyrics?track=${trackName}&artist=${artistName}${nctKeyParam}`);
+        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5066/api';
+        const res = await fetch(`${apiUrl}/lyrics?track=${trackName}&artist=${artistName}${nctKeyParam}`);
 
         if (!isMounted) return;
 

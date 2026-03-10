@@ -1,6 +1,6 @@
 import { useEffect, useRef, forwardRef, useImperativeHandle } from 'react';
 
-const BACKEND_URL = 'http://localhost:5066/api';
+const BACKEND_URL = import.meta.env.VITE_API_URL || 'http://localhost:5066/api';
 const PLAYER_EL_ID = 'yt-audio-player-div';
 
 const YouTubeAudioPlayer = forwardRef(function YouTubeAudioPlayer(
@@ -11,7 +11,7 @@ const YouTubeAudioPlayer = forwardRef(function YouTubeAudioPlayer(
   const playerRef = useRef(null);
   const timerRef = useRef(null);
   const readyRef = useRef(false);
-  
+
   // Lưu callback mới nhất để tránh stale clousure do useEffect chỉ chạy 1 lần
   const callbacksRef = useRef({ onStateChange, onTimeUpdate, onError });
   useEffect(() => {
@@ -47,7 +47,7 @@ const YouTubeAudioPlayer = forwardRef(function YouTubeAudioPlayer(
 
         // Đảm bảo phát sau khi load xong
         setTimeout(() => {
-          try { playerRef.current?.playVideo(); } catch (_) {}
+          try { playerRef.current?.playVideo(); } catch (_) { }
         }, 600);
 
       } catch (err) {
@@ -56,13 +56,13 @@ const YouTubeAudioPlayer = forwardRef(function YouTubeAudioPlayer(
       }
     },
 
-    play()           { playerRef.current?.playVideo(); },
-    pause()          { playerRef.current?.pauseVideo(); },
-    seekTo(s)        { playerRef.current?.seekTo(s, true); },
-    setVolume(v)     { playerRef.current?.setVolume?.(Math.round(v * 100)); },
+    play() { playerRef.current?.playVideo(); },
+    pause() { playerRef.current?.pauseVideo(); },
+    seekTo(s) { playerRef.current?.seekTo(s, true); },
+    setVolume(v) { playerRef.current?.setVolume?.(Math.round(v * 100)); },
     getCurrentTime() { return playerRef.current?.getCurrentTime?.() ?? 0; },
-    getDuration()    { return playerRef.current?.getDuration?.() ?? 0; },
-    isReady()        { return readyRef.current && !!playerRef.current; },
+    getDuration() { return playerRef.current?.getDuration?.() ?? 0; },
+    isReady() { return readyRef.current && !!playerRef.current; },
   }));
 
   // Track last polled state to detect state changes (especially ENDED)
@@ -77,16 +77,16 @@ const YouTubeAudioPlayer = forwardRef(function YouTubeAudioPlayer(
         try {
           if (readyRef.current && playerRef.current && typeof playerRef.current.getPlayerState === 'function') {
             const state = playerRef.current.getPlayerState();
-            
+
             // Detect state change qua polling (backup cho onStateChange event)
             // Đặc biệt quan trọng cho state 0 (ENDED) vì YouTube đôi khi miss event
             if (state !== lastPolledStateRef.current) {
               lastPolledStateRef.current = state;
               callbacksRef.current.onStateChange?.(state);
             }
-            
+
             // Lấy time/duration liên tục
-            if (state === 1 || state === 2 || state === 3 || state === 5) { 
+            if (state === 1 || state === 2 || state === 3 || state === 5) {
               const t = playerRef.current.getCurrentTime() || 0;
               const d = playerRef.current.getDuration() || 0;
               callbacksRef.current.onTimeUpdate?.(t, d);
@@ -174,7 +174,7 @@ const YouTubeAudioPlayer = forwardRef(function YouTubeAudioPlayer(
 
     return () => {
       readyRef.current = false;
-      try { playerRef.current?.destroy(); } catch (_) {}
+      try { playerRef.current?.destroy(); } catch (_) { }
       playerRef.current = null;
     };
   }, []); // eslint-disable-line

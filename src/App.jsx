@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { Routes, Route, useNavigate, useLocation } from "react-router-dom";
 import { PlayerProvider, usePlayer } from "./context/PlayerContext";
 import { ToastProvider } from "./context/ToastContext";
@@ -8,23 +8,40 @@ import QueuePanel from "./components/QueuePanel";
 import LyricsView from "./components/LyricsView";
 import SearchBar from "./components/SearchBar";
 import YouTubeAudioPlayer from "./components/YouTubeAudioPlayer";
-import Home from "./pages/Home";
-import SearchPage from "./pages/SearchPage";
-import FavoritesPage from "./pages/FavoritesPage";
-import RecentPage from "./pages/RecentPage";
-import LibraryPage from "./pages/LibraryPage";
-import NewMusicPage from "./pages/NewMusicPage";
-import GenresPage from "./pages/GenresPage";
-import PlaylistPage from "./pages/PlaylistPage";
-import ArtistDetail from "./pages/ArtistDetail";
-import ExternalPlaylistPage from "./pages/ExternalPlaylistPage";
-import ProfilePage from "./pages/ProfilePage";
-import AllArtists from "./pages/AllArtists";
-import SuggestedPlaylistDetail from "./pages/SuggestedPlaylistDetail";
-import Login from "./pages/Login";
-import Register from "./pages/Register";
+import { ErrorBoundary } from "./components/ErrorBoundary";
 import { AuthProvider } from "./context/AuthContext";
 import { HiMenuAlt2, HiArrowLeft } from "react-icons/hi";
+import React, { Suspense } from "react";
+
+// Lazy-loaded pages (Phase 2: Code Splitting)
+const Home = React.lazy(() => import("./pages/Home"));
+const SearchPage = React.lazy(() => import("./pages/SearchPage"));
+const FavoritesPage = React.lazy(() => import("./pages/FavoritesPage"));
+const RecentPage = React.lazy(() => import("./pages/RecentPage"));
+const LibraryPage = React.lazy(() => import("./pages/LibraryPage"));
+const NewMusicPage = React.lazy(() => import("./pages/NewMusicPage"));
+const GenresPage = React.lazy(() => import("./pages/GenresPage"));
+const PlaylistPage = React.lazy(() => import("./pages/PlaylistPage"));
+const ArtistDetail = React.lazy(() => import("./pages/ArtistDetail"));
+const ExternalPlaylistPage = React.lazy(() => import("./pages/ExternalPlaylistPage"));
+const ProfilePage = React.lazy(() => import("./pages/ProfilePage"));
+const AllArtists = React.lazy(() => import("./pages/AllArtists"));
+const SuggestedPlaylistDetail = React.lazy(() => import("./pages/SuggestedPlaylistDetail"));
+const Login = React.lazy(() => import("./pages/Login"));
+const Register = React.lazy(() => import("./pages/Register"));
+const NotFound = React.lazy(() => import("./pages/NotFound"));
+
+// Loading fallback
+function PageLoader() {
+  return (
+    <div className="min-h-[60vh] flex items-center justify-center">
+      <div className="flex flex-col items-center gap-3">
+        <div className="w-10 h-10 border-3 border-purple-500/30 border-t-purple-500 rounded-full animate-spin" />
+        <p className="text-gray-400 text-sm animate-pulse">Đang tải...</p>
+      </div>
+    </div>
+  );
+}
 
 function AppContent() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -35,6 +52,43 @@ function AppContent() {
   } = usePlayer();
   const navigate = useNavigate();
   const location = useLocation();
+
+  // ── Keyboard Shortcuts (Phase 3: #10) ──────────────────────────────────────
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      // Ignore if typing in an input field
+      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable) return;
+
+      switch (e.code) {
+        case 'Space':
+          e.preventDefault();
+          document.querySelector('[data-player-play-btn]')?.click();
+          break;
+        case 'ArrowRight':
+          if (e.shiftKey) document.querySelector('[data-player-next-btn]')?.click();
+          break;
+        case 'ArrowLeft':
+          if (e.shiftKey) document.querySelector('[data-player-prev-btn]')?.click();
+          break;
+        case 'KeyN':
+          if (!e.ctrlKey && !e.metaKey) document.querySelector('[data-player-next-btn]')?.click();
+          break;
+        case 'KeyP':
+          if (!e.ctrlKey && !e.metaKey) document.querySelector('[data-player-prev-btn]')?.click();
+          break;
+        case 'KeyM':
+          if (!e.ctrlKey && !e.metaKey) document.querySelector('[data-player-mute-btn]')?.click();
+          break;
+        case 'KeyL':
+          if (!e.ctrlKey && !e.metaKey) document.querySelector('[data-player-lyrics-btn]')?.click();
+          break;
+        default:
+          break;
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   return (
     <div className="animated-bg h-[100dvh] w-full max-w-[100vw] overflow-hidden flex">
@@ -72,23 +126,26 @@ function AppContent() {
 
         {/* Pages */}
         <div className="flex-1 px-2 sm:px-4 lg:px-8 py-4 sm:py-6 pb-32 overflow-y-auto">
-          <Routes>
-            <Route path="/" element={<Home />} />
-            <Route path="/search" element={<SearchPage />} />
-            <Route path="/favorites" element={<FavoritesPage />} />
-            <Route path="/recent" element={<RecentPage />} />
-            <Route path="/library" element={<LibraryPage />} />
-            <Route path="/new-music" element={<NewMusicPage />} />
-            <Route path="/genres" element={<GenresPage />} />
-            <Route path="/playlist/:id" element={<PlaylistPage />} />
-            <Route path="/artist-detail/:id" element={<ArtistDetail />} />
-            <Route path="/playlist-detail/:id" element={<ExternalPlaylistPage />} />
-            <Route path="/profile" element={<ProfilePage />} />
-            <Route path="/login" element={<Login />} />
-            <Route path="/register" element={<Register />} />
-            <Route path="/artists" element={<AllArtists />} />
-            <Route path="/suggested-playlist" element={<SuggestedPlaylistDetail />} />
-          </Routes>
+          <Suspense fallback={<PageLoader />}>
+            <Routes>
+              <Route path="/" element={<Home />} />
+              <Route path="/search" element={<SearchPage />} />
+              <Route path="/favorites" element={<FavoritesPage />} />
+              <Route path="/recent" element={<RecentPage />} />
+              <Route path="/library" element={<LibraryPage />} />
+              <Route path="/new-music" element={<NewMusicPage />} />
+              <Route path="/genres" element={<GenresPage />} />
+              <Route path="/playlist/:id" element={<PlaylistPage />} />
+              <Route path="/artist-detail/:id" element={<ArtistDetail />} />
+              <Route path="/playlist-detail/:id" element={<ExternalPlaylistPage />} />
+              <Route path="/profile" element={<ProfilePage />} />
+              <Route path="/login" element={<Login />} />
+              <Route path="/register" element={<Register />} />
+              <Route path="/artists" element={<AllArtists />} />
+              <Route path="/suggested-playlist" element={<SuggestedPlaylistDetail />} />
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </Suspense>
         </div>
       </main>
 
@@ -102,12 +159,14 @@ function AppContent() {
 
 export default function App() {
   return (
-    <AuthProvider>
-      <ToastProvider>
-        <PlayerProvider>
-          <AppContent />
-        </PlayerProvider>
-      </ToastProvider>
-    </AuthProvider>
+    <ErrorBoundary>
+      <AuthProvider>
+        <ToastProvider>
+          <PlayerProvider>
+            <AppContent />
+          </PlayerProvider>
+        </ToastProvider>
+      </AuthProvider>
+    </ErrorBoundary>
   );
 }

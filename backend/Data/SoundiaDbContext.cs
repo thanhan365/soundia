@@ -15,6 +15,7 @@ namespace Soundia.Api.Data
         public DbSet<Favorite> Favorites { get; set; } = null!;
         public DbSet<Playlist> Playlists { get; set; } = null!;
         public DbSet<PlaylistSong> PlaylistSongs { get; set; } = null!;
+        public DbSet<ListeningHistory> ListeningHistories { get; set; } = null!;
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -47,7 +48,18 @@ namespace Soundia.Api.Data
                 .HasForeignKey(f => f.SongId)
                 .OnDelete(DeleteBehavior.Cascade);
 
-            // No more static seed data - songs come from Deezer search + external save
+            // Configure One-to-Many for User -> ListeningHistory
+            modelBuilder.Entity<ListeningHistory>()
+                .HasOne(lh => lh.User)
+                .WithMany(u => u.ListeningHistories)
+                .HasForeignKey(lh => lh.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<ListeningHistory>()
+                .HasOne(lh => lh.Song)
+                .WithMany()
+                .HasForeignKey(lh => lh.SongId)
+                .OnDelete(DeleteBehavior.SetNull);
         }
     }
 }

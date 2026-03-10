@@ -1,4 +1,4 @@
-import React, { createContext, useState, useEffect } from 'react';
+import React, { createContext, useState, useEffect, useCallback } from 'react';
 import api from '../utils/api';
 
 export const AuthContext = createContext();
@@ -20,10 +20,11 @@ export const AuthProvider = ({ children }) => {
   const login = async (username, password) => {
     try {
       const response = await api.post('/auth/login', { username, password });
-      const { token, id, email } = response.data;
-      const userData = { id, username: response.data.username, email };
+      const { token, refreshToken, id, email, displayName, avatarUrl } = response.data;
+      const userData = { id, username: response.data.username, email, displayName, avatarUrl };
 
       localStorage.setItem('token', token);
+      localStorage.setItem('refreshToken', refreshToken);
       localStorage.setItem('user', JSON.stringify(userData));
       setUser(userData);
       return { success: true };
@@ -35,10 +36,11 @@ export const AuthProvider = ({ children }) => {
   const register = async (username, email, password) => {
     try {
       const response = await api.post('/auth/register', { username, email, password });
-      const { token, id } = response.data;
-      const userData = { id, username: response.data.username, email: response.data.email };
+      const { token, refreshToken, id } = response.data;
+      const userData = { id, username: response.data.username, email: response.data.email, displayName: response.data.displayName, avatarUrl: response.data.avatarUrl };
 
       localStorage.setItem('token', token);
+      localStorage.setItem('refreshToken', refreshToken);
       localStorage.setItem('user', JSON.stringify(userData));
       setUser(userData);
       return { success: true };
@@ -49,12 +51,25 @@ export const AuthProvider = ({ children }) => {
 
   const logout = () => {
     localStorage.removeItem('token');
+    localStorage.removeItem('refreshToken');
     localStorage.removeItem('user');
     setUser(null);
   };
 
+  const updateProfile = useCallback(async (profileData) => {
+    try {
+      const response = await api.put('/auth/profile', profileData);
+      const updated = { ...user, ...response.data };
+      localStorage.setItem('user', JSON.stringify(updated));
+      setUser(updated);
+      return { success: true };
+    } catch (error) {
+      return { success: false, message: error.response?.data || "Update failed" };
+    }
+  }, [user]);
+
   return (
-    <AuthContext.Provider value={{ user, login, register, logout, loading }}>
+    <AuthContext.Provider value={{ user, login, register, logout, updateProfile, loading }}>
       {!loading && children}
     </AuthContext.Provider>
   );

@@ -25,6 +25,8 @@ export default function ProgressBar() {
   const lastRealTimeRef = useRef(0);
   const lastUpdateTimeRef = useRef(performance.now());
   const syntheticTimeRef = useRef(0);
+  const songIdRef = useRef(currentSong?.id);
+  const isTransitioningRef = useRef(false);
 
   // ── Direct Polling — SILLY-SMOOTH & BULLETPROOF ───────────────────────────
   useEffect(() => {
@@ -49,10 +51,11 @@ export default function ProgressBar() {
               d = ytD;
               isRealTimeRead = true;
             }
-          } catch (e) {}
+          } catch (e) { }
         }
         // 2) Nếu không có data YouTube hoặc ở chế độ audio, thử HTML5 audio
-        if (!isRealTimeRead && !isYTModeRef?.current && audioRef.current?.src) {
+        //    BỎ QUA nếu đang transition (bài vừa đổi, audio chưa load bài mới)
+        if (!isRealTimeRead && !isYTModeRef?.current && audioRef.current?.src && !isTransitioningRef.current) {
           try {
             const audioT = audioRef.current.currentTime || 0;
             const audioD = audioRef.current.duration && !isNaN(audioRef.current.duration) ? audioRef.current.duration : 0;
@@ -61,12 +64,11 @@ export default function ProgressBar() {
               d = audioD;
               isRealTimeRead = true;
             }
-          } catch (e) {}
+          } catch (e) { }
         }
 
         // 3) Detect repeat: thời gian nhảy ngược (bài lặp lại từ đầu)
         if (isRealTimeRead && lastRealTimeRef.current > 3 && t < lastRealTimeRef.current - 3) {
-          // Bài hát đã repeat → reset synthetic time
           syntheticTimeRef.current = t;
         }
 
@@ -74,7 +76,7 @@ export default function ProgressBar() {
         if (isRealTimeRead) {
           lastRealTimeRef.current = t;
           syntheticTimeRef.current = t;
-        } else if (isPlaying && ctxDuration > 0) {
+        } else if (isPlaying && ctxDuration > 0 && !isTransitioningRef.current) {
           syntheticTimeRef.current += deltaSec;
           if (syntheticTimeRef.current > ctxDuration) syntheticTimeRef.current = ctxDuration;
           t = syntheticTimeRef.current;
@@ -83,7 +85,7 @@ export default function ProgressBar() {
         }
 
         setTime(t);
-        if (d > 0) setDur(d);
+        if (d > 0 && !isTransitioningRef.current) setDur(d);
       }
 
       animFrameId = requestAnimationFrame(poll);
@@ -97,19 +99,27 @@ export default function ProgressBar() {
     };
   }, [ytPlayerRef, audioRef, isPlaying, ctxDuration]);
 
-  // ── Fallback: dùng context duration khi player chưa trả về ──
+  // ── Fallback: dùng context duration khi cả audio lẫn YT đều chưa trả về ──
   useEffect(() => {
-    if (ctxDuration > 0 && dur === 0) {
+    if (ctxDuration > 0 && dur === 0 && !isTransitioningRef.current) {
       setDur(ctxDuration);
     }
-  }, [ctxDuration, dur]);
+  }, [ctxDuration]);
 
   // ── Reset khi đổi bài ──
   useEffect(() => {
-    setTime(0);
-    setDur(0);
-    syntheticTimeRef.current = 0;
-    lastRealTimeRef.current = 0;
+    if (songIdRef.current !== currentSong?.id) {
+      // Đánh dấu đang transition — polling sẽ không đọc giá trị cũ
+      isTransitioningRef.current = true;
+      songIdRef.current = currentSong?.id;
+      setTime(0);
+      setDur(0);
+      syntheticTimeRef.current = 0;
+      lastRealTimeRef.current = 0;
+      // Cho phép polling đọc lại sau 500ms (đủ thời gian audio load metadata mới)
+      const timer = setTimeout(() => { isTransitioningRef.current = false; }, 500);
+      return () => clearTimeout(timer);
+    }
   }, [currentSong?.id]);
 
   // ── Seek handlers ──
@@ -126,7 +136,7 @@ export default function ProgressBar() {
   const handleSeekEnd = (e) => {
     isDraggingRef.current = false;
     setIsDragging(false);
-    
+
     // RẤT QUAN TRỌNG: Cập nhật biến time ảo (syntheticTime) bằng giá trị chuẩn 
     // để nhịp poll tiếp theo không bị giật (snap-back) về quá khứ 
     // trong khi chờ Player API (YouTube/Audio) trả về real time mới.
@@ -134,12 +144,12 @@ export default function ProgressBar() {
     syntheticTimeRef.current = newTime;
     lastRealTimeRef.current = newTime;
     setTime(newTime);
-    
+
     seekTo(newTime);
   };
 
   const displayTime = isDragging ? dragValue : time;
-  const displayDur = dur > 0 ? dur : (ctxDuration > 0 ? ctxDuration : 100);
+  const displayDur = dur > 0 ? dur : (ctxDuration > 0 ? ctxDuration : 0);
 
   return (
     <div className="flex items-center gap-3 w-full">
