@@ -32,8 +32,8 @@ export default function TopTrendingSection() {
         <h2 className="text-xl md:text-2xl font-bold mb-4 md:mb-6 text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-red-500 flex items-center gap-2">
           <HiFire className="text-orange-500" /> Đang hot trên BXH
         </h2>
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 animate-pulse">
-          {[1,2,3,4,5,6,7,8].map(i => (
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 animate-pulse">
+          {[1, 2, 3, 4, 5, 6, 7, 8].map(i => (
             <div key={i} className="bg-white/5 rounded-xl p-3 h-20"></div>
           ))}
         </div>
@@ -52,7 +52,7 @@ export default function TopTrendingSection() {
         </h2>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
         {songs.map((song, index) => {
           const isActive = currentSong?.id === song.id;
           const isCurrentlyPlaying = isActive && isPlaying;
@@ -81,7 +81,7 @@ export default function TopTrendingSection() {
                   ) : (
                     /* Neon play button on hover */
                     <div className="w-7 h-7 rounded-full bg-neon flex items-center justify-center transform scale-0 group-hover:scale-100 transition-transform duration-300 shadow-neon">
-                      <svg className="w-3.5 h-3.5 text-dark ml-0.5" fill="currentColor" viewBox="0 0 20 20"><path d="M6.3 2.841A1.5 1.5 0 004 4.11V15.89a1.5 1.5 0 002.3 1.269l9.344-5.89a1.5 1.5 0 000-2.538L6.3 2.84z"/></svg>
+                      <svg className="w-3.5 h-3.5 text-dark ml-0.5" fill="currentColor" viewBox="0 0 20 20"><path d="M6.3 2.841A1.5 1.5 0 004 4.11V15.89a1.5 1.5 0 002.3 1.269l9.344-5.89a1.5 1.5 0 000-2.538L6.3 2.84z" /></svg>
                     </div>
                   )}
                 </div>
@@ -96,7 +96,7 @@ export default function TopTrendingSection() {
                   {song.artist}
                 </p>
               </div>
-              
+
               {/* Rank number */}
               <div className={`w-6 text-center font-bold text-sm transition-colors tabular-nums ${isActive ? "text-neon/60" : "text-gray-600 group-hover:text-orange-400/50"}`}>
                 #{index + 1}

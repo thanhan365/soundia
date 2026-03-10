@@ -6,6 +6,12 @@ module.exports = {
   ],
   theme: {
     extend: {
+      screens: {
+        '3xl': '2560px',
+      },
+      maxWidth: {
+        'layout': '1800px',
+      },
       colors: {
         dark: '#170f23',
         'dark-light': '#1e1632',

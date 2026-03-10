@@ -85,7 +85,7 @@ export default function PlayerBar() {
         ${isPlaying ? "shadow-[0_-4px_30px_rgba(56,189,248,0.15)]" : ""}
       `}
     >
-      <div className="max-w-screen-2xl mx-auto">
+      <div className="mx-auto">
 
         {/* ═══ MOBILE LAYOUT (<640px): 3 rows ═══ */}
         <div className="sm:hidden">

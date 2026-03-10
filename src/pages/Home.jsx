@@ -42,7 +42,7 @@ export default function Home() {
       <BannerSlider />
 
       {/* Main Content Area */}
-      <div className="mx-auto px-4 sm:px-6 md:px-8 max-w-7xl space-y-6 md:space-y-8 mt-4">
+      <div className="px-4 sm:px-6 md:px-8 space-y-6 md:space-y-8 mt-4">
 
         {/* Random Discovery Widget */}
         <RandomDiscovery onDiscover={handleRandomDiscover} />

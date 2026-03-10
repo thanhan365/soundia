@@ -14,7 +14,7 @@ export default function RecentlyPlayed({ songs }) {
         Nghe Gần Đây
       </h2>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
         {songs.slice(0, 6).map((song) => (
           <div
             key={song.id}
@@ -31,7 +31,7 @@ export default function RecentlyPlayed({ songs }) {
                 <FaPlay className="w-6 h-6 text-cyan-300 fill-current ml-0.5" />
               </div>
             </div>
-            
+
             <div className="flex-1 min-w-0 pr-2">
               <h3 className="text-white font-bold text-sm md:text-base truncate group-hover:text-cyan-300 transition-colors">
                 {song.title}

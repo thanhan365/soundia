@@ -70,7 +70,7 @@ export default function AllArtists() {
 
     return (
         <div className="min-h-screen text-white pb-32">
-            <div className="mx-auto px-4 sm:px-6 md:px-8 max-w-7xl pt-6">
+            <div className="px-4 sm:px-6 md:px-8 pt-6">
                 {/* Header */}
                 <div className="flex items-center gap-4 mb-8">
                     <button
@@ -89,7 +89,7 @@ export default function AllArtists() {
 
                 {/* Artists Grid */}
                 {loading ? (
-                    <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-8 gap-6 md:gap-8">
+                    <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7 2xl:grid-cols-8 gap-6 md:gap-8">
                         {[...Array(16)].map((_, i) => (
                             <div key={i} className="flex flex-col items-center gap-3">
                                 <div className="w-24 h-24 sm:w-28 sm:h-28 md:w-32 md:h-32 rounded-full bg-white/5 animate-pulse" />
@@ -98,7 +98,7 @@ export default function AllArtists() {
                         ))}
                     </div>
                 ) : (
-                    <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-8 gap-6 md:gap-8">
+                    <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7 2xl:grid-cols-8 gap-6 md:gap-8">
                         {artists.map((artist) => (
                             <ArtistCard key={artist.id} artist={artist} onClick={handleArtistClick} />
                         ))}

@@ -309,6 +309,8 @@ namespace Soundia.Api.Controllers
                     ("Dân Ca Đương Đại", "Dân ca mang hơi thở mới", "dân ca đương đại", "from-green-500 to-lime-500"),
                     ("K-Pop Hits", "Bản hit K-Pop hot nhất", "kpop hit", "from-fuchsia-500 to-pink-500"),
                     ("Lofi Chill Study", "Nhạc lofi học bài tập trung", "lofi chill", "from-indigo-500 to-slate-600"),
+                    ("Nhạc Phim Hay", "Nhạc phim Việt & quốc tế hay nhất", "nhạc phim hay", "from-sky-500 to-indigo-600"),
+                    ("V-Pop Mới Nhất", "Cập nhật V-Pop mới ra mắt", "vpop mới nhất 2024", "from-violet-500 to-fuchsia-600"),
                 };
 
                 var result = new List<object>();

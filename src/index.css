@@ -252,3 +252,45 @@ input[type="range"]::-moz-range-thumb {
   transform: translateZ(0);
   /* force hardware acceleration */
 }
+
+/* ── Responsive: Mobile ─────────────────────────────────── */
+@media (max-width: 640px) {
+
+  /* Larger touch targets on mobile */
+  input[type="range"] {
+    height: 6px;
+  }
+
+  input[type="range"]::-webkit-slider-thumb {
+    width: 16px;
+    height: 16px;
+  }
+
+  input[type="range"]::-moz-range-thumb {
+    width: 16px;
+    height: 16px;
+  }
+
+  /* Smaller animated bg orb on mobile */
+  .animated-bg::after {
+    width: 200px;
+    height: 200px;
+    filter: blur(40px);
+  }
+
+  /* Reduce animation intensity */
+  .animated-bg::before {
+    animation: none;
+    opacity: 0.5;
+  }
+}
+
+/* ── Responsive: Large screens (>1920px) ────────────────── */
+@media (min-width: 1920px) {
+
+  /* Larger orb on big screens */
+  .animated-bg::after {
+    width: 500px;
+    height: 500px;
+  }
+}

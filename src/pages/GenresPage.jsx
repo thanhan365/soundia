@@ -22,7 +22,7 @@ export default function GenresPage() {
         description="Duyệt nhạc theo thể loại yêu thích của bạn"
       />
 
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4">
         {genres.map((g) => (
           <button
             key={g.name}

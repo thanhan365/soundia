@@ -106,7 +106,7 @@ export default function PlaylistPage() {
     <div className="-mx-2 sm:-mx-4 lg:-mx-8 -mt-6">
       {/* ═══════════ HERO HEADER ═══════════ */}
       <div className="relative px-4 sm:px-6 lg:px-10 pt-6 sm:pt-10 pb-6 sm:pb-8 bg-gradient-to-b from-neon/8 via-neon/3 to-transparent">
-        <div className="flex flex-col md:flex-row items-center md:items-end gap-4 sm:gap-7 max-w-5xl mx-auto">
+        <div className="flex flex-col md:flex-row items-center md:items-end gap-4 sm:gap-7">
           {/* Cover */}
           <div
             className="relative w-32 h-32 sm:w-44 sm:h-44 md:w-52 md:h-52 rounded-xl overflow-hidden flex-shrink-0 group/cover cursor-pointer shadow-[0_8px_40px_rgba(0,0,0,0.5)] hover:shadow-[0_8px_50px_rgba(29,185,144,0.15)] transition-shadow duration-500"
@@ -193,7 +193,7 @@ export default function PlaylistPage() {
       </div>
 
       {/* ═══════════ SONG TABLE ═══════════ */}
-      <div className="px-4 sm:px-6 lg:px-10 max-w-5xl mx-auto mt-2">
+      <div className="px-4 sm:px-6 lg:px-10 mt-2">
         {songs.length > 0 ? (
           <>
             {/* Column headers */}

@@ -8,7 +8,7 @@ export default function ExternalPlaylistPage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { playSong, currentSong, isPlaying, togglePlay, playlists, allSongs } = usePlayer();
-  
+
   const [playlist, setPlaylist] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -17,13 +17,13 @@ export default function ExternalPlaylistPage() {
     // Since we removed Deezer, and Spotify playlists aren't fully supported without 
     // a dedicated backend endpoint for tracks, we will treat external playlists as 
     // "not found" or map local playlists.
-    
+
     // Check if it's a local playlist id
     const localPl = playlists.find(p => p.id === id || p.id === parseInt(id, 10));
-    
+
     if (localPl) {
       // Reconstruct local playlist with actual song objects
-      const tracks = (localPl.songs || []).map(songId => 
+      const tracks = (localPl.songs || []).map(songId =>
         allSongs.find(s => s.id === songId)
       ).filter(Boolean);
 
@@ -77,7 +77,7 @@ export default function ExternalPlaylistPage() {
   }
 
   return (
-    <div className="pb-32 px-4 md:px-8 mt-4 max-w-7xl mx-auto">
+    <div className="pb-32 px-4 md:px-8 mt-4">
       {/* Header Info */}
       <div className="flex flex-col md:flex-row items-center md:items-end gap-6 md:gap-8 mb-10 w-full animate-fade-in-up">
         {/* Cover */}
@@ -145,14 +145,13 @@ export default function ExternalPlaylistPage() {
           {playlist.tracks.map((song, i) => {
             const isActive = currentSong?.id === song.id;
             const isActivePlaying = isActive && isPlaying;
-            
+
             return (
               <div
                 key={song.id}
                 onClick={(e) => { e.stopPropagation(); if (isActive) togglePlay(); else playSong(song); }}
-                className={`group grid grid-cols-[40px_1fr_40px] md:grid-cols-[50px_minmax(150px,2fr)_minmax(120px,1fr)_80px] gap-3 md:gap-4 px-2 md:px-6 py-2.5 md:py-3 items-center rounded-xl md:rounded-2xl cursor-pointer transition-all duration-200 ${
-                  isActive ? "bg-cyan-500/10 border border-cyan-500/20" : "hover:bg-white/[0.04] border border-transparent"
-                }`}
+                className={`group grid grid-cols-[40px_1fr_40px] md:grid-cols-[50px_minmax(150px,2fr)_minmax(120px,1fr)_80px] gap-3 md:gap-4 px-2 md:px-6 py-2.5 md:py-3 items-center rounded-xl md:rounded-2xl cursor-pointer transition-all duration-200 ${isActive ? "bg-cyan-500/10 border border-cyan-500/20" : "hover:bg-white/[0.04] border border-transparent"
+                  }`}
               >
                 {/* 1. Index / Play indicator */}
                 <div className="flex justify-center flex-shrink-0 text-sm font-medium text-gray-500 w-full h-full md:items-center">

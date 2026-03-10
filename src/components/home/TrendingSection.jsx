@@ -19,7 +19,7 @@ export default function TrendingSection({ songs, title = "Đang Thịnh Hành" }
       </div>
 
       {/* Horizontal scroll on mobile, Grid on desktop */}
-      <div className="flex gap-4 md:gap-6 overflow-x-auto pb-6 snap-x snap-mandatory scrollbar-hide md:grid md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 md:overflow-visible md:pb-0">
+      <div className="flex gap-4 md:gap-6 overflow-x-auto pb-6 snap-x snap-mandatory scrollbar-hide md:grid md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7 md:overflow-visible md:pb-0">
         {songs.map((song) => (
           <div
             key={song.id}

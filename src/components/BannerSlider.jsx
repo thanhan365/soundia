@@ -88,7 +88,7 @@ export default function BannerSlider() {
 
   return (
     <div
-      className="relative mx-auto max-w-7xl w-[calc(100%-2rem)] overflow-hidden rounded-2xl md:rounded-3xl mt-0 md:mt-4 shadow-[0_10px_40px_rgba(0,0,0,0.5)] group/slider mb-4"
+      className="relative w-full overflow-hidden rounded-2xl md:rounded-3xl mt-0 md:mt-4 shadow-[0_10px_40px_rgba(0,0,0,0.5)] group/slider mb-4"
       onMouseEnter={() => setPaused(true)}
       onMouseLeave={() => setPaused(false)}
     >

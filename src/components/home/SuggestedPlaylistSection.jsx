@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { HiPlay } from "react-icons/hi2";
+import { HiChevronRight } from "react-icons/hi";
 
 function PlaylistCard({ playlist, onClick }) {
     const [imgFailed, setImgFailed] = useState(false);
@@ -84,11 +85,20 @@ export default function SuggestedPlaylistSection() {
     if (loading) {
         return (
             <section className="mb-8">
-                <div className="flex items-center gap-3 mb-4">
-                    <div className="w-1 h-6 bg-gradient-to-b from-neon to-emerald-400 rounded-full" />
-                    <h2 className="text-xl font-bold text-white">Playlist Gợi Ý</h2>
+                <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-3">
+                        <div className="w-1 h-6 bg-gradient-to-b from-neon to-emerald-400 rounded-full" />
+                        <h2 className="text-xl font-bold text-white">Playlist Gợi Ý</h2>
+                    </div>
+                    <button
+                        onClick={() => navigate('/genres')}
+                        className="flex items-center gap-1 text-sm text-gray-400 hover:text-neon transition-colors group"
+                    >
+                        Xem thêm
+                        <HiChevronRight className="text-base group-hover:translate-x-0.5 transition-transform" />
+                    </button>
                 </div>
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 md:gap-4">
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 2xl:grid-cols-6 gap-3 md:gap-4">
                     {[...Array(10)].map((_, i) => (
                         <div key={i} className="aspect-[4/3] rounded-2xl bg-white/5 animate-pulse" />
                     ))}
@@ -101,12 +111,21 @@ export default function SuggestedPlaylistSection() {
 
     return (
         <section className="mb-8">
-            <div className="flex items-center gap-3 mb-4">
-                <div className="w-1 h-6 bg-gradient-to-b from-neon to-emerald-400 rounded-full" />
-                <h2 className="text-xl font-bold text-white">Playlist Gợi Ý</h2>
+            <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-3">
+                    <div className="w-1 h-6 bg-gradient-to-b from-neon to-emerald-400 rounded-full" />
+                    <h2 className="text-xl font-bold text-white">Playlist Gợi Ý</h2>
+                </div>
+                <button
+                    onClick={() => navigate('/genres')}
+                    className="flex items-center gap-1 text-sm text-gray-400 hover:text-neon transition-colors group"
+                >
+                    Xem thêm
+                    <HiChevronRight className="text-base group-hover:translate-x-0.5 transition-transform" />
+                </button>
             </div>
 
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 md:gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 2xl:grid-cols-6 gap-3 md:gap-4">
                 {playlists.map((playlist) => (
                     <PlaylistCard
                         key={playlist.id}

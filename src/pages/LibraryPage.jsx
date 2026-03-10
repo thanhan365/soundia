@@ -94,7 +94,7 @@ export default function LibraryPage() {
             {filteredLibSongs.length} bài hát yêu thích
           </p>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-2">
             {filteredLibSongs.map((song, i) => (
               <SongItem key={song.id} song={song} index={i} />
             ))}
@@ -105,7 +105,7 @@ export default function LibraryPage() {
       {activeTab === "Playlist" && (
         <div className="pb-10 sm:pb-16">
           {playlists.length > 0 ? (
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2 sm:gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-2 sm:gap-4">
               {playlists.map((pl) => {
                 const resolvedCount = pl.songs.reduce(
                   (acc, sid) =>
@@ -150,7 +150,7 @@ export default function LibraryPage() {
       {activeTab === "Album" && (
         <div className="pb-10 sm:pb-16">
           {loadingExtras ? <SkeletonLoader /> : albums.length > 0 ? (
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4">
               {albums.map((album) => (
                 <div key={album.collectionId} className="group bg-white/[0.03] rounded-xl p-3 sm:p-4 border border-white/5 hover:border-white/10 transition-all">
                   <div className="w-full aspect-square rounded-lg overflow-hidden mb-3 relative">
@@ -173,7 +173,7 @@ export default function LibraryPage() {
       {activeTab === "MV" && (
         <div className="pb-10 sm:pb-16">
           {loadingExtras ? <SkeletonLoader /> : mvs.length > 0 ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4">
               {mvs.map((mv) => (
                 <div key={mv.trackId} className="group bg-white/[0.03] rounded-xl overflow-hidden border border-white/5 hover:border-white/10 transition-all cursor-pointer">
                   <div className="w-full aspect-video relative overflow-hidden bg-black flex items-center justify-center">

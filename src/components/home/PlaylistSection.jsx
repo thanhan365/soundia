@@ -21,7 +21,7 @@ export default function PlaylistSection() {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
         {playlists.map((pl) => (
           <div
             key={pl.id}
@@ -30,20 +30,20 @@ export default function PlaylistSection() {
           >
             <div className="relative w-full aspect-square mb-3 rounded-xl overflow-hidden shadow-lg bg-white/5 flex flex-col items-center justify-center">
               {pl.cover ? (
-                  <img
-                    src={pl.cover}
-                    alt={pl.name}
-                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                  />
+                <img
+                  src={pl.cover}
+                  alt={pl.name}
+                  className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                />
               ) : (
-                  <div className="w-full h-full bg-gradient-to-br from-purple-800 to-pink-600 flex items-center justify-center">
-                    <span className="text-4xl text-white font-bold">{pl.name.charAt(0).toUpperCase()}</span>
-                  </div>
+                <div className="w-full h-full bg-gradient-to-br from-purple-800 to-pink-600 flex items-center justify-center">
+                  <span className="text-4xl text-white font-bold">{pl.name.charAt(0).toUpperCase()}</span>
+                </div>
               )}
               <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col items-center justify-center p-4 text-center">
-                 <span className="text-white text-sm font-bold bg-purple-600/80 px-4 py-1.5 rounded-full backdrop-blur-sm transform translate-y-4 group-hover:translate-y-0 transition-transform duration-300">
-                    Xem Playlist
-                 </span>
+                <span className="text-white text-sm font-bold bg-purple-600/80 px-4 py-1.5 rounded-full backdrop-blur-sm transform translate-y-4 group-hover:translate-y-0 transition-transform duration-300">
+                  Xem Playlist
+                </span>
               </div>
             </div>
 

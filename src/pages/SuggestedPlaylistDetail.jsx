@@ -76,7 +76,7 @@ export default function SuggestedPlaylistDetail() {
 
     return (
         <div className="min-h-screen text-white pb-32">
-            <div className="mx-auto max-w-5xl">
+            <div className="mx-auto">
                 {/* Header Banner */}
                 <div className="relative rounded-2xl overflow-hidden mb-8">
                     <div className={`absolute inset-0 bg-gradient-to-br ${gradient} opacity-60`} />

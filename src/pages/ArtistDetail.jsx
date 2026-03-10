@@ -9,7 +9,7 @@ export default function ArtistDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { playSong, currentSong, isPlaying, togglePlay } = usePlayer();
-  
+
   const [artist, setArtist] = useState(null);
   const [topTracks, setTopTracks] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -24,17 +24,17 @@ export default function ArtistDetail() {
         // Dùng iTunes search để tìm bài hát của nghệ sĩ
         // Thử tìm theo tên từ URL hoặc search lại
         const results = await searchItunes(decodeURIComponent(actualId));
-        
+
         if (results?.tracks?.length > 0) {
-           const firstTrack = results.tracks[0];
-           setArtist({
-              name: firstTrack.artist,
-              picture: firstTrack.cover,
-              fans: 0
-           });
-           setTopTracks(results.tracks);
+          const firstTrack = results.tracks[0];
+          setArtist({
+            name: firstTrack.artist,
+            picture: firstTrack.cover,
+            fans: 0
+          });
+          setTopTracks(results.tracks);
         }
-      } catch(e) {
+      } catch (e) {
         console.error(e);
       } finally {
         setLoading(false);
@@ -79,7 +79,7 @@ export default function ArtistDetail() {
   }
 
   return (
-    <div className="pb-32 px-4 md:px-8 mt-4 max-w-7xl mx-auto">
+    <div className="pb-32 px-4 md:px-8 mt-4">
       {/* Header */}
       <div className="relative w-full h-64 md:h-80 rounded-3xl overflow-hidden mb-8 shadow-2xl group flex items-end">
         {/* Background Cover */}
@@ -88,7 +88,7 @@ export default function ArtistDetail() {
           style={{ backgroundImage: `url(${artist.picture})` }}
         />
         <div className="absolute inset-0 bg-gradient-to-t from-[#050511] via-[#050511]/60 to-transparent" />
-        
+
         {/* Content */}
         <div className="relative z-10 p-6 md:p-10 w-full flex flex-col md:flex-row items-end gap-6 justify-between">
           <div>
@@ -103,7 +103,7 @@ export default function ArtistDetail() {
               {new Intl.NumberFormat('vi-VN').format(artist.fans)} người theo dõi
             </p>
           </div>
-          
+
           {/* Action Buttons */}
           <div className="hidden md:flex items-center gap-4">
             <button
@@ -153,9 +153,8 @@ export default function ArtistDetail() {
                   if (isActive) togglePlay();
                   else playSong(song);
                 }}
-                className={`group flex items-center gap-4 p-3 rounded-xl cursor-pointer transition-all duration-200 ${
-                  isActive ? "bg-white/10" : "hover:bg-white/5"
-                }`}
+                className={`group flex items-center gap-4 p-3 rounded-xl cursor-pointer transition-all duration-200 ${isActive ? "bg-white/10" : "hover:bg-white/5"
+                  }`}
               >
                 {/* Index / Play indicator */}
                 <div className="w-8 text-center flex-shrink-0 text-gray-500 font-medium">

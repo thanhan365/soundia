@@ -1,5 +1,7 @@
 import React from "react";
+import { useNavigate } from "react-router-dom";
 import { FaPlay } from "react-icons/fa";
+import { HiChevronRight } from "react-icons/hi";
 import { searchItunes } from "../../services/iTunesService";
 import { usePlayer } from "../../context/PlayerContext";
 
@@ -8,10 +10,12 @@ const moods = [
   { id: 2, title: "Lofi Chill & Thư giãn", query: "lofi chill relax", from: "from-[#00DFD8]", to: "to-[#007CF0]" },
   { id: 3, title: "Tâm Trạng Suy", query: "nhạc tâm trạng buồn", from: "from-[#F5A18B]", to: "to-[#BCA1F7]" },
   { id: 4, title: "Năng Lượng Tích Cực", query: "happy upbeat energetic", from: "from-[#FF4D4D]", to: "to-[#FF9A9E]" },
+  { id: 5, title: "Ballad Việt", query: "ballad việt nam acoustic", from: "from-[#667eea]", to: "to-[#764ba2]" },
 ];
 
 export default function MoodGenreSection() {
   const { playSong } = usePlayer();
+  const navigate = useNavigate();
 
   const handleMoodClick = async (mood) => {
     try {
@@ -28,11 +32,20 @@ export default function MoodGenreSection() {
 
   return (
     <section className="mb-8">
-      <h2 className="text-xl font-bold text-white mb-4">
-        Cảm Xúc &amp; Thể Loại
-      </h2>
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="text-xl font-bold text-white">
+          Cảm Xúc &amp; Thể Loại
+        </h2>
+        <button
+          onClick={() => navigate('/genres')}
+          className="flex items-center gap-1 text-sm text-gray-400 hover:text-neon transition-colors group"
+        >
+          Xem thêm
+          <HiChevronRight className="text-base group-hover:translate-x-0.5 transition-transform" />
+        </button>
+      </div>
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 md:gap-4">
         {moods.map((mood) => (
           <div
             key={mood.id}
