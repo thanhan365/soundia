@@ -16,20 +16,20 @@ const Login = () => {
         if (res.success) {
             navigate('/');
         } else {
-            setError(typeof res.message === 'string' ? res.message : 'Invalid login credentials');
+            setError(typeof res.message === 'string' ? res.message : 'Tên đăng nhập hoặc mật khẩu không đúng');
         }
     };
 
     return (
         <div className="flex items-center justify-center min-h-screen bg-black">
             <div className="w-full max-w-md p-8 bg-gray-900 rounded-lg shadow-xl">
-                <h2 className="mb-6 text-3xl font-bold text-center text-white">Login to Soundia</h2>
-                
+                <h2 className="mb-6 text-3xl font-bold text-center text-white">Đăng nhập</h2>
+
                 {error && <div className="p-3 mb-4 text-sm text-red-400 bg-red-900/50 rounded">{error}</div>}
 
                 <form onSubmit={handleSubmit}>
                     <div className="mb-4">
-                        <label className="block mb-2 text-sm text-gray-400" htmlFor="username">Username</label>
+                        <label className="block mb-2 text-sm text-gray-400" htmlFor="username">Tên đăng nhập</label>
                         <input
                             type="text"
                             id="username"
@@ -39,9 +39,9 @@ const Login = () => {
                             required
                         />
                     </div>
-                    
+
                     <div className="mb-6">
-                        <label className="block mb-2 text-sm text-gray-400" htmlFor="password">Password</label>
+                        <label className="block mb-2 text-sm text-gray-400" htmlFor="password">Mật khẩu</label>
                         <input
                             type="password"
                             id="password"
@@ -51,17 +51,17 @@ const Login = () => {
                             required
                         />
                     </div>
-                    
+
                     <button
                         type="submit"
                         className="w-full px-4 py-2 font-bold text-white bg-green-500 rounded hover:bg-green-600 transition"
                     >
-                        Log In
+                        Đăng nhập
                     </button>
                 </form>
-                
+
                 <p className="mt-4 text-center text-gray-400">
-                    Don't have an account? <Link to="/register" className="text-green-500 hover:underline">Sign up</Link>
+                    Chưa có tài khoản? <Link to="/register" className="text-green-500 hover:underline">Đăng ký ngay</Link>
                 </p>
             </div>
         </div>

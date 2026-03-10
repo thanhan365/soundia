@@ -15,27 +15,27 @@ const Register = () => {
         setError('');
 
         if (password.length < 6) {
-            return setError('Password must be at least 6 characters long.');
+            return setError('Mật khẩu phải có ít nhất 6 ký tự.');
         }
 
         const res = await register(username, email, password);
         if (res.success) {
             navigate('/');
         } else {
-            setError(typeof res.message === 'string' ? res.message : 'Registration failed. Please check your inputs.');
+            setError(typeof res.message === 'string' ? res.message : 'Đăng ký thất bại. Vui lòng kiểm tra lại thông tin.');
         }
     };
 
     return (
         <div className="flex items-center justify-center min-h-screen bg-black">
             <div className="w-full max-w-md p-8 bg-gray-900 rounded-lg shadow-xl">
-                <h2 className="mb-6 text-3xl font-bold text-center text-white">Join Soundia</h2>
-                
+                <h2 className="mb-6 text-3xl font-bold text-center text-white">Đăng ký</h2>
+
                 {error && <div className="p-3 mb-4 text-sm text-red-400 bg-red-900/50 rounded">{error}</div>}
 
                 <form onSubmit={handleSubmit}>
                     <div className="mb-4">
-                        <label className="block mb-2 text-sm text-gray-400" htmlFor="username">Username</label>
+                        <label className="block mb-2 text-sm text-gray-400" htmlFor="username">Tên đăng nhập</label>
                         <input
                             type="text"
                             id="username"
@@ -47,7 +47,7 @@ const Register = () => {
                     </div>
 
                     <div className="mb-4">
-                        <label className="block mb-2 text-sm text-gray-400" htmlFor="email">Email address</label>
+                        <label className="block mb-2 text-sm text-gray-400" htmlFor="email">Địa chỉ email</label>
                         <input
                             type="email"
                             id="email"
@@ -57,9 +57,9 @@ const Register = () => {
                             required
                         />
                     </div>
-                    
+
                     <div className="mb-6">
-                        <label className="block mb-2 text-sm text-gray-400" htmlFor="password">Password</label>
+                        <label className="block mb-2 text-sm text-gray-400" htmlFor="password">Mật khẩu</label>
                         <input
                             type="password"
                             id="password"
@@ -68,19 +68,19 @@ const Register = () => {
                             onChange={(e) => setPassword(e.target.value)}
                             required
                         />
-                        <p className="mt-1 text-xs text-gray-500">Minimum 6 characters.</p>
+                        <p className="mt-1 text-xs text-gray-500">Tối thiểu 6 ký tự.</p>
                     </div>
-                    
+
                     <button
                         type="submit"
                         className="w-full px-4 py-2 font-bold text-white bg-green-500 rounded hover:bg-green-600 transition"
                     >
-                        Sign Up
+                        Đăng ký
                     </button>
                 </form>
-                
+
                 <p className="mt-4 text-center text-gray-400">
-                    Already have an account? <Link to="/login" className="text-green-500 hover:underline">Log in</Link>
+                    Đã có tài khoản? <Link to="/login" className="text-green-500 hover:underline">Đăng nhập</Link>
                 </p>
             </div>
         </div>

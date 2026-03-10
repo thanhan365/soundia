@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { usePlayer } from "../context/PlayerContext";
 import { FaPlay, FaPause, FaHeart, FaChevronLeft, FaChevronRight, FaPlus } from "react-icons/fa";
-import { searchItunes } from "../services/iTunesService";
+
 
 export default function BannerSlider() {
   const { playSong, currentSong, isPlaying, togglePlay } = usePlayer();
@@ -9,11 +9,53 @@ export default function BannerSlider() {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [paused, setPaused] = useState(false);
 
+  // Fetch Top 5 bài hát thịnh hành từ NCT charts (TRENDING_MUSIC)
   useEffect(() => {
     const fetchBanners = async () => {
-      const results = await searchItunes("nhạc hot việt nam");
-      if (results?.tracks?.length > 0) {
-        setSongs(results.tracks.slice(0, 5));
+      try {
+        // Step 1: Lấy danh sách charts để tìm key của TRENDING_MUSIC
+        const chartsRes = await fetch("https://graph.nhaccuatui.com/api/v1/playlist/charts");
+        if (!chartsRes.ok) return;
+        const chartsData = await chartsRes.json();
+        if (chartsData.code !== 0 || !Array.isArray(chartsData.data)) return;
+
+        const trendingChart = chartsData.data.find(c => c.tag === "TRENDING_MUSIC" || c.id === 5);
+        if (!trendingChart?.key) return;
+
+        // Step 2: Lấy chi tiết chart (đầy đủ 50 bài) bằng chart key
+        const detailRes = await fetch(`https://graph.nhaccuatui.com/api/v1/playlist/charts/${trendingChart.key}`);
+        if (!detailRes.ok) return;
+        const detailData = await detailRes.json();
+        if (detailData.code !== 0) return;
+
+        const items = detailData.data?.items || [];
+        if (items.length === 0) return;
+
+        // Take top 5 items and map to our song format
+        const top5 = items.slice(0, 5).map(item => {
+          // Extract stream URL (prefer 320kbps, fallback 128kbps)
+          let streamUrl = "";
+          if (Array.isArray(item.streamURL)) {
+            const hq = item.streamURL.find(s => s.type === "320");
+            const normal = item.streamURL.find(s => s.type === "128");
+            streamUrl = (hq?.stream || normal?.stream || "");
+          }
+
+          return {
+            id: `nct-${item.key}`,
+            title: item.name,
+            artist: item.artistName,
+            cover: item.image || item.bgImage || "",
+            duration: item.duration || 0,
+            source: "nct",
+            key: item.key,
+            streamUrl,
+          };
+        });
+
+        setSongs(top5);
+      } catch (err) {
+        console.error("BannerSlider: Failed to fetch NCT trending:", err);
       }
     };
     fetchBanners();
@@ -45,7 +87,7 @@ export default function BannerSlider() {
   };
 
   return (
-    <div 
+    <div
       className="relative mx-auto max-w-7xl w-[calc(100%-2rem)] overflow-hidden rounded-2xl md:rounded-3xl mt-0 md:mt-4 shadow-[0_10px_40px_rgba(0,0,0,0.5)] group/slider mb-4"
       onMouseEnter={() => setPaused(true)}
       onMouseLeave={() => setPaused(false)}
@@ -57,7 +99,7 @@ export default function BannerSlider() {
       >
         {songs.map((song) => {
           const isActivePlaying = currentSong?.id === song.id && isPlaying;
-          
+
           return (
             <div
               key={song.id}
@@ -88,7 +130,7 @@ export default function BannerSlider() {
                   <p className="text-[10px] md:text-sm font-bold uppercase tracking-[0.2em] text-[#14b8a6] drop-shadow-[0_0_8px_rgba(20,184,166,0.5)]">
                     Tâm điểm nổi bật
                   </p>
-                  <h1 
+                  <h1
                     className="text-2xl md:text-4xl lg:text-5xl font-black text-white hover:text-transparent hover:bg-clip-text hover:bg-gradient-to-r hover:from-[#14b8a6] hover:to-purple-500 cursor-pointer line-clamp-2 drop-shadow-md transition-all duration-300"
                     onClick={(e) => handlePlayPause(e, song)}
                   >
@@ -99,7 +141,7 @@ export default function BannerSlider() {
                   </p>
 
                   <div className="flex items-center gap-3 pt-2">
-                    <button 
+                    <button
                       onClick={(e) => handlePlayPause(e, song)}
                       className="flex items-center gap-2 bg-gradient-to-r from-[#14b8a6] to-purple-600 hover:from-teal-400 hover:to-purple-500 text-white px-5 md:px-6 py-2 md:py-2.5 rounded-full text-xs md:text-sm font-bold transition-all duration-300 hover:scale-105 hover:shadow-[0_0_20px_rgba(20,184,166,0.5)]"
                     >
@@ -171,8 +213,8 @@ export default function BannerSlider() {
             aria-label={`Go to slide ${i + 1}`}
             className={`
               h-2 rounded-full transition-all duration-300
-              ${i === currentIndex 
-                ? "w-8 md:w-10 bg-[#14b8a6] shadow-[0_0_8px_rgba(20,184,166,0.8)]" 
+              ${i === currentIndex
+                ? "w-8 md:w-10 bg-[#14b8a6] shadow-[0_0_8px_rgba(20,184,166,0.8)]"
                 : "w-2.5 bg-white/40 hover:bg-white/70"}
             `}
           />

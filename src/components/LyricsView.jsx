@@ -1,10 +1,20 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { usePlayer } from "../context/PlayerContext";
 import { HiX } from "react-icons/hi";
+import { HiPlay, HiPause, HiBackward, HiForward } from "react-icons/hi2";
+import { IoShuffle, IoRepeat } from "react-icons/io5";
+import { HiQueueList } from "react-icons/hi2";
+import ProgressBar from "./ProgressBar";
+import VolumeControl from "./VolumeControl";
 
 export default function LyricsView() {
   // CHỈ lấy những gì cần cho render, KHÔNG lấy currentTime (gây re-render mỗi frame)
-  const { lyricsOpen, setLyricsOpen, currentSong, isPlaying, audioRef, ytPlayerRef, isYTModeRef } = usePlayer();
+  const {
+    lyricsOpen, setLyricsOpen, currentSong, isPlaying, audioRef, ytPlayerRef, isYTModeRef,
+    togglePlay, playNext, playPrev,
+    shuffle, toggleShuffle, repeatMode, toggleRepeat,
+    queueOpen, setQueueOpen, isLoadingStream,
+  } = usePlayer();
   const [lyricsData, setLyricsData] = useState({ state: "idle", synced: [], plain: "", error: null });
   const [currentLyricIndex, setCurrentLyricIndex] = useState(-1);
   const containerRef = useRef(null);
@@ -162,7 +172,7 @@ export default function LyricsView() {
         />
       )}
 
-      <div className="relative z-10 flex flex-col md:flex-row items-center justify-center w-full max-w-6xl px-4 sm:px-8 h-full gap-8 md:gap-16 pt-16 pb-20">
+      <div className="relative z-10 flex flex-col md:flex-row items-center justify-center w-full max-w-6xl px-4 sm:px-8 h-full gap-8 md:gap-16 pt-16 pb-36">
 
         {/* Left Side: Cover Art */}
         {currentSong ? (
@@ -258,6 +268,73 @@ export default function LyricsView() {
             </div>
           </div>
         )}
+      </div>
+
+      {/* ═══ EMBEDDED PLAYER CONTROLS — full-width like NCT ═══ */}
+      <div className="absolute bottom-0 left-0 right-0 z-20 bg-gradient-to-t from-black via-black/90 to-transparent">
+        {/* Progress Bar — full width */}
+        <div className="w-full px-4 sm:px-6 pt-6">
+          <ProgressBar />
+        </div>
+
+        {/* Controls Row — full width, 3 columns */}
+        <div className="flex items-center px-4 sm:px-6 py-3 gap-4">
+          {/* LEFT: Cover + Song Info */}
+          <div className="flex items-center gap-3 min-w-0 w-[28%]">
+            {currentSong && (
+              <>
+                <div className={`w-10 h-10 rounded-lg overflow-hidden flex-shrink-0 ${isPlaying ? "ring-1 ring-neon/30" : ""}`}>
+                  <img src={currentSong.cover} alt="" className="w-full h-full object-cover" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold text-white truncate">{currentSong.title}</p>
+                  <p className="text-xs text-gray-400 truncate">{currentSong.artist}</p>
+                </div>
+              </>
+            )}
+          </div>
+
+          {/* CENTER: Transport controls */}
+          <div className="flex items-center justify-center gap-4 sm:gap-5 flex-1">
+            <button onClick={toggleShuffle} className={`relative p-1.5 transition-all ${shuffle ? "text-neon" : "text-gray-500 hover:text-gray-300"}`}>
+              <IoShuffle className="text-lg" />
+              {shuffle && <span className="absolute -bottom-0.5 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-neon" />}
+            </button>
+            <button onClick={playPrev} className="text-gray-400 hover:text-white transition-colors p-1">
+              <HiBackward className="text-xl" />
+            </button>
+            <button
+              onClick={togglePlay}
+              disabled={!currentSong || isLoadingStream}
+              className={`w-11 h-11 rounded-full flex items-center justify-center transition-all ${currentSong ? "bg-white text-dark hover:scale-110" : "bg-white/10 text-gray-600 cursor-not-allowed"} ${isLoadingStream ? "opacity-70 cursor-wait hover:scale-100" : ""}`}
+            >
+              {isLoadingStream ? (
+                <div className="w-5 h-5 rounded-full border-[2px] border-dark border-t-transparent animate-spin" />
+              ) : isPlaying ? <HiPause className="text-lg" /> : <HiPlay className="text-lg ml-0.5" />}
+            </button>
+            <button onClick={playNext} className="text-gray-400 hover:text-white transition-colors p-1">
+              <HiForward className="text-xl" />
+            </button>
+            <button onClick={toggleRepeat} className={`relative p-1.5 transition-all ${repeatMode !== "none" ? "text-neon" : "text-gray-500 hover:text-gray-300"}`}>
+              <IoRepeat className="text-lg" />
+              {repeatMode === "one" && <span className="absolute -top-1 -right-1 bg-neon text-dark text-[8px] rounded-full w-3.5 h-3.5 flex items-center justify-center font-bold">1</span>}
+              {repeatMode !== "none" && <span className="absolute -bottom-0.5 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-neon" />}
+            </button>
+          </div>
+
+          {/* RIGHT: LRC, Volume, Queue */}
+          <div className="flex items-center justify-end gap-3 w-[28%]">
+            <button onClick={() => setLyricsOpen(false)} className="p-1 rounded-lg text-xs font-bold text-neon bg-neon/10 transition-all">
+              <span className="text-[11px]">LRC</span>
+            </button>
+            <div className="hidden sm:block">
+              <VolumeControl />
+            </div>
+            <button onClick={() => setQueueOpen(!queueOpen)} className={`p-1 rounded-lg transition-all ${queueOpen ? "text-neon bg-neon/10" : "text-gray-500 hover:text-gray-300"}`}>
+              <HiQueueList className="text-base" />
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   );
