@@ -153,10 +153,11 @@ export function PlayerProvider({ children }) {
       setIsPlaying(true);
       setIsLoadingStream(true);
       setCurrentTime(0);
-      if (song.duration) setDuration(parseDurationStr(song.duration));
+      const expectedDur = parseDurationStr(song.duration);
+      if (expectedDur > 0) setDuration(expectedDur);
       else setDuration(0);
       const query = `${song.artist} - ${song.title} official audio`;
-      ytPlayerRef.current?.loadAndPlay(query);
+      ytPlayerRef.current?.loadAndPlay(query, expectedDur);
     } else {
       if (isYTMode) {
         ytPlayerRef.current?.pause();
@@ -190,8 +191,9 @@ export function PlayerProvider({ children }) {
         setIsPlaying(true);
         setIsLoadingStream(true);
         setCurrentTime(0);
+        const expectedDur = parseDurationStr(song.duration);
         const query = `${song.artist} - ${song.title} official audio`;
-        ytPlayerRef.current?.loadAndPlay(query);
+        ytPlayerRef.current?.loadAndPlay(query, expectedDur);
       }
     }
   };

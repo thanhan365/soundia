@@ -20,12 +20,14 @@ namespace Soundia.Api.Controllers
         /// GET /api/stream/video-id?query=Son+Tung+Muon+Roi+Ma+Sao+Con
         /// </summary>
         [HttpGet("video-id")]
-        public async Task<IActionResult> GetVideoId([FromQuery] string query)
+        public async Task<IActionResult> GetVideoId([FromQuery] string query, [FromQuery] int? expectedDuration = null)
         {
             if (string.IsNullOrWhiteSpace(query))
                 return BadRequest(new { message = "query is required" });
 
-            var cacheKey = query.Trim().ToLowerInvariant();
+            var cacheKey = expectedDuration.HasValue
+                ? $"{query.Trim().ToLowerInvariant()}__dur{expectedDuration.Value}"
+                : query.Trim().ToLowerInvariant();
 
             // Check cache
             if (_videoIdCache.TryGetValue(cacheKey, out var cached) && cached.Expiry > DateTime.UtcNow)
@@ -34,7 +36,7 @@ namespace Soundia.Api.Controllers
                 return Ok(new { videoId = cached.VideoId, source = "cache" });
             }
 
-            Console.WriteLine($"[VideoId] Searching YouTube for: {query}");
+            Console.WriteLine($"[VideoId] Tìm YouTube cho: {query} (expectedDuration={expectedDuration}s)");
 
             using var http = new HttpClient();
             http.Timeout = TimeSpan.FromSeconds(10);
@@ -47,25 +49,89 @@ namespace Soundia.Api.Controllers
                 var url = $"https://www.youtube.com/results?search_query={Uri.EscapeDataString(query)}";
                 var html = await http.GetStringAsync(url);
 
-                // YouTube embeds initial data as JSON in the page - extract video IDs
-                // Pattern: "videoRenderer":{"videoId":"XXXXXXXXXXX"
-                var match = Regex.Match(html, "\"videoRenderer\":\\{\"videoId\":\"([a-zA-Z0-9_-]{11})\"");
-                if (match.Success)
+                // Trích xuất nhiều videoRenderer candidates kèm duration
+                var candidates = new List<(string VideoId, int DurationSeconds, string Title)>();
+                var matches = Regex.Matches(html,
+                    @"""videoRenderer"":\{""videoId"":""([a-zA-Z0-9_-]{11})"".*?""lengthText"":\{""accessibility"":\{""accessibilityData"":\{""label"":""(.*?)""",
+                    RegexOptions.Singleline);
+
+                foreach (Match m in matches)
                 {
-                    var videoId = match.Groups[1].Value;
-                    _videoIdCache[cacheKey] = (videoId, DateTime.UtcNow.AddMinutes(60));
-                    Console.WriteLine($"[VideoId] Found: {videoId} for query: {query}");
-                    return Ok(new { videoId, source = "youtube-search" });
+                    if (candidates.Count >= 10) break;
+                    var videoId = m.Groups[1].Value;
+                    var durationLabel = m.Groups[2].Value; // VD: "3 minutes, 43 seconds"
+                    var durationSec = ParseYouTubeDurationLabel(durationLabel);
+
+                    // Cũng thử lấy title cho log
+                    candidates.Add((videoId, durationSec, durationLabel));
                 }
 
-                Console.WriteLine($"[VideoId] No video ID found in search results for: {query}");
-                return NotFound(new { message = "No video found for this query" });
+                if (candidates.Count == 0)
+                {
+                    // Fallback: thử regex đơn giản lấy video đầu tiên
+                    var fallback = Regex.Match(html, @"""videoRenderer"":\{""videoId"":""([a-zA-Z0-9_-]{11})""");
+                    if (fallback.Success)
+                    {
+                        var videoId = fallback.Groups[1].Value;
+                        _videoIdCache[cacheKey] = (videoId, DateTime.UtcNow.AddMinutes(60));
+                        Console.WriteLine($"[VideoId] Fallback (không parse được duration): {videoId}");
+                        return Ok(new { videoId, source = "youtube-search" });
+                    }
+                    Console.WriteLine($"[VideoId] Không tìm thấy video cho: {query}");
+                    return NotFound(new { message = "No video found for this query" });
+                }
+
+                // Log tất cả candidates
+                Console.WriteLine($"[VideoId] Tìm thấy {candidates.Count} candidates:");
+                foreach (var c in candidates)
+                    Console.WriteLine($"  - {c.VideoId} | {c.DurationSeconds}s | {c.Title}");
+
+                // Chọn video phù hợp nhất
+                string bestVideoId;
+                if (expectedDuration.HasValue && expectedDuration.Value > 0)
+                {
+                    // Chọn video có duration gần nhất với expectedDuration
+                    var best = candidates.OrderBy(c => Math.Abs(c.DurationSeconds - expectedDuration.Value)).First();
+                    bestVideoId = best.VideoId;
+                    Console.WriteLine($"[VideoId] Chọn best match: {best.VideoId} ({best.DurationSeconds}s) — expected {expectedDuration.Value}s, chênh lệch {Math.Abs(best.DurationSeconds - expectedDuration.Value)}s");
+                }
+                else
+                {
+                    // Không có expectedDuration → lấy video đầu tiên
+                    bestVideoId = candidates[0].VideoId;
+                    Console.WriteLine($"[VideoId] Không có expectedDuration → lấy video đầu tiên: {bestVideoId}");
+                }
+
+                _videoIdCache[cacheKey] = (bestVideoId, DateTime.UtcNow.AddMinutes(60));
+                return Ok(new { videoId = bestVideoId, source = "youtube-search" });
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"[VideoId] Error: {ex.Message}");
+                Console.WriteLine($"[VideoId] Lỗi: {ex.Message}");
                 return StatusCode(503, new { message = "Could not search YouTube" });
             }
+        }
+
+        /// <summary>
+        /// Parse YouTube accessibility duration label, ví dụ:
+        /// "3 minutes, 43 seconds" → 223
+        /// "1 hour, 2 minutes, 30 seconds" → 3750
+        /// "43 seconds" → 43
+        /// </summary>
+        private static int ParseYouTubeDurationLabel(string label)
+        {
+            if (string.IsNullOrWhiteSpace(label)) return 0;
+
+            int total = 0;
+            var hourMatch = Regex.Match(label, @"(\d+)\s*hour");
+            var minMatch = Regex.Match(label, @"(\d+)\s*minute");
+            var secMatch = Regex.Match(label, @"(\d+)\s*second");
+
+            if (hourMatch.Success) total += int.Parse(hourMatch.Groups[1].Value) * 3600;
+            if (minMatch.Success) total += int.Parse(minMatch.Groups[1].Value) * 60;
+            if (secMatch.Success) total += int.Parse(secMatch.Groups[1].Value);
+
+            return total;
         }
 
 
