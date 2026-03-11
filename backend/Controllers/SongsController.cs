@@ -798,6 +798,65 @@ namespace Soundia.Api.Controllers
             }
         }
 
+        // ── Zing MP3 Single Song Info (via Node.js helper) ──────────────────
+        [HttpGet("zing-song/{id}")]
+        public async Task<ActionResult> ZingSong(string id)
+        {
+            try
+            {
+                var scriptPath = Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "scripts", "zing-song.cjs");
+                if (!System.IO.File.Exists(scriptPath))
+                    scriptPath = Path.Combine(Directory.GetCurrentDirectory(), "scripts", "zing-song.cjs");
+
+                var psi = new System.Diagnostics.ProcessStartInfo
+                {
+                    FileName = "node",
+                    Arguments = $"\"{scriptPath}\" {id}",
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                    UseShellExecute = false,
+                    CreateNoWindow = true,
+                    WorkingDirectory = Path.Combine(Directory.GetCurrentDirectory(), ".."),
+                    StandardOutputEncoding = System.Text.Encoding.UTF8,
+                    StandardErrorEncoding = System.Text.Encoding.UTF8
+                };
+
+                using var process = System.Diagnostics.Process.Start(psi);
+                if (process == null)
+                    return StatusCode(500, new { success = false, message = "Failed to start Node.js process" });
+
+                var output = await process.StandardOutput.ReadToEndAsync();
+                var error = await process.StandardError.ReadToEndAsync();
+                await process.WaitForExitAsync();
+
+                if (process.ExitCode != 0 || string.IsNullOrEmpty(output))
+                    return StatusCode(500, new { success = false, message = "Failed to fetch song info", details = error });
+
+                using var doc = System.Text.Json.JsonDocument.Parse(output);
+                var root = doc.RootElement;
+
+                if (root.TryGetProperty("error", out var errEl))
+                    return StatusCode(400, new { success = false, message = errEl.GetString() });
+
+                return Ok(new
+                {
+                    success = true,
+                    data = new
+                    {
+                        id = root.TryGetProperty("id", out var sid) ? sid.GetString() ?? "" : "",
+                        title = root.TryGetProperty("title", out var st) ? st.GetString() ?? "" : "",
+                        artist = root.TryGetProperty("artist", out var sa) ? sa.GetString() ?? "Unknown" : "Unknown",
+                        cover = root.TryGetProperty("cover", out var sc) ? sc.GetString() ?? "" : "",
+                        duration = root.TryGetProperty("duration", out var sd) ? sd.GetInt32() : 0
+                    }
+                });
+            }
+            catch (System.Exception ex)
+            {
+                return StatusCode(500, new { success = false, message = "Error fetching Zing song", details = ex.ToString() });
+            }
+        }
+
         // ── NCT Graph API Endpoints ─────────────────────────────────────────
         private static readonly Soundia.Api.Services.NctApiService _nctApi = new();
 

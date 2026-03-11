@@ -43,3 +43,5 @@ Release/
 # Environment variables (KHÔNG commit lên git!)
 .env
 backend/.env
+# Local Netlify folder
+.netlify

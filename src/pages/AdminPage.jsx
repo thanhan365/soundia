@@ -403,9 +403,11 @@ function ImportTab() {
                     tracks: [{ id: d.key, title: res.data.title || '', artist: res.data.artist || 'Unknown', cover: res.data.cover || '', audio: res.data.streamUrl || 'YT_STREAM', nctKey: d.key, source: 'nct' }]
                 });
             } else if (d.source === 'zing' && d.type === 'song') {
+                const res = await api.get(`/songs/zing-song/${d.id}`);
+                const song = res.data.data;
                 setResult({
-                    source: 'Zing MP3', type: 'Bài hát', name: `Zing Song ${d.id}`, totalSongs: 1,
-                    tracks: [{ id: `zing_${d.id}`, title: `Zing Song ${d.id}`, artist: 'Đang tải...', cover: '', audio: 'YT_STREAM', source: 'zing' }]
+                    source: 'Zing MP3', type: 'Bài hát', name: song.title || `Zing Song`, image: song.cover, totalSongs: 1,
+                    tracks: [{ id: song.id || `zing_${d.id}`, title: song.title || '', artist: song.artist || 'Unknown', cover: song.cover || '', audio: 'YT_STREAM', source: 'zing', duration: song.duration || 0 }]
                 });
             }
         } catch (err) { setError(err.response?.data?.message || err.message || 'Lỗi khi tải'); }
@@ -468,89 +470,89 @@ function ImportTab() {
 
             {/* Import từ link mode */}
             {activeImportMode === 'link' && <>
-            {/* Input */}
-            <div className="bg-white/5 rounded-xl p-4 border border-white/5">
-                <p className="text-xs text-gray-400 mb-3">
-                    Dán <span className="text-amber-300">link trực tiếp</span> hoặc <span className="text-amber-300">mã nhúng iframe</span> từ <span className="text-purple-400">Zing MP3</span> / <span className="text-green-400">NhacCuaTui</span>
-                </p>
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mb-3">
-                    {[
-                        { l: 'Zing Playlist/Album', c: 'text-purple-400' },
-                        { l: 'Zing Bài hát', c: 'text-purple-400' },
-                        { l: 'Zing Embed/iframe', c: 'text-purple-400' },
-                        { l: 'NCT Playlist', c: 'text-green-400' },
-                        { l: 'NCT Bài hát', c: 'text-green-400' },
-                        { l: 'NCT Embed/iframe', c: 'text-green-400' },
-                    ].map((x, i) => (
-                        <div key={i} className="flex items-center gap-1.5 px-2 py-1.5 bg-black/20 rounded-lg">
-                            <HiCheck className={`text-[10px] ${x.c}`} /><span className="text-[11px] text-gray-300">{x.l}</span>
-                        </div>
-                    ))}
-                </div>
-                <div className="flex gap-2">
-                    <input value={linkInput} onChange={(e) => { setLinkInput(e.target.value); setResult(null); setError(''); }}
-                        onKeyDown={(e) => e.key === 'Enter' && handlePreview()}
-                        placeholder="Dán link Zing MP3 / NhacCuaTui / iframe embed..."
-                        className="flex-1 px-3 py-2.5 bg-black/30 border border-white/10 rounded-lg text-sm text-white placeholder-gray-500 focus:outline-none focus:border-amber-500/50 transition-all" />
-                    <button onClick={handlePreview} disabled={loading || !linkInput.trim()}
-                        className="px-4 py-2.5 bg-gradient-to-r from-amber-500 to-orange-500 text-white text-sm font-semibold rounded-lg disabled:opacity-50 transition-all flex items-center gap-1.5">
-                        {loading ? <HiRefresh className="animate-spin" /> : <HiUpload />}
-                        {loading ? 'Đang tải...' : 'Import'}
-                    </button>
-                </div>
-                {error && <div className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm mt-3 bg-red-500/10 text-red-400 border border-red-500/20"><HiX />{error}</div>}
-            </div>
-
-            {/* Results */}
-            {result && (
-                <div className="bg-white/5 rounded-xl border border-white/5 overflow-hidden">
-                    <div className="p-4 border-b border-white/5 flex items-center gap-3">
-                        {result.image && <img src={result.image} alt="" className="w-14 h-14 rounded-xl object-cover" />}
-                        <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 mb-0.5">
-                                <span className={`text-[10px] font-bold uppercase px-1.5 py-0.5 rounded-full ${result.source === 'Zing MP3' ? 'bg-purple-500/20 text-purple-400' : 'bg-green-500/20 text-green-400'}`}>{result.source}</span>
-                                <span className="text-[10px] text-gray-500">{result.type}</span>
-                            </div>
-                            <h3 className="text-base font-bold text-white truncate">{result.name}</h3>
-                            <p className="text-[11px] text-gray-400">{result.totalSongs} bài • NCT ưu tiên → YouTube</p>
-                        </div>
-                        <button onClick={handlePlayAll}
-                            className="px-3 py-2 bg-gradient-to-r from-neon to-purple-500 text-white text-sm font-semibold rounded-lg hover:scale-105 transition-all flex items-center gap-1.5 flex-shrink-0">
-                            <HiPlay /> Phát tất cả
-                        </button>
-                        <button onClick={handleSaveToLibrary} disabled={saving}
-                            className="px-3 py-2 bg-gradient-to-r from-amber-500 to-orange-500 text-white text-sm font-semibold rounded-lg hover:scale-105 transition-all flex items-center gap-1.5 flex-shrink-0 disabled:opacity-50">
-                            {saving ? <><HiRefresh className="animate-spin" /> Đang lưu...</> : <><HiPlusCircle /> Thêm Playlist lên Home</>}
-                        </button>
-                    </div>
-                    {saveMsg && (
-                        <div className={`mx-4 mt-2 px-3 py-2 rounded-lg text-sm ${saveMsg.type === 'success' ? 'bg-green-500/10 text-green-400 border border-green-500/20' : 'bg-red-500/10 text-red-400 border border-red-500/20'}`}>
-                            {saveMsg.type === 'success' ? <HiCheck className="inline mr-1" /> : <HiX className="inline mr-1" />}
-                            {saveMsg.text}
-                        </div>
-                    )}
-                    <div className="max-h-[45vh] overflow-y-auto">
-                        {result.tracks.map((song, idx) => (
-                            <div key={song.id || idx} className="flex items-center gap-2.5 px-4 py-2 hover:bg-white/5 transition-colors border-b border-white/[0.03] last:border-0 group">
-                                <span className="text-[11px] text-gray-500 w-5 text-right font-mono">{idx + 1}</span>
-                                {song.cover ? <img src={song.cover} alt="" className="w-8 h-8 rounded object-cover" /> :
-                                    <div className="w-8 h-8 rounded bg-white/5 flex items-center justify-center"><HiMusicNote className="text-gray-600 text-xs" /></div>}
-                                <div className="min-w-0 flex-1">
-                                    <p className="text-sm text-white truncate">{song.title}</p>
-                                    <p className="text-[11px] text-gray-400 truncate">{song.artist}</p>
-                                </div>
-                                {song.duration > 0 && <span className="text-[11px] text-gray-500">{Math.floor(song.duration / 60)}:{String(song.duration % 60).padStart(2, '0')}</span>}
-                                <button onClick={() => playSong({ ...song, audio: song.audio || 'YT_STREAM' })}
-                                    className="opacity-0 group-hover:opacity-100 p-1 rounded-full bg-neon/20 text-neon hover:bg-neon/30 transition-all" title="Phát">
-                                    <HiPlay className="text-xs" /></button>
-                                <button onClick={() => addToQueue({ ...song, audio: song.audio || 'YT_STREAM' })}
-                                    className="opacity-0 group-hover:opacity-100 p-1 rounded-full bg-white/5 text-gray-400 hover:text-white transition-all" title="Thêm hàng chờ">
-                                    <HiPlusCircle className="text-xs" /></button>
+                {/* Input */}
+                <div className="bg-white/5 rounded-xl p-4 border border-white/5">
+                    <p className="text-xs text-gray-400 mb-3">
+                        Dán <span className="text-amber-300">link trực tiếp</span> hoặc <span className="text-amber-300">mã nhúng iframe</span> từ <span className="text-purple-400">Zing MP3</span> / <span className="text-green-400">NhacCuaTui</span>
+                    </p>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mb-3">
+                        {[
+                            { l: 'Zing Playlist/Album', c: 'text-purple-400' },
+                            { l: 'Zing Bài hát', c: 'text-purple-400' },
+                            { l: 'Zing Embed/iframe', c: 'text-purple-400' },
+                            { l: 'NCT Playlist', c: 'text-green-400' },
+                            { l: 'NCT Bài hát', c: 'text-green-400' },
+                            { l: 'NCT Embed/iframe', c: 'text-green-400' },
+                        ].map((x, i) => (
+                            <div key={i} className="flex items-center gap-1.5 px-2 py-1.5 bg-black/20 rounded-lg">
+                                <HiCheck className={`text-[10px] ${x.c}`} /><span className="text-[11px] text-gray-300">{x.l}</span>
                             </div>
                         ))}
                     </div>
+                    <div className="flex gap-2">
+                        <input value={linkInput} onChange={(e) => { setLinkInput(e.target.value); setResult(null); setError(''); }}
+                            onKeyDown={(e) => e.key === 'Enter' && handlePreview()}
+                            placeholder="Dán link Zing MP3 / NhacCuaTui / iframe embed..."
+                            className="flex-1 px-3 py-2.5 bg-black/30 border border-white/10 rounded-lg text-sm text-white placeholder-gray-500 focus:outline-none focus:border-amber-500/50 transition-all" />
+                        <button onClick={handlePreview} disabled={loading || !linkInput.trim()}
+                            className="px-4 py-2.5 bg-gradient-to-r from-amber-500 to-orange-500 text-white text-sm font-semibold rounded-lg disabled:opacity-50 transition-all flex items-center gap-1.5">
+                            {loading ? <HiRefresh className="animate-spin" /> : <HiUpload />}
+                            {loading ? 'Đang tải...' : 'Import'}
+                        </button>
+                    </div>
+                    {error && <div className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm mt-3 bg-red-500/10 text-red-400 border border-red-500/20"><HiX />{error}</div>}
                 </div>
-            )}
+
+                {/* Results */}
+                {result && (
+                    <div className="bg-white/5 rounded-xl border border-white/5 overflow-hidden">
+                        <div className="p-4 border-b border-white/5 flex items-center gap-3">
+                            {result.image && <img src={result.image} alt="" className="w-14 h-14 rounded-xl object-cover" />}
+                            <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2 mb-0.5">
+                                    <span className={`text-[10px] font-bold uppercase px-1.5 py-0.5 rounded-full ${result.source === 'Zing MP3' ? 'bg-purple-500/20 text-purple-400' : 'bg-green-500/20 text-green-400'}`}>{result.source}</span>
+                                    <span className="text-[10px] text-gray-500">{result.type}</span>
+                                </div>
+                                <h3 className="text-base font-bold text-white truncate">{result.name}</h3>
+                                <p className="text-[11px] text-gray-400">{result.totalSongs} bài • NCT ưu tiên → YouTube</p>
+                            </div>
+                            <button onClick={handlePlayAll}
+                                className="px-3 py-2 bg-gradient-to-r from-neon to-purple-500 text-white text-sm font-semibold rounded-lg hover:scale-105 transition-all flex items-center gap-1.5 flex-shrink-0">
+                                <HiPlay /> Phát tất cả
+                            </button>
+                            <button onClick={handleSaveToLibrary} disabled={saving}
+                                className="px-3 py-2 bg-gradient-to-r from-amber-500 to-orange-500 text-white text-sm font-semibold rounded-lg hover:scale-105 transition-all flex items-center gap-1.5 flex-shrink-0 disabled:opacity-50">
+                                {saving ? <><HiRefresh className="animate-spin" /> Đang lưu...</> : <><HiPlusCircle /> Thêm Playlist lên Home</>}
+                            </button>
+                        </div>
+                        {saveMsg && (
+                            <div className={`mx-4 mt-2 px-3 py-2 rounded-lg text-sm ${saveMsg.type === 'success' ? 'bg-green-500/10 text-green-400 border border-green-500/20' : 'bg-red-500/10 text-red-400 border border-red-500/20'}`}>
+                                {saveMsg.type === 'success' ? <HiCheck className="inline mr-1" /> : <HiX className="inline mr-1" />}
+                                {saveMsg.text}
+                            </div>
+                        )}
+                        <div className="max-h-[45vh] overflow-y-auto">
+                            {result.tracks.map((song, idx) => (
+                                <div key={song.id || idx} className="flex items-center gap-2.5 px-4 py-2 hover:bg-white/5 transition-colors border-b border-white/[0.03] last:border-0 group">
+                                    <span className="text-[11px] text-gray-500 w-5 text-right font-mono">{idx + 1}</span>
+                                    {song.cover ? <img src={song.cover} alt="" className="w-8 h-8 rounded object-cover" /> :
+                                        <div className="w-8 h-8 rounded bg-white/5 flex items-center justify-center"><HiMusicNote className="text-gray-600 text-xs" /></div>}
+                                    <div className="min-w-0 flex-1">
+                                        <p className="text-sm text-white truncate">{song.title}</p>
+                                        <p className="text-[11px] text-gray-400 truncate">{song.artist}</p>
+                                    </div>
+                                    {song.duration > 0 && <span className="text-[11px] text-gray-500">{Math.floor(song.duration / 60)}:{String(song.duration % 60).padStart(2, '0')}</span>}
+                                    <button onClick={() => playSong({ ...song, audio: song.audio || 'YT_STREAM' })}
+                                        className="opacity-0 group-hover:opacity-100 p-1 rounded-full bg-neon/20 text-neon hover:bg-neon/30 transition-all" title="Phát">
+                                        <HiPlay className="text-xs" /></button>
+                                    <button onClick={() => addToQueue({ ...song, audio: song.audio || 'YT_STREAM' })}
+                                        className="opacity-0 group-hover:opacity-100 p-1 rounded-full bg-white/5 text-gray-400 hover:text-white transition-all" title="Thêm hàng chờ">
+                                        <HiPlusCircle className="text-xs" /></button>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )}
             </>}
         </div>
     );
@@ -640,8 +642,8 @@ function UsersTab() {
                                 <button onClick={(e) => { e.stopPropagation(); handleDelete(u.id, u.username); }}
                                     disabled={deleting === u.id}
                                     className={`px-2 py-1.5 rounded-lg text-xs font-medium transition-all flex-shrink-0 flex items-center gap-1 ${confirmId === u.id
-                                            ? 'bg-red-500 text-white animate-pulse'
-                                            : 'text-red-400 bg-red-500/10 hover:bg-red-500/20'
+                                        ? 'bg-red-500 text-white animate-pulse'
+                                        : 'text-red-400 bg-red-500/10 hover:bg-red-500/20'
                                         }`} title={confirmId === u.id ? 'Bấm lần nữa để xóa' : 'Xóa user'}>
                                     {deleting === u.id ? <><HiRefresh className="text-sm animate-spin" /> Đang xóa...</>
                                         : confirmId === u.id ? <><HiTrash className="text-sm" /> Xác nhận?</>
@@ -663,10 +665,159 @@ function UsersTab() {
     );
 }
 
+// ── Tab: Playlists ───────────────────────────────────────────────────────
+function PlaylistsTab() {
+    const [playlists, setPlaylists] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [deletingId, setDeletingId] = useState(null);
+    const [confirmDeleteId, setConfirmDeleteId] = useState(null);
+    const [editingId, setEditingId] = useState(null);
+    const [editName, setEditName] = useState('');
+
+    const fetchPlaylists = async () => {
+        setLoading(true);
+        try {
+            const res = await api.get('/admin/public-playlists');
+            setPlaylists(res.data || []);
+        } catch (error) {
+            console.error("Lỗi khi tải playlist:", error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchPlaylists();
+    }, []);
+
+    const handleDelete = async (id, name) => {
+        if (confirmDeleteId !== id) {
+            setConfirmDeleteId(id);
+            setTimeout(() => setConfirmDeleteId(prev => prev === id ? null : prev), 4000);
+            return;
+        }
+
+        setConfirmDeleteId(null);
+        setDeletingId(id);
+        try {
+            const res = await api.delete(`/admin/public-playlists/${id}`);
+            if (res.data.success) {
+                setPlaylists(prev => prev.filter(p => p.id !== id));
+            }
+        } catch (error) {
+            alert('Lỗi khi xóa playlist');
+        } finally {
+            setDeletingId(null);
+        }
+    };
+
+    const startEdit = (p) => {
+        setEditingId(p.id);
+        setEditName(p.name);
+    };
+
+    const cancelEdit = () => {
+        setEditingId(null);
+        setEditName('');
+    };
+
+    const saveEdit = async (id) => {
+        if (!editName.trim()) return;
+        try {
+            const res = await api.put(`/admin/public-playlists/${id}/rename`, { name: editName.trim() });
+            if (res.data.success) {
+                setPlaylists(prev => prev.map(p => p.id === id ? { ...p, name: res.data.name } : p));
+            }
+        } catch (error) {
+            alert('Lỗi khi đổi tên playlist');
+        } finally {
+            setEditingId(null);
+            setEditName('');
+        }
+    };
+
+    return (
+        <div className="space-y-4">
+            <div className="flex justify-between items-center mb-4">
+                <h3 className="text-sm font-semibold text-white flex items-center gap-2">
+                    <HiCollection className="text-purple-400" /> Quản lý Playlist Public
+                </h3>
+                <button onClick={fetchPlaylists} className="text-xs text-gray-400 hover:text-white px-3 py-1 bg-white/5 rounded-lg">
+                    <HiRefresh className={`inline mr-1 ${loading ? 'animate-spin' : ''}`} /> Tải lại
+                </button>
+            </div>
+
+            {loading ? (
+                <div className="text-center py-12 text-gray-400"><HiRefresh className="inline animate-spin mr-2" />Đang tải...</div>
+            ) : playlists.length === 0 ? (
+                <div className="text-center py-12 text-gray-500 bg-white/5 rounded-xl border border-white/5">Chưa có playlist public nào.</div>
+            ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                    {playlists.map(p => (
+                        <div key={p.id} className="bg-white/5 border border-white/5 p-3 rounded-xl flex items-center gap-3 group hover:bg-white/10 transition-colors">
+                            <div className="w-14 h-14 rounded-lg bg-gray-800 flex-shrink-0 overflow-hidden relative">
+                                {p.cover ? (
+                                    <img src={p.cover} alt={p.name} className="w-full h-full object-cover" onError={(e) => e.target.style.display = 'none'} />
+                                ) : (
+                                    <div className="w-full h-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
+                                        <HiCollection className="text-white/50 text-xl" />
+                                    </div>
+                                )}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                                {editingId === p.id ? (
+                                    <div className="flex items-center gap-1">
+                                        <input
+                                            value={editName}
+                                            onChange={(e) => setEditName(e.target.value)}
+                                            onKeyDown={(e) => { if (e.key === 'Enter') saveEdit(p.id); if (e.key === 'Escape') cancelEdit(); }}
+                                            autoFocus
+                                            className="flex-1 px-2 py-1 bg-black/40 border border-amber-500/50 rounded-lg text-sm text-white focus:outline-none"
+                                        />
+                                        <button onClick={() => saveEdit(p.id)} className="p-1 text-green-400 hover:text-green-300" title="Lưu"><HiCheck /></button>
+                                        <button onClick={cancelEdit} className="p-1 text-gray-400 hover:text-white" title="Hủy"><HiX /></button>
+                                    </div>
+                                ) : (
+                                    <>
+                                        <h4 className="text-sm font-bold text-white truncate" title={p.name}>{p.name}</h4>
+                                        <p className="text-xs text-gray-400 mt-0.5">{p.songCount} bài hát</p>
+                                    </>
+                                )}
+                            </div>
+                            {editingId !== p.id && (
+                                <>
+                                    <button
+                                        onClick={() => startEdit(p)}
+                                        className="p-2 rounded-lg bg-white/5 text-gray-400 hover:text-amber-400 hover:bg-amber-500/10 transition-colors flex-shrink-0"
+                                        title="Sửa tên"
+                                    >
+                                        <HiCog className="text-sm" />
+                                    </button>
+                                    <button
+                                        onClick={() => handleDelete(p.id, p.name)}
+                                        disabled={deletingId === p.id}
+                                        className={`p-2 rounded-lg transition-colors flex-shrink-0
+                                            ${deletingId === p.id ? 'opacity-50 cursor-not-allowed' : ''}
+                                            ${confirmDeleteId === p.id ? 'bg-red-500 text-white' : 'bg-white/5 text-gray-400 hover:text-red-400 hover:bg-red-500/10'}`}
+                                        title={confirmDeleteId === p.id ? "Nhấn lần nữa để chắc chắn xóa" : "Xóa playlist"}
+                                    >
+                                        {deletingId === p.id ? <HiRefresh className="animate-spin" /> : <HiTrash />}
+                                    </button>
+                                </>
+                            )}
+                        </div>
+                    ))}
+                </div>
+            )}
+        </div>
+    );
+}
+
 // ── Main Admin Page ──────────────────────────────────────────────────────
 const tabs = [
     { id: 'dashboard', label: 'Tổng quan', icon: HiChartBar },
-    { id: 'import', label: 'Import nhạc', icon: HiUpload },
+    { id: 'import', label: 'Bài hát', icon: HiMusicNote },
+    { id: 'playlists', label: 'Playlists', icon: HiCollection },
     { id: 'users', label: 'Người dùng', icon: HiUsers },
 ];
 
@@ -708,6 +859,7 @@ const AdminPage = () => {
             {/* Tab Content */}
             {activeTab === 'dashboard' && <DashboardTab />}
             {activeTab === 'import' && <ImportTab />}
+            {activeTab === 'playlists' && <PlaylistsTab />}
             {activeTab === 'users' && <UsersTab />}
         </div>
     );

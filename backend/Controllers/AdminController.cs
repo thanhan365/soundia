@@ -264,6 +264,48 @@ namespace Soundia.Api.Controllers
             return Ok(playlists);
         }
 
+        // ── Delete Public Playlist ───────────────────────────────────────────
+        [HttpDelete("public-playlists/{id}")]
+        public async Task<ActionResult> DeletePublicPlaylist(int id)
+        {
+            if (!await IsAdmin()) return Forbid();
+
+            var playlist = await _context.Playlists
+                .Include(p => p.PlaylistSongs)
+                .FirstOrDefaultAsync(p => p.Id == id && p.IsPublic);
+
+            if (playlist == null)
+            {
+                return NotFound(new { success = false, message = "Không tìm thấy playlist" });
+            }
+
+            // Xóa tất cả các bài hát trong playlist trước
+            _context.PlaylistSongs.RemoveRange(playlist.PlaylistSongs);
+            
+            // Xóa playlist
+            _context.Playlists.Remove(playlist);
+            await _context.SaveChangesAsync();
+
+            return Ok(new { success = true, message = "Đã xóa playlist thành công" });
+        }
+        // ── Rename Public Playlist ──────────────────────────────────────────
+        [HttpPut("public-playlists/{id}/rename")]
+        public async Task<ActionResult> RenamePublicPlaylist(int id, [FromBody] RenamePlaylistRequest request)
+        {
+            if (!await IsAdmin()) return Forbid();
+
+            var playlist = await _context.Playlists
+                .FirstOrDefaultAsync(p => p.Id == id && p.IsPublic);
+
+            if (playlist == null)
+                return NotFound(new { success = false, message = "Không tìm thấy playlist" });
+
+            playlist.Name = request.Name.Trim();
+            await _context.SaveChangesAsync();
+
+            return Ok(new { success = true, message = "Đã đổi tên playlist", name = playlist.Name });
+        }
+
         // ── Import Songs from Link (Zing/NCT) ─────────────────────────────────
         [HttpPost("import-songs")]
         public async Task<ActionResult> ImportSongs([FromBody] ImportSongsRequest request)
@@ -382,6 +424,11 @@ namespace Soundia.Api.Controllers
             public string? Duration { get; set; }
             public string? Cover { get; set; }
             public string? Audio { get; set; }
+        }
+
+        public class RenamePlaylistRequest
+        {
+            public string Name { get; set; } = string.Empty;
         }
     }
 }

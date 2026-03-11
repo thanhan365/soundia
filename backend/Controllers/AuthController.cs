@@ -161,13 +161,16 @@ namespace Soundia.Api.Controllers
         [HttpPost("seed-admin")]
         public async Task<ActionResult> SeedAdmin([FromBody] RegisterRequest request)
         {
-            // Remove existing admin(s) first
-            var existingAdmins = await _context.Users.Where(u => u.Role == "admin").ToListAsync();
-            if (existingAdmins.Any())
-                _context.Users.RemoveRange(existingAdmins);
+            // Cho phép tối đa 5 tài khoản admin
+            var adminCount = await _context.Users.CountAsync(u => u.Role == "admin");
+            if (adminCount >= 5)
+                return BadRequest("Đã đạt giới hạn 5 tài khoản admin.");
 
-            if (await _context.Users.AnyAsync(u => u.Username == request.Username.ToLower() && u.Role != "admin"))
-                return BadRequest("Username is already taken by a regular user.");
+            if (await _context.Users.AnyAsync(u => u.Username == request.Username.ToLower()))
+                return BadRequest("Tên đăng nhập đã tồn tại.");
+
+            if (await _context.Users.AnyAsync(u => u.Email == request.Email.ToLower()))
+                return BadRequest("Email đã tồn tại.");
 
             var admin = new User
             {
@@ -175,7 +178,7 @@ namespace Soundia.Api.Controllers
                 Email = request.Email.ToLower(),
                 PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.Password),
                 Role = "admin",
-                DisplayName = "Administrator"
+                DisplayName = request.Username
             };
             _context.Users.Add(admin);
             await _context.SaveChangesAsync();

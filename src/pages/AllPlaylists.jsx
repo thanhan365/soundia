@@ -5,6 +5,17 @@ import { HiPlay, HiMusicalNote } from "react-icons/hi2";
 
 function PlaylistCard({ playlist, onClick, onPlay }) {
     const [imgFailed, setImgFailed] = useState(false);
+    const [fallbackCover, setFallbackCover] = useState(null);
+
+    const handleImgError = () => {
+        setImgFailed(true);
+        if (playlist.songCovers && playlist.songCovers.length > 0) {
+            const randomCover = playlist.songCovers[Math.floor(Math.random() * playlist.songCovers.length)];
+            if (randomCover) setFallbackCover(randomCover);
+        }
+    };
+
+    const displayCover = !imgFailed ? playlist.cover : fallbackCover;
 
     return (
         <div
@@ -12,12 +23,12 @@ function PlaylistCard({ playlist, onClick, onPlay }) {
             className="group cursor-pointer relative rounded-2xl overflow-hidden aspect-[4/3] shadow-lg hover:shadow-2xl transition-all duration-300 hover:scale-[1.03]"
         >
             {/* Background Image */}
-            {playlist.cover && !imgFailed ? (
+            {displayCover ? (
                 <img
-                    src={playlist.cover}
+                    src={displayCover}
                     alt={playlist.name}
                     className="absolute inset-0 w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
-                    onError={() => setImgFailed(true)}
+                    onError={() => { if (!imgFailed) handleImgError(); else setFallbackCover(null); }}
                 />
             ) : (
                 <div className={`absolute inset-0 bg-gradient-to-br ${playlist.gradient || "from-purple-500 to-pink-500"} flex items-center justify-center`}>
@@ -92,6 +103,7 @@ export default function AllPlaylists() {
                             name: p.name,
                             description: `${p.songCount} bài hát`,
                             cover: p.cover || '',
+                            songCovers: (p.songs || []).map(s => s.coverUrl).filter(Boolean),
                             gradient: 'from-amber-500 to-orange-600',
                             songCount: p.songCount,
                             isDbPlaylist: true,
