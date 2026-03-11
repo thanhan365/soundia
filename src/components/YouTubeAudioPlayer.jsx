@@ -68,7 +68,7 @@ const YouTubeAudioPlayer = forwardRef(function YouTubeAudioPlayer(
   // Track last polled state to detect state changes (especially ENDED)
   const lastPolledStateRef = useRef(-99);
 
-  // ── Global Polling Interval for Time Update ──────────────────────────────
+   // ── Global Polling Interval for Time Update ──────────────────────────────
   // Tránh việc miss event onStateChange làm kẹt interval và xử lý background throttling
   useEffect(() => {
     const startInterval = () => {
@@ -85,15 +85,16 @@ const YouTubeAudioPlayer = forwardRef(function YouTubeAudioPlayer(
               callbacksRef.current.onStateChange?.(state);
             }
 
-            // Lấy time/duration liên tục
-            if (state === 1 || state === 2 || state === 3 || state === 5) {
-              const t = playerRef.current.getCurrentTime() || 0;
-              const d = playerRef.current.getDuration() || 0;
-              callbacksRef.current.onTimeUpdate?.(t, d);
-            }
+            // Report time/duration for ALL states (even -1/unstarted)
+            // getDuration() returns valid duration even before play starts
+            try {
+              const t = playerRef.current.getCurrentTime?.() || 0;
+              const d = playerRef.current.getDuration?.() || 0;
+              if (d > 0 || t > 0) callbacksRef.current.onTimeUpdate?.(t, d);
+            } catch { }
           }
         } catch (err) { }
-      }, 250);
+      }, 100); // 100ms for faster state detection
     };
 
     // Khởi động lần đầu

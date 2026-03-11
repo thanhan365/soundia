@@ -26,6 +26,7 @@ export function usePlayback({ showToast }) {
     const playNextRef = useRef(null);
     const currentSongRef = useRef(currentSong);
     const playSongRef = useRef(null);
+    const ytPlayStartedRef = useRef(false);
 
     // Sync refs
     useEffect(() => { currentSongRef.current = currentSong; }, [currentSong]);
@@ -91,19 +92,33 @@ export function usePlayback({ showToast }) {
 
     const handleYTStateChange = useCallback((state) => {
         if (!isYTModeRef.current) return;
-        if (state === 1) { setIsPlaying(true); setIsLoadingStream(false); }
+        if (state === 1) {
+            ytPlayStartedRef.current = true;
+            setIsPlaying(true);
+            setIsLoadingStream(false);
+        }
         else if (state === 2) { setIsPlaying(false); }
         else if (state === 0) {
             if (repeatModeRef.current === "one") {
                 if (currentSongRef.current && playSongRef.current) playSongRef.current(currentSongRef.current, true);
             } else { playNextRef.current?.(); }
         }
-        else if (state === 3) { setIsLoadingStream(true); }
+        else if (state === 3) {
+            // Only show spinner for INITIAL buffering, not mid-song buffering
+            if (!ytPlayStartedRef.current) setIsLoadingStream(true);
+        }
         else if (state === 5) { setIsPlaying(false); setIsLoadingStream(false); }
-        else if (state === -1) { setIsLoadingStream(false); }
+        // state -1 (unstarted): do NOT clear loading — song is transitioning
     }, []); // eslint-disable-line
 
-    const handleYTTimeUpdate = useCallback((t, d) => { if (d > 0) setDuration(d); }, []);
+    const handleYTTimeUpdate = useCallback((t, d) => {
+        if (d > 0) setDuration(d);
+        // Bulletproof: clear spinner when YouTube is actually playing
+        if (t > 0.5) {
+            if (!ytPlayStartedRef.current) ytPlayStartedRef.current = true;
+            setIsLoadingStream(false);
+        }
+    }, []); // eslint-disable-line
 
     const handleYTError = useCallback(() => {
         setIsLoadingStream(false);
@@ -143,7 +158,7 @@ export function usePlayback({ showToast }) {
         volume, error, setError, shuffle, repeatMode,
         isLoadingStream, setIsLoadingStream, isYTMode, setIsYTMode,
         recentHistory,
-        audioRef, ytPlayerRef, isYTModeRef, currentSongRef, playSongRef, playNextRef,
+        audioRef, ytPlayerRef, isYTModeRef, currentSongRef, playSongRef, playNextRef, ytPlayStartedRef,
         addToRecent, handleAudioError,
         handleYTReady, handleYTStateChange, handleYTTimeUpdate, handleYTError,
         togglePlay, seekTo, changeVolume, toggleShuffle, toggleRepeat,

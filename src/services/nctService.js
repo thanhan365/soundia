@@ -2,6 +2,10 @@ import axios from "axios";
 
 const api = axios.create({ baseURL: "/api/songs" });
 
+// ── Frontend cache for resolved stream URLs (avoids re-querying on repeat plays) ──
+const _streamCache = new Map();
+const CACHE_MAX = 100;
+
 /**
  * Search NCT songs (with stream URLs from backend)
  */
@@ -46,9 +50,24 @@ export const getNctStreamUrl = async (nctKey) => {
  * Searches NCT for a matching song and returns its stream URL
  */
 export const resolveNctStream = async (title, artist) => {
+  const cacheKey = `${(title||'').toLowerCase()}|${(artist||'').toLowerCase()}`;
+  // Check cache first
+  if (_streamCache.has(cacheKey)) return _streamCache.get(cacheKey);
+  // Check negative cache (avoid re-trying failed lookups repeatedly)
+  if (_streamCache.has(`_neg_${cacheKey}`)) return null;
+
   try {
     const res = await api.get(`/nct-resolve?title=${encodeURIComponent(title)}&artist=${encodeURIComponent(artist || "")}`);
-    return res.data?.success ? res.data.streamUrl : null;
+    const url = res.data?.success ? res.data.streamUrl : null;
+    if (url) {
+      if (_streamCache.size >= CACHE_MAX) _streamCache.clear();
+      _streamCache.set(cacheKey, url);
+    } else {
+      // Cache negative result for 60s
+      _streamCache.set(`_neg_${cacheKey}`, true);
+      setTimeout(() => _streamCache.delete(`_neg_${cacheKey}`), 60000);
+    }
+    return url;
   } catch { return null; }
 };
 

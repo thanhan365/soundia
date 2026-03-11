@@ -40,7 +40,7 @@ export function PlayerProvider({ children }) {
     volume, error, setError, shuffle, repeatMode,
     isLoadingStream, setIsLoadingStream, isYTMode, setIsYTMode,
     recentHistory,
-    audioRef, ytPlayerRef, isYTModeRef, currentSongRef, playSongRef, playNextRef,
+    audioRef, ytPlayerRef, isYTModeRef, currentSongRef, playSongRef, playNextRef, ytPlayStartedRef,
     addToRecent, handleAudioError,
     handleYTReady, handleYTStateChange, handleYTTimeUpdate, handleYTError,
     togglePlay, seekTo, changeVolume, toggleShuffle, toggleRepeat,
@@ -67,6 +67,18 @@ export function PlayerProvider({ children }) {
     }
   }, [allSongs.length, autoQueue.length, fetchAutoQueue]); // eslint-disable-line
 
+  // ── Watchdog: auto-clear isLoadingStream if YT is actually playing ─────────
+  useEffect(() => {
+    if (!isLoadingStream || !isYTMode) return;
+    const id = setInterval(() => {
+      try {
+        const t = ytPlayerRef.current?.getCurrentTime?.() ?? 0;
+        if (t > 0.5) { setIsLoadingStream(false); clearInterval(id); }
+      } catch { }
+    }, 200);
+    return () => clearInterval(id);
+  }, [isLoadingStream, isYTMode]); // eslint-disable-line
+
   // ── playSong (needs access to all hooks) ───────────────────────────────────
   const playSong = async (song, forceReload = false) => {
     const audio = audioRef.current;
@@ -90,10 +102,22 @@ export function PlayerProvider({ children }) {
 
     // NCT stream resolution — resolve khi chưa có audio, hoặc khi là iTunes preview 30s
     if (!song.audio || song.audio === 'YT_STREAM' || isItunesPreview) {
+      setIsLoadingStream(true); // Show loading spinner immediately
       try {
+        // Run NCT lookups in parallel with a 4s timeout — fall back to YT quickly if NCT is slow
+        const withTimeout = (promise, ms) => Promise.race([
+          promise,
+          new Promise(r => setTimeout(() => r(null), ms))
+        ]);
+
         let streamUrl = null;
-        if (song.nctKey) streamUrl = await getNctStreamUrl(song.nctKey);
-        if (!streamUrl && song.title) streamUrl = await resolveNctStream(song.title, song.artist);
+        // Try NCT key and title search in parallel
+        const [keyResult, titleResult] = await Promise.all([
+          song.nctKey ? withTimeout(getNctStreamUrl(song.nctKey), 4000) : Promise.resolve(null),
+          song.title ? withTimeout(resolveNctStream(song.title, song.artist), 4000) : Promise.resolve(null),
+        ]);
+        streamUrl = keyResult || titleResult;
+
         if (streamUrl) {
           console.log(`[Stream] NCT resolved: "${song.title}" by ${song.artist}`);
           song.audio = streamUrl;
@@ -121,6 +145,7 @@ export function PlayerProvider({ children }) {
     if (needsYT) {
       setIsYTMode(true);
       isYTModeRef.current = true;
+      ytPlayStartedRef.current = false; // Reset — state 3 will show spinner until state 1 fires
       audio.pause();
       audio.src = "";
       setCurrentSong(song);
@@ -154,6 +179,7 @@ export function PlayerProvider({ children }) {
         audio.src = audioUrl;
         audio.preload = 'auto';
         // Phát ngay — trình duyệt tự buffer và phát khi sẵn sàng
+        setIsLoadingStream(false); // Clear spinner — NCT resolve is done, audio is playing
         audio.play().catch(() => { });
       } catch (err) {
         console.warn("[3-in-1] HTML5 Audio failed, falling back to YouTube:", err.message);

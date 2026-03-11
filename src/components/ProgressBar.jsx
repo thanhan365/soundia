@@ -1,4 +1,4 @@
-import { useRef, useState, useEffect, useCallback } from "react";
+import { useRef, useState, useEffect } from "react";
 import { usePlayer } from "../context/PlayerContext";
 import RangeSlider from "./RangeSlider";
 
@@ -9,102 +9,106 @@ function formatTime(seconds) {
   return `${mins}:${secs.toString().padStart(2, "0")}`;
 }
 
-/**
- * ProgressBar — shared single-source-of-truth polling.
- * 
- * Uses a module-level singleton rAF loop + shared refs so that ALL mounted
- * ProgressBar instances display the exact same time/duration, eliminating
- * desync between PlayerBar and LyricsView.
- */
-
-// ── Module-level shared state (singleton across all ProgressBar instances) ──
-const shared = {
-  time: 0,
-  dur: 0,
-  rafId: null,
-  instanceCount: 0,
-  listeners: new Set(),
-  songId: null,
-  isTransitioning: false,
-  lastRealTime: 0,
-  lastUpdateMs: performance.now(),
-  syntheticTime: 0,
-};
-
-function notifyListeners() {
-  for (const fn of shared.listeners) fn(shared.time, shared.dur);
-}
-
 export default function ProgressBar() {
   const {
     seekTo, duration: ctxDuration, currentSong,
     ytPlayerRef, audioRef, isPlaying, isYTModeRef
   } = usePlayer();
 
-  const [time, setTime] = useState(shared.time);
-  const [dur, setDur] = useState(shared.dur);
+  const [time, setTime] = useState(0);
+  const [dur, setDur] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
   const [dragValue, setDragValue] = useState(0);
+
   const isDraggingRef = useRef(false);
+  const rafRef = useRef(null);
+  const syntheticRef = useRef(0);
+  const lastRealRef = useRef(0);
+  const lastMsRef = useRef(performance.now());
+  // Store current song ID at mount to avoid false reset
+  const mountedSongIdRef = useRef(currentSong?.id);
 
-  // ── Subscribe to shared polling loop ──────────────────────────────────────
+  // ── Duration: sync from context (updated by YouTube's onTimeUpdate callback)
   useEffect(() => {
-    const listener = (t, d) => {
-      if (!isDraggingRef.current) {
-        setTime(t);
-        if (d > 0) setDur(d);
-      }
-    };
-    shared.listeners.add(listener);
-    shared.instanceCount++;
-
-    // Start the shared rAF loop if not already running
-    if (!shared.rafId) {
-      startSharedPoll(ytPlayerRef, audioRef, isYTModeRef, isPlaying, ctxDuration);
-    }
-
-    return () => {
-      shared.listeners.delete(listener);
-      shared.instanceCount--;
-      if (shared.instanceCount <= 0) {
-        if (shared.rafId) cancelAnimationFrame(shared.rafId);
-        shared.rafId = null;
-        shared.instanceCount = 0;
-      }
-    };
-  }, []); // eslint-disable-line
-
-  // ── Update the shared poll parameters when deps change ────────────────────
-  const pollParamsRef = useRef({ ytPlayerRef, audioRef, isYTModeRef, isPlaying, ctxDuration });
-  useEffect(() => {
-    pollParamsRef.current = { ytPlayerRef, audioRef, isYTModeRef, isPlaying, ctxDuration };
-    // Restart poll with new params
-    if (shared.rafId) cancelAnimationFrame(shared.rafId);
-    startSharedPoll(ytPlayerRef, audioRef, isYTModeRef, isPlaying, ctxDuration);
-  }, [ytPlayerRef, audioRef, isPlaying, ctxDuration]);
-
-  // ── Song change: reset shared state ───────────────────────────────────────
-  useEffect(() => {
-    if (shared.songId !== currentSong?.id) {
-      shared.isTransitioning = true;
-      shared.songId = currentSong?.id;
-      shared.time = 0;
-      shared.dur = 0;
-      shared.syntheticTime = 0;
-      shared.lastRealTime = 0;
-      notifyListeners();
-      const timer = setTimeout(() => { shared.isTransitioning = false; }, 500);
-      return () => clearTimeout(timer);
-    }
-  }, [currentSong?.id]);
-
-  // ── Fallback: context duration when YT/audio haven't reported yet ─────────
-  useEffect(() => {
-    if (ctxDuration > 0 && shared.dur === 0 && !shared.isTransitioning) {
-      shared.dur = ctxDuration;
-      notifyListeners();
+    if (ctxDuration > 0) {
+      setDur(ctxDuration);
     }
   }, [ctxDuration]);
+
+  // ── Reset when song actually changes (not on mount) ───────────────────────
+  useEffect(() => {
+    // Skip if this is the same song that was playing when we mounted
+    if (mountedSongIdRef.current === currentSong?.id) return;
+    mountedSongIdRef.current = currentSong?.id;
+    setTime(0);
+    setDur(0);
+    syntheticRef.current = 0;
+    lastRealRef.current = 0;
+  }, [currentSong?.id]);
+
+  // ── rAF polling loop ──────────────────────────────────────────────────────
+  useEffect(() => {
+    lastMsRef.current = performance.now();
+
+    const poll = () => {
+      if (!isDraggingRef.current) {
+        const now = performance.now();
+        const delta = (now - lastMsRef.current) / 1000;
+        lastMsRef.current = now;
+
+        let t = -1, d = 0;
+
+        // Try YouTube player
+        if (isYTModeRef?.current) {
+          try {
+            const yt = ytPlayerRef?.current;
+            if (yt) {
+              const ytT = typeof yt.getCurrentTime === 'function' ? yt.getCurrentTime() : -1;
+              const ytD = typeof yt.getDuration === 'function' ? yt.getDuration() : 0;
+              if (ytT >= 0) { t = ytT; }
+              if (ytD > 0) { d = ytD; }
+            }
+          } catch { }
+        }
+
+        // Try HTML5 Audio
+        if (t < 0 && !isYTModeRef?.current) {
+          try {
+            const audio = audioRef?.current;
+            if (audio) {
+              const audioT = audio.currentTime;
+              const audioD = isFinite(audio.duration) ? audio.duration : 0;
+              if (audioT >= 0) { t = audioT; }
+              if (audioD > 0) { d = audioD; }
+            }
+          } catch { }
+        }
+
+        if (t >= 0) {
+          // Got real time from player
+          if (lastRealRef.current > 3 && t < lastRealRef.current - 3) {
+            syntheticRef.current = t; // Repeat detected
+          }
+          lastRealRef.current = t;
+          syntheticRef.current = t;
+          setTime(t);
+        } else if (isPlaying) {
+          // Synthetic advance: player not ready yet but song is playing
+          syntheticRef.current += delta;
+          setTime(syntheticRef.current);
+        }
+
+        if (d > 0) setDur(d);
+      } else {
+        lastMsRef.current = performance.now();
+      }
+
+      rafRef.current = requestAnimationFrame(poll);
+    };
+
+    rafRef.current = requestAnimationFrame(poll);
+    return () => { if (rafRef.current) cancelAnimationFrame(rafRef.current); };
+  }, [isPlaying, ytPlayerRef, audioRef, isYTModeRef]); // re-create when these change
 
   // ── Seek handlers ─────────────────────────────────────────────────────────
   const handleSeekStart = (e) => {
@@ -120,12 +124,11 @@ export default function ProgressBar() {
   const handleSeekEnd = () => {
     isDraggingRef.current = false;
     setIsDragging(false);
-    const newTime = parseFloat(dragValue);
-    shared.syntheticTime = newTime;
-    shared.lastRealTime = newTime;
-    shared.time = newTime;
-    notifyListeners();
-    seekTo(newTime);
+    const v = parseFloat(dragValue);
+    syntheticRef.current = v;
+    lastRealRef.current = v;
+    setTime(v);
+    seekTo(v);
   };
 
   const displayTime = isDragging ? dragValue : time;
@@ -152,62 +155,4 @@ export default function ProgressBar() {
       </span>
     </div>
   );
-}
-
-// ── Shared singleton polling loop ────────────────────────────────────────────
-function startSharedPoll(ytPlayerRef, audioRef, isYTModeRef, isPlaying, ctxDuration) {
-  shared.lastUpdateMs = performance.now();
-
-  const poll = () => {
-    const now = performance.now();
-    const deltaSec = (now - shared.lastUpdateMs) / 1000;
-    shared.lastUpdateMs = now;
-
-    let t = 0, d = 0;
-    let isRealTimeRead = false;
-
-    // 1) YouTube player
-    if (isYTModeRef?.current) {
-      try {
-        const ytT = ytPlayerRef.current?.getCurrentTime?.() || 0;
-        const ytD = ytPlayerRef.current?.getDuration?.() || 0;
-        if (ytD > 0) { t = ytT; d = ytD; isRealTimeRead = true; }
-      } catch { }
-    }
-
-    // 2) HTML5 Audio
-    if (!isRealTimeRead && !isYTModeRef?.current && audioRef.current?.src && !shared.isTransitioning) {
-      try {
-        const audioT = audioRef.current.currentTime || 0;
-        const audioD = audioRef.current.duration && !isNaN(audioRef.current.duration) ? audioRef.current.duration : 0;
-        if (audioT >= 0 && audioD > 0) { t = audioT; d = audioD; isRealTimeRead = true; }
-      } catch { }
-    }
-
-    // 3) Detect repeat (time jumps backward)
-    if (isRealTimeRead && shared.lastRealTime > 3 && t < shared.lastRealTime - 3) {
-      shared.syntheticTime = t;
-    }
-
-    // 4) Fallback synthetic timer
-    if (isRealTimeRead) {
-      shared.lastRealTime = t;
-      shared.syntheticTime = t;
-    } else if (isPlaying && ctxDuration > 0 && !shared.isTransitioning) {
-      shared.syntheticTime += deltaSec;
-      if (shared.syntheticTime > ctxDuration) shared.syntheticTime = ctxDuration;
-      t = shared.syntheticTime;
-    } else {
-      t = shared.syntheticTime;
-    }
-
-    shared.time = t;
-    if (d > 0 && !shared.isTransitioning) shared.dur = d;
-
-    notifyListeners();
-
-    shared.rafId = requestAnimationFrame(poll);
-  };
-
-  shared.rafId = requestAnimationFrame(poll);
 }
