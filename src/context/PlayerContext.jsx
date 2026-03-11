@@ -94,10 +94,15 @@ export function PlayerProvider({ children }) {
         let streamUrl = null;
         if (song.nctKey) streamUrl = await getNctStreamUrl(song.nctKey);
         if (!streamUrl && song.title) streamUrl = await resolveNctStream(song.title, song.artist);
-        if (streamUrl) song.audio = streamUrl;
-        else if (isItunesPreview) song.audio = "YT_STREAM"; // Fallback YT thay vì preview 30s
+        if (streamUrl) {
+          console.log(`[Stream] NCT resolved: "${song.title}" by ${song.artist}`);
+          song.audio = streamUrl;
+        } else {
+          console.log(`[Stream] NCT no match for "${song.title}" by ${song.artist} → YouTube fallback`);
+          if (isItunesPreview) song.audio = "YT_STREAM"; // Fallback YT thay vì preview 30s
+        }
       } catch (err) {
-        console.log(`[3-in-1] NCT resolve failed:`, err.message);
+        console.log(`[Stream] NCT resolve failed for "${song.title}":`, err.message, '→ YouTube fallback');
         if (isItunesPreview) song.audio = "YT_STREAM"; // Fallback YT
       }
     }

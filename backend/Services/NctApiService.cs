@@ -128,25 +128,71 @@ namespace Soundia.Api.Services
 
             try
             {
-                // Search NCT with the song title
-                var searchKeyword = $"{title} {artist?.Split(',')[0]?.Split('&')[0]?.Trim()}";
-                var songs = await SearchSongsAsync(searchKeyword, 1, 5);
+                // Search NCT with the song title + primary artist
+                var primaryArtist = SplitArtists(artist).FirstOrDefault() ?? "";
+                var searchKeyword = $"{title} {primaryArtist}".Trim();
+                var songs = await SearchSongsAsync(searchKeyword, 1, 10);
                 if (songs.Count == 0) return null;
 
-                // Find best match by normalized title comparison
-                var normTitle = Regex.Replace(title?.ToLowerInvariant() ?? "", @"[^a-z0-9]", "");
+                // Normalize input title & artist list (remove diacritics + non-alphanumeric)
+                var normTitle = NormalizeForMatch(title ?? "");
+                var inputArtists = SplitArtists(artist).Select(NormalizeForMatch).Where(a => a.Length > 0).ToList();
+
                 NctSong bestMatch = null;
+                int bestScore = 0;
+
                 foreach (var s in songs)
                 {
-                    var normName = Regex.Replace(s.Name?.ToLowerInvariant() ?? "", @"[^a-z0-9]", "");
-                    if (normName == normTitle || normName.Contains(normTitle) || normTitle.Contains(normName))
+                    var normName = NormalizeForMatch(s.Name ?? "");
+                    // Also normalize without parenthetical suffixes: "Bài Hát (Remix)" → "baihat"
+                    var normNameBase = NormalizeForMatch(Regex.Replace(s.Name ?? "", @"\s*[\(\[\{].*?[\)\]\}]", ""));
+
+                    // ── Title matching ──────────────────────────────────────
+                    int titleScore = 0;
+                    if (normName == normTitle || normNameBase == normTitle)
+                        titleScore = 10; // Exact match
+                    else if (normTitle.Length >= 4 && normName.StartsWith(normTitle) && normName.Length <= normTitle.Length + 8)
+                        titleScore = 7; // NCT title is input title + short suffix (e.g. "remix")
+                    else
+                        continue; // No match → skip entirely
+
+                    // ── Artist matching ─────────────────────────────────────
+                    int artistScore = 0;
+                    if (inputArtists.Count > 0)
                     {
+                        var nctArtists = SplitArtists(s.ArtistName).Select(NormalizeForMatch).Where(a => a.Length > 0).ToList();
+                        foreach (var inputArt in inputArtists)
+                        {
+                            if (inputArt.Length < 2) continue;
+                            foreach (var nctArt in nctArtists)
+                            {
+                                if (nctArt == inputArt || nctArt.Contains(inputArt) || inputArt.Contains(nctArt))
+                                {
+                                    artistScore = 3;
+                                    break;
+                                }
+                            }
+                            if (artistScore > 0) break;
+                        }
+
+                        // If we have artist info but NONE matched → SKIP entirely
+                        // Playing wrong artist's version is worse than YouTube fallback
+                        if (artistScore == 0)
+                            continue;
+                    }
+
+                    int score = titleScore + artistScore;
+                    if (score > bestScore)
+                    {
+                        bestScore = score;
                         bestMatch = s;
-                        break;
                     }
                 }
-                // If no exact match, use first result (likely relevant)
-                bestMatch ??= songs[0];
+
+                // Require minimum score: exact title(10) + no artist info, OR title(7+) + artist(3)
+                if (bestMatch == null || bestScore < 7) return null;
+
+                Console.WriteLine($"[NCT-Resolve] Matched '{title}' by '{artist}' → NCT '{bestMatch.Name}' by '{bestMatch.ArtistName}' (score={bestScore})");
 
                 // Get stream URL for the matched song
                 var streamUrl = await GetStreamUrlAsync(bestMatch.Key);
@@ -157,6 +203,37 @@ namespace Soundia.Api.Services
                 return streamUrl;
             }
             catch { return null; }
+        }
+
+        /// <summary>Split multi-artist string into individual artists</summary>
+        private static List<string> SplitArtists(string artists)
+        {
+            if (string.IsNullOrWhiteSpace(artists)) return new List<string>();
+            // Split on: , / & ft. feat. x (as separator)
+            return Regex.Split(artists, @"\s*[,/&]\s*|\s+(?:ft\.?|feat\.?|x)\s+", RegexOptions.IgnoreCase)
+                .Select(a => a.Trim())
+                .Where(a => a.Length > 0)
+                .ToList();
+        }
+
+        /// <summary>Normalize string for fuzzy matching: remove diacritics + non-alphanumeric</summary>
+        private static string NormalizeForMatch(string input)
+        {
+            if (string.IsNullOrEmpty(input)) return "";
+            // Normalize Unicode → decomposed form, strip combining marks (diacritics)
+            var normalized = input.Normalize(System.Text.NormalizationForm.FormD);
+            var sb = new System.Text.StringBuilder(normalized.Length);
+            foreach (var c in normalized)
+            {
+                var cat = System.Globalization.CharUnicodeInfo.GetUnicodeCategory(c);
+                if (cat != System.Globalization.UnicodeCategory.NonSpacingMark)
+                    sb.Append(c);
+            }
+            var noDiacritics = sb.ToString().Normalize(System.Text.NormalizationForm.FormC).ToLowerInvariant();
+            // Special Vietnamese chars that don't decompose: đ → d
+            noDiacritics = noDiacritics.Replace("đ", "d").Replace("Đ", "d");
+            // Keep only alphanumeric
+            return Regex.Replace(noDiacritics, @"[^a-z0-9]", "");
         }
 
         // ─── Search Songs With Stream URLs ─────────────────────────────────

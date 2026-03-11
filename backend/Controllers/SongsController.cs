@@ -630,7 +630,9 @@ namespace Soundia.Api.Controllers
                     RedirectStandardError = true,
                     UseShellExecute = false,
                     CreateNoWindow = true,
-                    WorkingDirectory = Path.Combine(Directory.GetCurrentDirectory(), "..")
+                    WorkingDirectory = Path.Combine(Directory.GetCurrentDirectory(), ".."),
+                    StandardOutputEncoding = System.Text.Encoding.UTF8,
+                    StandardErrorEncoding = System.Text.Encoding.UTF8
                 };
 
                 using var process = System.Diagnostics.Process.Start(psi);
