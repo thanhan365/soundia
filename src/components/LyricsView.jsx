@@ -70,6 +70,7 @@ export default function LyricsView() {
           if (data.syncedLyrics) {
             setLyricsData({ state: "success", synced: parseSyncedLyrics(data.syncedLyrics), plain: "", error: null });
           } else if (data.plainLyrics) {
+            // Không có synced → hiện plain text (không fake timestamps)
             setLyricsData({ state: "success", synced: [], plain: data.plainLyrics, error: null });
           } else {
             setLyricsData({ state: "error", synced: [], plain: "", error: "Không có lời cho bài hát này." });

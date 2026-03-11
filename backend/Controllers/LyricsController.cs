@@ -30,8 +30,14 @@ namespace Soundia.Api.Controllers
             }
 
             using var http = new HttpClient();
-            http.Timeout = TimeSpan.FromSeconds(6);
+            http.Timeout = TimeSpan.FromSeconds(8);
             http.DefaultRequestHeaders.Add("User-Agent",
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36");
+            
+            // HttpClient riêng cho LRC download (timeout dài hơn vì file lớn)
+            using var lrcHttp = new HttpClient();
+            lrcHttp.Timeout = TimeSpan.FromSeconds(12);
+            lrcHttp.DefaultRequestHeaders.Add("User-Agent",
                 "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36");
 
             // Clean title: remove (feat. X), [Official MV], etc.
@@ -83,58 +89,18 @@ namespace Soundia.Api.Controllers
                                 try
                                 {
                                     Console.WriteLine($"[Lyrics] Fetching NCT LRC: {lrcUrl}");
-                                    var lrcBytes = await http.GetByteArrayAsync(lrcUrl);
+                                    var lrcBytes = await lrcHttp.GetByteArrayAsync(lrcUrl);
                                     var lrcRaw = System.Text.Encoding.UTF8.GetString(lrcBytes);
                                     
-                                    // Check if LRC is plain text (starts with [) or encrypted (hex string)
-                                    if (lrcRaw.TrimStart().StartsWith("["))
+                                    // Check if LRC is plain text (starts with [mm:ss) or encrypted
+                                    if (lrcRaw.TrimStart().StartsWith("[") && System.Text.RegularExpressions.Regex.IsMatch(lrcRaw, @"\[\d{2}:\d{2}"))
                                     {
                                         syncedLyrics = lrcRaw;
                                         Console.WriteLine($"[Lyrics] NCT LRC plain text (not encrypted)");
                                     }
                                     else
                                     {
-                                        // Try decrypt with AES (NCT encrypts LRC with AES-ECB)
-                                        try
-                                        {
-                                            var keyBytes = System.Text.Encoding.UTF8.GetBytes(decryptKey.PadRight(16, '\0').Substring(0, 16));
-                                            using var aes = System.Security.Cryptography.Aes.Create();
-                                            aes.Key = keyBytes;
-                                            aes.Mode = System.Security.Cryptography.CipherMode.ECB;
-                                            aes.Padding = System.Security.Cryptography.PaddingMode.PKCS7;
-                                            
-                                            // LRC data might be hex-encoded or raw bytes
-                                            byte[] encryptedBytes;
-                                            if (System.Text.RegularExpressions.Regex.IsMatch(lrcRaw.Trim(), @"^[0-9A-Fa-f]+$"))
-                                            {
-                                                // Hex-encoded
-                                                encryptedBytes = Enumerable.Range(0, lrcRaw.Trim().Length / 2)
-                                                    .Select(i => Convert.ToByte(lrcRaw.Trim().Substring(i * 2, 2), 16))
-                                                    .ToArray();
-                                            }
-                                            else
-                                            {
-                                                encryptedBytes = lrcBytes;
-                                            }
-                                            
-                                            using var decryptor = aes.CreateDecryptor();
-                                            var decryptedBytes = decryptor.TransformFinalBlock(encryptedBytes, 0, encryptedBytes.Length);
-                                            var decrypted = System.Text.Encoding.UTF8.GetString(decryptedBytes);
-                                            
-                                            if (decrypted.Contains("[") && decrypted.Contains(":"))
-                                            {
-                                                syncedLyrics = decrypted;
-                                                Console.WriteLine($"[Lyrics] NCT LRC decrypted successfully ({syncedLyrics.Length} chars)");
-                                            }
-                                            else
-                                            {
-                                                Console.WriteLine($"[Lyrics] NCT LRC decrypted but doesn't look like LRC format");
-                                            }
-                                        }
-                                        catch (Exception dex) 
-                                        { 
-                                            Console.WriteLine($"[Lyrics] NCT LRC decrypt failed: {dex.Message}"); 
-                                        }
+                                        syncedLyrics = DecryptNctLrc(lrcBytes, lrcRaw, decryptKey);
                                     }
                                 }
                                 catch (Exception lrcEx) { Console.WriteLine($"[Lyrics] NCT LRC fetch error: {lrcEx.Message}"); }
@@ -168,13 +134,12 @@ namespace Soundia.Api.Controllers
                 catch (Exception ex) { Console.WriteLine($"[Lyrics] NCT API error: {ex.Message}"); }
             }
             
-            // ═══ Strategy 0b: NCT Search fallback (nếu không có nctKey, search bằng title+artist) ═══
-            if (string.IsNullOrWhiteSpace(nctKey))
+            // ═══ Strategy 0b: NCT Search fallback (search bằng title+artist, cũng lấy synced LRC) ═══
             {
                 try
                 {
                     Console.WriteLine($"[Lyrics] Trying NCT search for lyrics: {cleanTrack} - {cleanArtist}");
-                    var searchUrl = $"https://graph.nhaccuatui.com/api/v1/search/song?keyword={Uri.EscapeDataString($"{cleanTrack} {cleanArtist}")}&pageindex=0&pagesize=3&correct=false";
+                    var searchUrl = $"https://graph.nhaccuatui.com/api/v1/search/song?keyword={Uri.EscapeDataString($"{cleanTrack} {cleanArtist}")}&pageindex=0&pagesize=5&correct=false";
                     var searchJson = await http.GetStringAsync(searchUrl);
                     var searchDoc = JsonSerializer.Deserialize<JsonElement>(searchJson);
                     
@@ -189,24 +154,58 @@ namespace Soundia.Api.Controllers
                                 var foundKey = songKey.GetString();
                                 if (string.IsNullOrEmpty(foundKey)) continue;
                                 
-                                // Fetch lyric for this song
                                 try
                                 {
                                     var lyricUrl = $"https://graph.nhaccuatui.com/api/v1/song/lyric/detail?songKey={foundKey}";
                                     var lyricJson = await http.GetStringAsync(lyricUrl);
                                     var lyricDoc = JsonSerializer.Deserialize<JsonElement>(lyricJson);
                                     
-                                    if (lyricDoc.TryGetProperty("data", out var lyricData) 
-                                        && lyricData.TryGetProperty("content", out var lyricContent)
-                                        && lyricContent.ValueKind == JsonValueKind.String)
+                                    if (lyricDoc.TryGetProperty("data", out var lyricData))
                                     {
-                                        var lyrics = lyricContent.GetString()?.Trim() ?? "";
-                                        if (lyrics.Length > 20)
+                                        string searchPlain = "";
+                                        string? searchSynced = null;
+
+                                        // Plain lyrics
+                                        if (lyricData.TryGetProperty("content", out var lc) && lc.ValueKind == JsonValueKind.String)
+                                            searchPlain = lc.GetString()?.Trim() ?? "";
+
+                                        // Synced LRC (tìm timedLyric + decrypt)
+                                        if (lyricData.TryGetProperty("timedLyric", out var tl) && tl.ValueKind == JsonValueKind.String)
                                         {
-                                            Console.WriteLine($"[Lyrics] NCT search found lyrics for: {cleanTrack} (key: {foundKey})");
-                                            var result = new { syncedLyrics = (string?)null, plainLyrics = lyrics, source = "nct-search" };
+                                            var lrcUrl2 = tl.GetString();
+                                            var dk2 = "Lyr1cjust4nct";
+                                            if (lyricData.TryGetProperty("keyDecryptLyric", out var kd2) && kd2.ValueKind == JsonValueKind.String)
+                                                dk2 = kd2.GetString() ?? dk2;
+
+                                            if (!string.IsNullOrEmpty(lrcUrl2))
+                                            {
+                                                try
+                                                {
+                                                    var lrcBytes2 = await lrcHttp.GetByteArrayAsync(lrcUrl2);
+                                                    var lrcRaw2 = System.Text.Encoding.UTF8.GetString(lrcBytes2);
+                                                    if (lrcRaw2.TrimStart().StartsWith("[") && System.Text.RegularExpressions.Regex.IsMatch(lrcRaw2, @"\[\d{2}:\d{2}"))
+                                                        searchSynced = lrcRaw2;
+                                                    else
+                                                        searchSynced = DecryptNctLrc(lrcBytes2, lrcRaw2, dk2);
+                                                }
+                                                catch { }
+                                            }
+                                        }
+
+                                        if (searchSynced != null)
+                                        {
+                                            if (string.IsNullOrWhiteSpace(searchPlain))
+                                                searchPlain = System.Text.RegularExpressions.Regex.Replace(searchSynced, @"\[\d{2}:\d{2}\.\d{2,3}\]", "").Trim();
+                                            Console.WriteLine($"[Lyrics] NCT search found SYNCED for: {cleanTrack} (key: {foundKey})");
+                                            var result = new { syncedLyrics = searchSynced, plainLyrics = searchPlain, source = "nct-search" };
                                             _cache[cacheKey] = (result, DateTime.UtcNow.AddHours(24));
                                             return Ok(result);
+                                        }
+
+                                        if (searchPlain.Length > 20 && string.IsNullOrWhiteSpace(nctFallbackPlain))
+                                        {
+                                            nctFallbackPlain = searchPlain;
+                                            Console.WriteLine($"[Lyrics] NCT search found plain for: {cleanTrack} (key: {foundKey})");
                                         }
                                     }
                                 }
@@ -425,6 +424,111 @@ namespace Soundia.Api.Controllers
                 foreach (var prop in element.EnumerateObject())
                     yield return prop.Name;
             }
+        }
+
+        /// <summary>
+        /// Decrypt NCT LRC file — NCT dùng mcrypt PHP (Blowfish ECB).
+        /// Thử Blowfish ECB (primary), DES ECB, AES ECB fallback.
+        /// </summary>
+        private static string? DecryptNctLrc(byte[] lrcBytes, string lrcRaw, string decryptKey)
+        {
+            try
+            {
+                var keyBytes = System.Text.Encoding.UTF8.GetBytes(decryptKey);
+                var trimmedRaw = lrcRaw.Trim();
+                var lrcRegex = new System.Text.RegularExpressions.Regex(@"\[\d{2}:\d{2}\.\d{2,3}\]");
+
+                // Parse hex → raw bytes
+                byte[]? encryptedBytes = null;
+                var hexClean = System.Text.RegularExpressions.Regex.Replace(trimmedRaw, @"\s+", "");
+                if (System.Text.RegularExpressions.Regex.IsMatch(hexClean, @"^[0-9A-Fa-f]+$") && hexClean.Length >= 16)
+                {
+                    if (hexClean.Length % 2 != 0) hexClean = hexClean.Substring(0, hexClean.Length - 1);
+                    try
+                    {
+                        encryptedBytes = Enumerable.Range(0, hexClean.Length / 2)
+                            .Select(i => Convert.ToByte(hexClean.Substring(i * 2, 2), 16)).ToArray();
+                        Console.WriteLine($"[Lyrics] NCT LRC hex → {encryptedBytes.Length} bytes");
+                    }
+                    catch { encryptedBytes = null; }
+                }
+                if (encryptedBytes == null)
+                {
+                    try { encryptedBytes = Convert.FromBase64String(trimmedRaw); }
+                    catch { encryptedBytes = lrcBytes; }
+                }
+
+                // === 1) Blowfish ECB (primary — NCT dùng mcrypt PHP = Blowfish ECB) ===
+                try
+                {
+                    // Blowfish block size = 8 bytes, align input
+                    int bfBlockLen = (encryptedBytes.Length / 8) * 8;
+                    var bfInput = encryptedBytes.Take(bfBlockLen).ToArray();
+
+                    var bfEngine = new Org.BouncyCastle.Crypto.Engines.BlowfishEngine();
+                    var bfCipher = new Org.BouncyCastle.Crypto.BufferedBlockCipher(
+                        new Org.BouncyCastle.Crypto.Modes.EcbBlockCipher(bfEngine));
+                    bfCipher.Init(false, new Org.BouncyCastle.Crypto.Parameters.KeyParameter(keyBytes));
+                    
+                    var output = new byte[bfCipher.GetOutputSize(bfInput.Length)];
+                    int len = bfCipher.ProcessBytes(bfInput, 0, bfInput.Length, output, 0);
+                    len += bfCipher.DoFinal(output, len);
+                    
+                    var txt = System.Text.Encoding.UTF8.GetString(output, 0, len).TrimEnd('\0').Trim();
+                    if (lrcRegex.Matches(txt).Count >= 3)
+                    {
+                        Console.WriteLine($"[Lyrics] NCT LRC Blowfish ECB decrypt OK ({txt.Length} chars)");
+                        return txt;
+                    }
+                }
+                catch (Exception bfEx) { Console.WriteLine($"[Lyrics] Blowfish decrypt error: {bfEx.Message}"); }
+
+                // === 2) DES ECB fallback ===
+                try
+                {
+                    var desKey = System.Text.Encoding.UTF8.GetBytes(decryptKey.PadRight(8, '\0').Substring(0, 8));
+                    int desBlockLen = (encryptedBytes.Length / 8) * 8;
+                    var desInput = encryptedBytes.Take(desBlockLen).ToArray();
+                    using var des = System.Security.Cryptography.DES.Create();
+                    des.Key = desKey;
+                    des.Mode = System.Security.Cryptography.CipherMode.ECB;
+                    des.Padding = System.Security.Cryptography.PaddingMode.None;
+                    using var dec = des.CreateDecryptor();
+                    var db = dec.TransformFinalBlock(desInput, 0, desInput.Length);
+                    var txt = System.Text.Encoding.UTF8.GetString(db).TrimEnd('\0').Trim();
+                    if (lrcRegex.Matches(txt).Count >= 3)
+                    {
+                        Console.WriteLine($"[Lyrics] NCT LRC DES ECB decrypt OK ({txt.Length} chars)");
+                        return txt;
+                    }
+                }
+                catch { }
+
+                // === 3) AES ECB fallback ===
+                try
+                {
+                    var aesKey = System.Text.Encoding.UTF8.GetBytes(decryptKey.PadRight(16, '\0').Substring(0, 16));
+                    int aesBlockLen = (encryptedBytes.Length / 16) * 16;
+                    var aesInput = encryptedBytes.Take(aesBlockLen).ToArray();
+                    using var aes = System.Security.Cryptography.Aes.Create();
+                    aes.Key = aesKey;
+                    aes.Mode = System.Security.Cryptography.CipherMode.ECB;
+                    aes.Padding = System.Security.Cryptography.PaddingMode.None;
+                    using var dec = aes.CreateDecryptor();
+                    var db = dec.TransformFinalBlock(aesInput, 0, aesInput.Length);
+                    var txt = System.Text.Encoding.UTF8.GetString(db).TrimEnd('\0').Trim();
+                    if (lrcRegex.Matches(txt).Count >= 3)
+                    {
+                        Console.WriteLine($"[Lyrics] NCT LRC AES ECB decrypt OK ({txt.Length} chars)");
+                        return txt;
+                    }
+                }
+                catch { }
+
+                Console.WriteLine($"[Lyrics] NCT LRC decrypt: all ciphers failed");
+            }
+            catch (Exception ex) { Console.WriteLine($"[Lyrics] NCT LRC decrypt error: {ex.Message}"); }
+            return null;
         }
     }
 }
