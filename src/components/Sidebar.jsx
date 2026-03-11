@@ -98,8 +98,8 @@ export default function Sidebar({ isOpen, onClose }) {
         {/* Divider */}
         <div className="mx-3 my-3 h-px bg-white/10" />
 
-        {/* Personal */}
-        <div className="px-2 flex-1 overflow-y-auto scrollbar-hide">
+        {/* Personal - Fixed */}
+        <div className="px-2 flex-shrink-0">
           <p className={`text-[10px] font-bold text-gray-500 uppercase tracking-widest px-3 mb-2 transition-all duration-300 whitespace-nowrap ${isExpanded ? "opacity-100" : "opacity-0"}`}>
             Cá nhân
           </p>
@@ -123,54 +123,54 @@ export default function Sidebar({ isOpen, onClose }) {
               </span>
             </NavLink>
           ))}
+        </div>
 
-          {/* Playlists section */}
-          <div className={`mt-4 transition-all duration-300 ${isExpanded ? "opacity-100" : "opacity-0 h-0 overflow-hidden"}`}>
-            <div className="flex items-center justify-between px-3 mb-2">
-              <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">
-                Playlist
-              </p>
-              <button
-                onClick={() => {
-                  if (!user) {
-                    navigate('/login');
-                  } else {
-                    setShowModal(true);
-                  }
-                }}
-                className="text-gray-500 hover:text-neon transition-colors"
-                title="Tạo playlist mới"
-              >
-                <HiPlus className="text-lg" />
-              </button>
-            </div>
-
-            {playlists.length > 0 ? (
-              <div className="space-y-0.5">
-                {playlists.map((pl) => (
-                  <NavLink
-                    key={pl.id}
-                    to={`/playlist/${pl.id}`}
-                    onClick={onClose}
-                    className={({ isActive }) => `
-                      flex items-center gap-3 px-3 py-2 rounded-lg text-[13px]
-                      no-underline transition-all duration-200
-                      ${isActive
-                        ? "bg-white/10 text-white font-semibold"
-                        : "text-gray-400 hover:text-white hover:bg-white/5"
-                      }
-                    `}
-                  >
-                    <HiCollection className="text-sm flex-shrink-0 text-neon/60" />
-                    <span className="truncate">{pl.name}</span>
-                    <span className="text-[10px] text-gray-600 ml-auto">{pl.songs.length}</span>
-                  </NavLink>
-                ))}
-              </div>
-            ) : (
-              <p className="px-3 text-xs text-gray-600 italic">Chưa có playlist nào</p>
-            )}
+        {/* Playlists - Scrollable */}
+        <div className={`px-2 flex-1 overflow-y-auto scrollbar-hide mt-4 transition-all duration-300 ${isExpanded ? "opacity-100" : "opacity-0 h-0 overflow-hidden"}`}>
+          <div className="flex items-center justify-between px-3 mb-2 sticky top-0 bg-[#170f23]/98 z-10 py-1">
+            <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">
+              Playlist
+            </p>
+            <button
+              onClick={() => {
+                if (!user) {
+                  navigate('/login');
+                } else {
+                  setShowModal(true);
+                }
+              }}
+              className="text-gray-500 hover:text-neon transition-colors"
+              title="Tạo playlist mới"
+            >
+              <HiPlus className="text-lg" />
+            </button>
           </div>
+
+          {playlists.length > 0 ? (
+            <div className="space-y-0.5 pb-4">
+              {playlists.map((pl) => (
+                <NavLink
+                  key={pl.id}
+                  to={`/playlist/${pl.id}`}
+                  onClick={onClose}
+                  className={({ isActive }) => `
+                    flex items-center gap-3 px-3 py-2 rounded-lg text-[13px]
+                    no-underline transition-all duration-200
+                    ${isActive
+                      ? "bg-white/10 text-white font-semibold"
+                      : "text-gray-400 hover:text-white hover:bg-white/5"
+                    }
+                  `}
+                >
+                  <HiCollection className="text-sm flex-shrink-0 text-neon/60" />
+                  <span className="truncate">{pl.name}</span>
+                  <span className="text-[10px] text-gray-600 ml-auto">{pl.songs.length}</span>
+                </NavLink>
+              ))}
+            </div>
+          ) : (
+            <p className="px-3 text-xs text-gray-600 italic">Chưa có playlist nào</p>
+          )}
         </div>
 
         {/* Auth Section */}
