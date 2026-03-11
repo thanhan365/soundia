@@ -65,8 +65,9 @@ export default function ProgressBar() {
             if (yt) {
               const ytT = typeof yt.getCurrentTime === 'function' ? yt.getCurrentTime() : -1;
               const ytD = typeof yt.getDuration === 'function' ? yt.getDuration() : 0;
-              if (ytT >= 0) { t = ytT; }
-              if (ytD > 0) { d = ytD; }
+              // Chỉ lấy time khi YouTube đã report duration > 0
+              // (tránh lấy getCurrentTime()=0 khi player chưa thực sự ready)
+              if (ytD > 0) { t = ytT; d = ytD; }
             }
           } catch { }
         }
