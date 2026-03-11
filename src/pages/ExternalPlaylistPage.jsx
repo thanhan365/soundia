@@ -103,14 +103,7 @@ export default function ExternalPlaylistPage() {
 
   useEffect(() => {
     const loadPlaylist = async () => {
-      const localPl = playlists.find(p => p.id === id || p.id === parseInt(id, 10));
-      if (localPl) {
-        const tracks = (localPl.songs || []).map(songId => allSongs.find(s => s.id === songId)).filter(Boolean);
-        const coverFromTrack = tracks.find(t => t.cover || t.coverUrl)?.cover || tracks.find(t => t.cover || t.coverUrl)?.coverUrl || '';
-        setPlaylist({ id: localPl.id, title: localPl.name, picture: localPl.cover || coverFromTrack, tracks });
-        setLoading(false);
-        return;
-      }
+      // Ưu tiên fetch từ DB public playlists trước (đây là trang /playlist-detail/:id)
       try {
         const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5066/api';
         const res = await fetch(`${apiUrl}/admin/public-playlists`);
@@ -126,11 +119,22 @@ export default function ExternalPlaylistPage() {
           }
         }
       } catch (err) { console.error("Failed to fetch DB playlist:", err); }
+
+      // Fallback: tìm trong playlist cá nhân của user
+      const localPl = playlists.find(p => p.id === id || p.id === parseInt(id, 10));
+      if (localPl) {
+        const tracks = (localPl.songs || []).map(songId => allSongs.find(s => s.id === songId)).filter(Boolean);
+        const coverFromTrack = tracks.find(t => t.cover || t.coverUrl)?.cover || tracks.find(t => t.cover || t.coverUrl)?.coverUrl || '';
+        setPlaylist({ id: localPl.id, title: localPl.name, picture: localPl.cover || coverFromTrack, tracks });
+        setLoading(false);
+        return;
+      }
+
       setPlaylist(null);
       setLoading(false);
     };
     loadPlaylist();
-  }, [id, playlists, allSongs]);
+  }, [id]);
 
   // Autoplay when playlist loaded
   const autoplayTriggered = useRef(false);
