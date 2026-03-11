@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useContext } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { HiPlus } from "react-icons/hi";
 import { FaPlay, FaPause, FaHeart, FaRandom, FaEllipsisH, FaShareAlt, FaLink } from "react-icons/fa";
 import { HiQueueList } from "react-icons/hi2";
@@ -11,6 +11,8 @@ import CreatePlaylistModal from "../components/CreatePlaylistModal";
 export default function ExternalPlaylistPage() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const autoplay = searchParams.get("autoplay") === "true";
   const { playSong, currentSong, isPlaying, togglePlay, playlists, allSongs, addToQueue, isFavorite, toggleFavorite, addSongToPlaylist, createPlaylist } = usePlayer();
   const { showToast } = useToast();
   const { user } = useContext(AuthContext);
@@ -129,6 +131,15 @@ export default function ExternalPlaylistPage() {
     };
     loadPlaylist();
   }, [id, playlists, allSongs]);
+
+  // Autoplay when playlist loaded
+  const autoplayTriggered = useRef(false);
+  useEffect(() => {
+    if (autoplay && playlist?.tracks?.length > 0 && !loading && !autoplayTriggered.current) {
+      autoplayTriggered.current = true;
+      playSong(playlist.tracks[0]);
+    }
+  }, [autoplay, playlist, loading]);
 
   const handlePlayPlaylist = () => {
     if (playlist?.tracks?.length > 0) {

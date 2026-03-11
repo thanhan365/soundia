@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { HiArrowLeft } from "react-icons/hi";
 import { HiPlay, HiMusicalNote } from "react-icons/hi2";
 
-function PlaylistCard({ playlist, onClick }) {
+function PlaylistCard({ playlist, onClick, onPlay }) {
     const [imgFailed, setImgFailed] = useState(false);
 
     return (
@@ -29,11 +29,14 @@ function PlaylistCard({ playlist, onClick }) {
             <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
 
             {/* Play button on hover */}
-            <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-all duration-300 transform translate-y-2 group-hover:translate-y-0">
-                <div className="w-11 h-11 bg-neon rounded-full flex items-center justify-center shadow-lg shadow-neon/30">
+            <button
+                onClick={(e) => { e.stopPropagation(); onPlay(playlist); }}
+                className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-all duration-300 transform translate-y-2 group-hover:translate-y-0 z-10"
+            >
+                <div className="w-11 h-11 bg-neon rounded-full flex items-center justify-center shadow-lg shadow-neon/30 hover:scale-110 transition-transform">
                     <HiPlay className="text-dark text-xl ml-0.5" />
                 </div>
-            </div>
+            </button>
 
             {/* Song count badge */}
             {playlist.songCount > 0 && (
@@ -66,13 +69,36 @@ export default function AllPlaylists() {
         const fetchPlaylists = async () => {
             try {
                 const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5066/api';
-                const res = await fetch(`${apiUrl}/songs/suggested-playlists`);
-                if (res.ok) {
-                    const data = await res.json();
-                    if (data.success && data.data) {
-                        setPlaylists(data.data);
-                    }
+
+                const [suggestedRes, dbRes] = await Promise.allSettled([
+                    fetch(`${apiUrl}/songs/suggested-playlists`),
+                    fetch(`${apiUrl}/admin/public-playlists`),
+                ]);
+
+                let external = [];
+                if (suggestedRes.status === 'fulfilled' && suggestedRes.value.ok) {
+                    const data = await suggestedRes.value.json();
+                    if (data.success && data.data) external = data.data;
                 }
+
+                let dbPlaylists = [];
+                if (dbRes.status === 'fulfilled' && dbRes.value.ok) {
+                    const dbData = await dbRes.value.json();
+                    dbPlaylists = (dbData || [])
+                        .filter(p => p.songCount > 0)
+                        .map(p => ({
+                            id: `db_${p.id}`,
+                            dbId: p.id,
+                            name: p.name,
+                            description: `${p.songCount} bài hát`,
+                            cover: p.cover || '',
+                            gradient: 'from-amber-500 to-orange-600',
+                            songCount: p.songCount,
+                            isDbPlaylist: true,
+                        }));
+                }
+
+                setPlaylists([...dbPlaylists, ...external]);
             } catch (err) {
                 console.error("Failed to fetch playlists:", err);
             } finally {
@@ -83,6 +109,10 @@ export default function AllPlaylists() {
     }, []);
 
     const handlePlaylistClick = (playlist) => {
+        if (playlist.isDbPlaylist) {
+            navigate(`/playlist-detail/${playlist.dbId}`);
+            return;
+        }
         const params = new URLSearchParams({
             name: playlist.name,
             q: playlist.searchQuery || playlist.name,
@@ -91,6 +121,24 @@ export default function AllPlaylists() {
             gradient: playlist.gradient || "",
             nctKey: playlist.nctPlaylistKey || "",
             zingId: playlist.zingPlaylistId || "",
+        });
+        navigate(`/suggested-playlist?${params.toString()}`);
+    };
+
+    const handlePlaylistPlay = (playlist) => {
+        if (playlist.isDbPlaylist) {
+            navigate(`/playlist-detail/${playlist.dbId}?autoplay=true`);
+            return;
+        }
+        const params = new URLSearchParams({
+            name: playlist.name,
+            q: playlist.searchQuery || playlist.name,
+            desc: playlist.description || "",
+            cover: playlist.cover || "",
+            gradient: playlist.gradient || "",
+            nctKey: playlist.nctPlaylistKey || "",
+            zingId: playlist.zingPlaylistId || "",
+            autoplay: "true",
         });
         navigate(`/suggested-playlist?${params.toString()}`);
     };
@@ -135,6 +183,7 @@ export default function AllPlaylists() {
                                 key={playlist.id}
                                 playlist={playlist}
                                 onClick={handlePlaylistClick}
+                                onPlay={handlePlaylistPlay}
                             />
                         ))}
                     </div>

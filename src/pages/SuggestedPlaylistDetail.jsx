@@ -17,6 +17,7 @@ export default function SuggestedPlaylistDetail() {
     const gradient = searchParams.get("gradient") || "from-purple-500 to-pink-500";
     const nctKey = searchParams.get("nctKey") || "";
     const zingId = searchParams.get("zingId") || "";
+    const autoplay = searchParams.get("autoplay") === "true";
 
     const [songs, setSongs] = useState([]);
     const [playlistCover, setPlaylistCover] = useState(cover);
@@ -90,6 +91,15 @@ export default function SuggestedPlaylistDetail() {
 
     const handlePlayAll = () => { if (songs.length) playSong(songs[0]); };
     const handleToggleAll = () => { isPlaylistPlaying ? togglePlay() : handlePlayAll(); };
+
+    // Autoplay when songs loaded
+    const autoplayTriggered = useRef(false);
+    useEffect(() => {
+        if (autoplay && songs.length > 0 && !loading && !autoplayTriggered.current) {
+            autoplayTriggered.current = true;
+            playSong(songs[0]);
+        }
+    }, [autoplay, songs, loading]);
     const handleShufflePlay = () => {
         if (!songs.length) return;
         const shuffled = [...songs].sort(() => Math.random() - 0.5);

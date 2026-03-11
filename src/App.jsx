@@ -1,5 +1,5 @@
-import { useState, useRef, useEffect, useCallback } from "react";
-import { Routes, Route, useNavigate, useLocation } from "react-router-dom";
+import { useState, useRef, useEffect, useCallback, useContext } from "react";
+import { Routes, Route, NavLink, useNavigate, useLocation } from "react-router-dom";
 import { PlayerProvider, usePlayer } from "./context/PlayerContext";
 import { ToastProvider } from "./context/ToastContext";
 import Sidebar from "./components/Sidebar";
@@ -9,8 +9,8 @@ import LyricsView from "./components/LyricsView";
 import SearchBar from "./components/SearchBar";
 import YouTubeAudioPlayer from "./components/YouTubeAudioPlayer";
 import { ErrorBoundary } from "./components/ErrorBoundary";
-import { AuthProvider } from "./context/AuthContext";
-import { HiMenuAlt2, HiArrowLeft } from "react-icons/hi";
+import { AuthProvider, AuthContext } from "./context/AuthContext";
+import { HiMenuAlt2, HiArrowLeft, HiUser, HiCog, HiLogout, HiLogin } from "react-icons/hi";
 import React, { Suspense } from "react";
 import { useColorExtractor } from "./hooks/useColorExtractor";
 
@@ -43,6 +43,68 @@ function PageLoader() {
         <div className="w-10 h-10 border-3 border-purple-500/30 border-t-purple-500 rounded-full animate-spin" />
         <p className="text-gray-400 text-sm animate-pulse">Đang tải...</p>
       </div>
+    </div>
+  );
+}
+
+function HeaderUserMenu() {
+  const { user, logout } = useContext(AuthContext);
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const handle = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    document.addEventListener("mousedown", handle);
+    return () => document.removeEventListener("mousedown", handle);
+  }, []);
+
+  if (!user) {
+    return (
+      <NavLink to="/login" className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-neon/10 text-neon text-xs font-semibold hover:bg-neon/20 transition-all no-underline whitespace-nowrap">
+        <HiLogin className="text-sm" /> Đăng nhập
+      </NavLink>
+    );
+  }
+
+  return (
+    <div ref={ref} className="relative flex-shrink-0">
+      <button
+        onClick={() => setOpen(!open)}
+        className="flex items-center gap-2 px-2 py-1.5 rounded-full hover:bg-white/10 transition-all"
+      >
+        <div className="w-7 h-7 rounded-full bg-neon/20 flex items-center justify-center text-neon text-xs font-bold uppercase">
+          {user.username?.charAt(0) || "U"}
+        </div>
+        <span className="text-white text-xs font-semibold hidden sm:block max-w-[100px] truncate">{user.username}</span>
+      </button>
+      {open && (
+        <div className="absolute right-0 top-full mt-2 w-48 bg-[#1a1a2e] border border-white/10 rounded-xl shadow-2xl overflow-hidden z-[100] animate-fade-in">
+          <NavLink
+            to="/profile"
+            onClick={() => setOpen(false)}
+            className="flex items-center gap-3 px-4 py-2.5 text-sm text-white hover:bg-white/10 transition-colors no-underline"
+          >
+            <HiUser className="text-neon" /> Hồ sơ
+          </NavLink>
+          {user.role === 'admin' && (
+            <NavLink
+              to="/admin"
+              onClick={() => setOpen(false)}
+              className="flex items-center gap-3 px-4 py-2.5 text-sm text-amber-400 hover:bg-amber-500/10 transition-colors no-underline"
+            >
+              <HiCog /> Quản trị
+            </NavLink>
+          )}
+          <div className="h-px bg-white/10 mx-2" />
+          <button
+            onClick={() => { logout(); navigate('/'); setOpen(false); }}
+            className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-gray-400 hover:text-red-400 hover:bg-red-500/10 transition-colors text-left"
+          >
+            <HiLogout /> Đăng xuất
+          </button>
+        </div>
+      )}
     </div>
   );
 }
@@ -133,6 +195,7 @@ function AppContent() {
           <div className="flex-1">
             <SearchBar />
           </div>
+          <HeaderUserMenu />
         </header>
 
         {/* Pages */}

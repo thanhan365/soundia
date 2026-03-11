@@ -5,7 +5,7 @@ import { AuthContext } from "../context/AuthContext";
 import {
   HiHome, HiHeart, HiClock,
   HiCollection, HiPlus,
-  HiSparkles, HiViewGrid, HiUser, HiLogout, HiLogin, HiCog
+  HiSparkles, HiViewGrid
 } from "react-icons/hi";
 import CreatePlaylistModal from "./CreatePlaylistModal";
 
@@ -173,64 +173,7 @@ export default function Sidebar({ isOpen, onClose }) {
           )}
         </div>
 
-        {/* Auth Section */}
-        <div className="mt-auto mb-2 px-2">
-          {user ? (
-            <div className="flex flex-col gap-1">
-              <NavLink
-                to="/profile"
-                onClick={onClose}
-                className={({ isActive }) => `flex items-center gap-3 px-3 py-2 rounded-lg text-[13px] font-semibold transition-all duration-200 whitespace-nowrap overflow-hidden ${isActive ? "bg-neon/10 text-neon" : "text-white bg-white/5 hover:bg-white/10"}`}
-              >
-                <HiUser className="text-lg text-neon flex-shrink-0" />
-                <span className={`transition-all duration-300 ${isExpanded ? "opacity-100" : "opacity-0 w-0"}`}>
-                  {user.username}
-                </span>
-              </NavLink>
-              {user.role === 'admin' && (
-                <NavLink
-                  to="/admin"
-                  onClick={onClose}
-                  className={({ isActive }) => `flex items-center gap-3 px-3 py-2 rounded-lg text-[13px] font-semibold transition-all duration-200 whitespace-nowrap overflow-hidden ${isActive ? "bg-amber-500/10 text-amber-400" : "text-amber-500/70 hover:text-amber-400 hover:bg-amber-500/10"}`}
-                >
-                  <HiCog className="text-lg flex-shrink-0" />
-                  <span className={`transition-all duration-300 ${isExpanded ? "opacity-100" : "opacity-0 w-0"}`}>
-                    Quản trị
-                  </span>
-                </NavLink>
-              )}
-              <button
-                onClick={() => {
-                  logout();
-                  navigate('/');
-                }}
-                className={`flex items-center gap-3 px-3 py-2 rounded-lg text-[13px] font-semibold text-gray-400 hover:text-red-400 hover:bg-red-500/10 transition-all duration-200 whitespace-nowrap overflow-hidden w-full text-left`}
-              >
-                <HiLogout className="text-lg flex-shrink-0" />
-                <span className={`transition-all duration-300 ${isExpanded ? "opacity-100" : "opacity-0 w-0"}`}>
-                  Đăng xuất
-                </span>
-              </button>
-            </div>
-          ) : (
-            <div className="flex flex-col gap-1">
-              <NavLink
-                to="/login"
-                onClick={onClose}
-                className={({ isActive }) => `
-                  flex items-center gap-3 px-3 py-2 rounded-lg text-[13px] font-semibold
-                  no-underline transition-all duration-200 whitespace-nowrap overflow-hidden
-                  ${isActive ? "bg-neon/10 text-neon" : "text-gray-400 hover:text-white hover:bg-white/5"}
-                `}
-              >
-                <HiLogin className="text-lg flex-shrink-0" />
-                <span className={`transition-all duration-300 ${isExpanded ? "opacity-100" : "opacity-0 w-0"}`}>
-                  Đăng nhập
-                </span>
-              </NavLink>
-            </div>
-          )}
-        </div>
+
         {/* Now Playing mini */}
         {currentSong && (
           <div className="p-3 border-t border-white/5 flex-shrink-0">

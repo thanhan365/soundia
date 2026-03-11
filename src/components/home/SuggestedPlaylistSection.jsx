@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { HiPlay } from "react-icons/hi2";
 import { HiChevronRight } from "react-icons/hi";
 
-function PlaylistCard({ playlist, onClick }) {
+function PlaylistCard({ playlist, onClick, onPlay }) {
     const [imgFailed, setImgFailed] = useState(false);
 
     return (
@@ -27,11 +27,21 @@ function PlaylistCard({ playlist, onClick }) {
             <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
 
             {/* Play button on hover */}
-            <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-all duration-300 transform translate-y-2 group-hover:translate-y-0">
-                <div className="w-10 h-10 bg-neon rounded-full flex items-center justify-center shadow-lg shadow-neon/30">
+            <button
+                onClick={(e) => { e.stopPropagation(); onPlay(playlist); }}
+                className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-all duration-300 transform translate-y-2 group-hover:translate-y-0 z-10"
+            >
+                <div className="w-10 h-10 bg-neon rounded-full flex items-center justify-center shadow-lg shadow-neon/30 hover:scale-110 transition-transform">
                     <HiPlay className="text-dark text-lg ml-0.5" />
                 </div>
-            </div>
+            </button>
+
+            {/* Song count badge */}
+            {playlist.songCount > 0 && (
+                <div className="absolute top-3 left-3 bg-black/50 backdrop-blur-sm text-white text-[10px] font-medium px-2 py-0.5 rounded-full">
+                    {playlist.songCount} bài
+                </div>
+            )}
 
             {/* Text */}
             <div className="absolute bottom-0 left-0 right-0 p-3 md:p-4">
@@ -113,6 +123,24 @@ export default function SuggestedPlaylistSection() {
         navigate(`/suggested-playlist?${params.toString()}`);
     };
 
+    const handlePlaylistPlay = (playlist) => {
+        if (playlist.isDbPlaylist) {
+            navigate(`/playlist-detail/${playlist.dbId}?autoplay=true`);
+            return;
+        }
+        const params = new URLSearchParams({
+            name: playlist.name,
+            q: playlist.searchQuery,
+            desc: playlist.description,
+            cover: playlist.cover || "",
+            gradient: playlist.gradient || "",
+            nctKey: playlist.nctPlaylistKey || "",
+            zingId: playlist.zingPlaylistId || "",
+            autoplay: "true",
+        });
+        navigate(`/suggested-playlist?${params.toString()}`);
+    };
+
     if (loading) {
         return (
             <section className="mb-8">
@@ -123,7 +151,7 @@ export default function SuggestedPlaylistSection() {
                     </div>
                     <button
                         onClick={() => navigate('/playlists')}
-                        className="flex items-center gap-1 text-sm text-gray-400 hover:text-neon transition-colors group"
+                        className="flex items-center gap-1 text-sm font-semibold text-neon hover:text-neon/80 transition-colors group"
                     >
                         Xem thêm
                         <HiChevronRight className="text-base group-hover:translate-x-0.5 transition-transform" />
@@ -149,7 +177,7 @@ export default function SuggestedPlaylistSection() {
                 </div>
                 <button
                     onClick={() => navigate('/playlists')}
-                    className="flex items-center gap-1 text-sm text-gray-400 hover:text-neon transition-colors group"
+                    className="flex items-center gap-1 text-sm font-semibold text-neon hover:text-neon/80 transition-colors group"
                 >
                     Xem thêm
                     <HiChevronRight className="text-base group-hover:translate-x-0.5 transition-transform" />
@@ -157,11 +185,12 @@ export default function SuggestedPlaylistSection() {
             </div>
 
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 2xl:grid-cols-6 gap-3 md:gap-4">
-                {playlists.map((playlist) => (
+                {playlists.slice(0, 12).map((playlist) => (
                     <PlaylistCard
                         key={playlist.id}
                         playlist={playlist}
                         onClick={handlePlaylistClick}
+                        onPlay={handlePlaylistPlay}
                     />
                 ))}
             </div>

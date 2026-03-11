@@ -105,8 +105,12 @@ export default function BannerSlider() {
               key={song.id}
               className="min-w-full relative flex-shrink-0 group overflow-hidden flex items-end p-4 md:p-8 lg:p-10"
             >
-              {/* Background removed to make banner transparent */}
-              {/* Content wrapper */}
+              {/* Background: blurred song cover */}
+              <div className="absolute inset-0">
+                <img src={song.cover} alt="" className="w-full h-full object-cover scale-110 blur-xl opacity-40" />
+                <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/50 to-black/70" />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-transparent to-black/30" />
+              </div>
               <div className="relative z-10 flex flex-col md:flex-row items-end gap-8 w-full">
                 {/* Glow behind the cover image */}
                 <div className="relative group/cover cursor-pointer hidden sm:block" onClick={(e) => handlePlayPause(e, song)}>
