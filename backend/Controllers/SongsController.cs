@@ -320,18 +320,60 @@ namespace Soundia.Api.Controllers
                     {
                         if (p.source == "zing")
                         {
-                            // Zing MP3 playlist — chỉ lấy metadata, songs sẽ fetch khi user click vào
+                            // Zing MP3 playlist — fetch cover image from Zing API via Node.js
+                            string zingCover = "";
+                            string zingDesc = p.fallbackName;
+                            int zingSongCount = 0;
+                            try
+                            {
+                                var scriptPath = Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "scripts", "zing-playlist.cjs");
+                                if (!System.IO.File.Exists(scriptPath))
+                                    scriptPath = Path.Combine(Directory.GetCurrentDirectory(), "scripts", "zing-playlist.cjs");
+
+                                var psi = new System.Diagnostics.ProcessStartInfo
+                                {
+                                    FileName = "node",
+                                    Arguments = $"\"{scriptPath}\" {p.key}",
+                                    RedirectStandardOutput = true,
+                                    RedirectStandardError = true,
+                                    UseShellExecute = false,
+                                    CreateNoWindow = true,
+                                    WorkingDirectory = Path.Combine(Directory.GetCurrentDirectory(), ".."),
+                                    StandardOutputEncoding = System.Text.Encoding.UTF8,
+                                    StandardErrorEncoding = System.Text.Encoding.UTF8
+                                };
+
+                                using var proc = System.Diagnostics.Process.Start(psi);
+                                if (proc != null)
+                                {
+                                    var output = await proc.StandardOutput.ReadToEndAsync();
+                                    await proc.WaitForExitAsync();
+                                    if (proc.ExitCode == 0 && !string.IsNullOrEmpty(output))
+                                    {
+                                        using var zDoc = System.Text.Json.JsonDocument.Parse(output);
+                                        var zRoot = zDoc.RootElement;
+                                        if (zRoot.TryGetProperty("image", out var zImg))
+                                            zingCover = zImg.GetString() ?? "";
+                                        if (zRoot.TryGetProperty("name", out var zName) && !string.IsNullOrEmpty(zName.GetString()))
+                                            zingDesc = zName.GetString();
+                                        if (zRoot.TryGetProperty("totalSongs", out var zTs))
+                                            zingSongCount = zTs.GetInt32();
+                                    }
+                                }
+                            }
+                            catch { /* fallback — no cover */ }
+
                             return new
                             {
                                 id = $"zing_{p.key}_{i}",
                                 name = p.fallbackName,
-                                description = p.fallbackName,
+                                description = zingDesc,
                                 searchQuery = p.fallbackName,
-                                cover = "",
+                                cover = zingCover,
                                 gradient = p.gradient,
                                 nctPlaylistKey = "",
                                 zingPlaylistId = p.key,
-                                songCount = 0,
+                                songCount = zingSongCount,
                                 order = i
                             };
                         }

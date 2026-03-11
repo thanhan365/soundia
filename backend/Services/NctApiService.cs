@@ -144,15 +144,29 @@ namespace Soundia.Api.Services
                 foreach (var s in songs)
                 {
                     var normName = NormalizeForMatch(s.Name ?? "");
+                    var nctNameLower = (s.Name ?? "").ToLowerInvariant();
                     // Also normalize without parenthetical suffixes: "Bài Hát (Remix)" → "baihat"
                     var normNameBase = NormalizeForMatch(Regex.Replace(s.Name ?? "", @"\s*[\(\[\{].*?[\)\]\}]", ""));
+                    var inputTitleLower = (title ?? "").ToLowerInvariant();
+
+                    // ── Version mismatch filter ────────────────────────────
+                    // If input doesn't say "remix" but NCT result is a remix → skip (and vice versa)
+                    var versionTags = new[] { "remix", "cover", "acoustic", "live", "instrumental", "lofi", "karaoke" };
+                    bool versionMismatch = false;
+                    foreach (var tag in versionTags)
+                    {
+                        bool inputHas = inputTitleLower.Contains(tag);
+                        bool nctHas = nctNameLower.Contains(tag);
+                        if (inputHas != nctHas) { versionMismatch = true; break; }
+                    }
+                    if (versionMismatch) continue;
 
                     // ── Title matching ──────────────────────────────────────
                     int titleScore = 0;
                     if (normName == normTitle || normNameBase == normTitle)
                         titleScore = 10; // Exact match
                     else if (normTitle.Length >= 4 && normName.StartsWith(normTitle) && normName.Length <= normTitle.Length + 8)
-                        titleScore = 7; // NCT title is input title + short suffix (e.g. "remix")
+                        titleScore = 7; // NCT title is input title + short suffix
                     else
                         continue; // No match → skip entirely
 
