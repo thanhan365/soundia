@@ -1,5 +1,5 @@
 
-import { createContext, useContext, useState, useEffect, useCallback } from "react";
+import { createContext, useContext, useState, useEffect, useCallback, useRef } from "react";
 import { AuthContext } from "./AuthContext";
 import { useToast } from "./ToastContext";
 import api from "../utils/api";
@@ -39,7 +39,7 @@ export function PlayerProvider({ children }) {
     currentTime, setCurrentTime, duration, setDuration,
     volume, error, setError, shuffle, repeatMode,
     isLoadingStream, setIsLoadingStream, isYTMode, setIsYTMode,
-    recentHistory,
+    recentHistory, crossfade, setCrossfade, crossfadeTriggeredRef,
     audioRef, ytPlayerRef, isYTModeRef, currentSongRef, playSongRef, playNextRef, ytPlayStartedRef,
     addToRecent, handleAudioError,
     handleYTReady, handleYTStateChange, handleYTTimeUpdate, handleYTError,
@@ -59,6 +59,72 @@ export function PlayerProvider({ children }) {
   // ── UI State ───────────────────────────────────────────────────────────────
   const [queueOpen, setQueueOpen] = useState(false);
   const [lyricsOpen, setLyricsOpen] = useState(false);
+
+  // ── Sleep Timer ────────────────────────────────────────────────────────────
+  const [sleepTimer, setSleepTimerState] = useState(null); // null | 'end' | minutes remaining display
+  const [sleepTimerEnd, setSleepTimerEnd] = useState(null); // timestamp khi timer hết
+  const sleepTimerRef = useRef(null);
+
+  const setSleepTimer = useCallback((option) => {
+    // Clear existing timer
+    if (sleepTimerRef.current) { clearInterval(sleepTimerRef.current); sleepTimerRef.current = null; }
+    if (option === null || option === 'off') {
+      setSleepTimerState(null);
+      setSleepTimerEnd(null);
+      return;
+    }
+    if (option === 'end') {
+      // Pause sau khi bài hiện tại kết thúc
+      setSleepTimerState('end');
+      setSleepTimerEnd(null);
+      return;
+    }
+    // option = số phút (15, 30, 45, 60)
+    const minutes = parseInt(option, 10);
+    if (isNaN(minutes) || minutes <= 0) return;
+    const endTime = Date.now() + minutes * 60 * 1000;
+    setSleepTimerEnd(endTime);
+    setSleepTimerState(minutes);
+  }, []);
+
+  // Countdown effect
+  useEffect(() => {
+    if (sleepTimerRef.current) clearInterval(sleepTimerRef.current);
+    if (!sleepTimerEnd && sleepTimer !== 'end') return;
+
+    if (sleepTimerEnd) {
+      sleepTimerRef.current = setInterval(() => {
+        const remaining = sleepTimerEnd - Date.now();
+        if (remaining <= 0) {
+          // Timer hết — pause nhạc
+          clearInterval(sleepTimerRef.current);
+          sleepTimerRef.current = null;
+          setSleepTimerState(null);
+          setSleepTimerEnd(null);
+          if (audioRef.current) audioRef.current.pause();
+          if (ytPlayerRef.current?.pause) ytPlayerRef.current.pause();
+          setIsPlaying(false);
+          showToast('⏱️ Hẹn giờ kết thúc — đã tạm dừng nhạc', 'info');
+        } else {
+          setSleepTimerState(Math.ceil(remaining / 60000));
+        }
+      }, 10000); // update mỗi 10s
+    }
+    return () => { if (sleepTimerRef.current) clearInterval(sleepTimerRef.current); };
+  }, [sleepTimerEnd]); // eslint-disable-line
+
+  // Sleep timer 'end' mode — pause khi bài kết thúc
+  useEffect(() => {
+    if (sleepTimer !== 'end') return;
+    const audio = audioRef.current;
+    const handleEnded = () => {
+      setSleepTimerState(null);
+      setIsPlaying(false);
+      showToast('⏱️ Hết bài — đã tạm dừng nhạc', 'info');
+    };
+    if (audio) audio.addEventListener('ended', handleEnded);
+    return () => { if (audio) audio.removeEventListener('ended', handleEnded); };
+  }, [sleepTimer]); // eslint-disable-line
 
   // ── Auto-populate queue ────────────────────────────────────────────────────
   useEffect(() => {
@@ -82,6 +148,7 @@ export function PlayerProvider({ children }) {
   // ── playSong (needs access to all hooks) ───────────────────────────────────
   const playSong = async (song, forceReload = false) => {
     const audio = audioRef.current;
+    crossfadeTriggeredRef.current = false; // Reset crossfade trigger for new song
 
     if (!forceReload && currentSong?.id === song.id) {
       if (isYTMode) {
@@ -218,7 +285,7 @@ export function PlayerProvider({ children }) {
   useEffect(() => { playSongRef.current = playSong; }, [playSong]); // eslint-disable-line
 
   // ── playNext / playPrev ────────────────────────────────────────────────────
-  const playNext = useCallback(() => {
+  const playNext = useCallback(async () => {
     if (!currentSong) return;
     if (manualQueue.length > 0) {
       const next = manualQueue[0];
@@ -245,6 +312,32 @@ export function PlayerProvider({ children }) {
     } else {
       const idx = list.findIndex((s) => s.id === currentSong.id);
       if (repeatMode === "none" && (idx === list.length - 1 || idx === -1)) {
+        // ── Autoplay tương tự: tìm bài cùng artist ──
+        try {
+          const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5066/api';
+          const query = encodeURIComponent(currentSong.artist);
+          const res = await fetch(`${apiUrl}/songs/search?q=${query}&limit=20`);
+          if (res.ok) {
+            const data = await res.json();
+            const similar = (data.data || data).filter(s => s.id !== currentSong.id);
+            if (similar.length > 0) {
+              const pick = similar[Math.floor(Math.random() * Math.min(similar.length, 5))];
+              const normalizedSong = { ...pick, audio: pick.audioUrl || pick.audio, cover: pick.coverUrl || pick.cover };
+              showToast(`🎵 Phát bài tương tự: ${normalizedSong.title || pick.title}`, 'info');
+              playSong(normalizedSong);
+              return;
+            }
+          }
+        } catch { /* fallback below */ }
+        // Fallback: random từ allSongs
+        if (allSongs.length > 1) {
+          let rIdx;
+          do { rIdx = Math.floor(Math.random() * allSongs.length); }
+          while (allSongs.length > 1 && allSongs[rIdx].id === currentSong.id);
+          showToast('🎵 Phát bài ngẫu nhiên', 'info');
+          playSong(allSongs[rIdx]);
+          return;
+        }
         autoQueueLoadedRef.current = false;
         fetchAutoQueue();
         return;
@@ -275,6 +368,8 @@ export function PlayerProvider({ children }) {
         renamePlaylist, reorderPlaylistSongs, setPlaylistCover,
         searchHistory, addSearchHistory, clearSearchHistory,
         isLoadingStream, isYTMode,
+        sleepTimer, setSleepTimer,
+        crossfade, setCrossfade,
         ytPlayerRef, audioRef, isYTModeRef,
         handleYTReady, handleYTStateChange, handleYTTimeUpdate, handleYTError,
         playSong, togglePlay, playNext, playPrev, seekTo, changeVolume,

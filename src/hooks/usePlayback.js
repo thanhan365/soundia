@@ -18,6 +18,10 @@ export function usePlayback({ showToast }) {
     const [isLoadingStream, setIsLoadingStream] = useState(false);
     const [isYTMode, setIsYTMode] = useState(false);
     const [recentHistory, setRecentHistory] = useState([]);
+    const [crossfade, setCrossfade] = useState(() => {
+        const saved = localStorage.getItem('soundia_crossfade');
+        return saved ? parseInt(saved, 10) : 0; // 0=off, 3/5/8 seconds
+    });
 
     const audioRef = useRef(new Audio());
     const ytPlayerRef = useRef(null);
@@ -27,11 +31,19 @@ export function usePlayback({ showToast }) {
     const currentSongRef = useRef(currentSong);
     const playSongRef = useRef(null);
     const ytPlayStartedRef = useRef(false);
+    const crossfadeTriggeredRef = useRef(false);
+    const crossfadeRef = useRef(crossfade);
+    const volumeRef = useRef(volume);
 
     // Sync refs
     useEffect(() => { currentSongRef.current = currentSong; }, [currentSong]);
     useEffect(() => { isYTModeRef.current = isYTMode; }, [isYTMode]);
     useEffect(() => { repeatModeRef.current = repeatMode; }, [repeatMode]);
+    useEffect(() => { crossfadeRef.current = crossfade; }, [crossfade]);
+    useEffect(() => { volumeRef.current = volume; }, [volume]);
+
+    // Crossfade persistence
+    useEffect(() => { localStorage.setItem('soundia_crossfade', crossfade.toString()); }, [crossfade]);
 
     // Volume persistence
     useEffect(() => {
@@ -60,6 +72,11 @@ export function usePlayback({ showToast }) {
         const audio = audioRef.current;
         const onMeta = () => { const dur = audio.duration; if (dur && !isNaN(dur)) setDuration(dur); };
         const onEnd = () => {
+            // Crossfade: nếu đã trigger sớm thì không playNext lại
+            if (crossfadeTriggeredRef.current) {
+                crossfadeTriggeredRef.current = false;
+                return;
+            }
             if (repeatModeRef.current === "one") {
                 if (currentSongRef.current && playSongRef.current) playSongRef.current(currentSongRef.current, true);
             } else { playNextRef.current?.(); }
@@ -69,6 +86,30 @@ export function usePlayback({ showToast }) {
         const onPause = () => { if (!isYTModeRef.current) setIsPlaying(false); };
         const onTimeUpdate = () => {
             if (!isYTModeRef.current && audio.duration && !isNaN(audio.duration)) setDuration(audio.duration);
+            // Crossfade: fade out trước khi bài kết thúc
+            const cf = crossfadeRef.current;
+            if (cf > 0 && !isYTModeRef.current && audio.duration > 0 && !isNaN(audio.duration)) {
+                const remaining = audio.duration - audio.currentTime;
+                if (remaining <= cf && remaining > 0 && !crossfadeTriggeredRef.current) {
+                    crossfadeTriggeredRef.current = true;
+                    // Fade out volume dần
+                    const fadeSteps = 20;
+                    const stepTime = (remaining * 1000) / fadeSteps;
+                    const targetVol = volumeRef.current;
+                    let step = 0;
+                    const fadeInterval = setInterval(() => {
+                        step++;
+                        const newVol = targetVol * (1 - step / fadeSteps);
+                        audio.volume = Math.max(0, newVol);
+                        if (step >= fadeSteps) {
+                            clearInterval(fadeInterval);
+                            audio.volume = targetVol; // restore for next song
+                        }
+                    }, stepTime);
+                    // Trigger next song sớm (crossfade overlap)
+                    setTimeout(() => { playNextRef.current?.(); }, Math.max(0, (remaining - 0.5) * 1000));
+                }
+            }
         };
 
         audio.addEventListener("loadedmetadata", onMeta);
@@ -157,7 +198,7 @@ export function usePlayback({ showToast }) {
         currentTime, setCurrentTime, duration, setDuration,
         volume, error, setError, shuffle, repeatMode,
         isLoadingStream, setIsLoadingStream, isYTMode, setIsYTMode,
-        recentHistory,
+        recentHistory, crossfade, setCrossfade, crossfadeTriggeredRef,
         audioRef, ytPlayerRef, isYTModeRef, currentSongRef, playSongRef, playNextRef, ytPlayStartedRef,
         addToRecent, handleAudioError,
         handleYTReady, handleYTStateChange, handleYTTimeUpdate, handleYTError,

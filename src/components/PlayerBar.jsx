@@ -5,7 +5,7 @@ import { useClickOutside } from "../hooks/useClickOutside";
 import ProgressBar from "./ProgressBar";
 import VolumeControl from "./VolumeControl";
 import { HiPlay, HiPause, HiBackward, HiForward } from "react-icons/hi2";
-import { HiMusicNote, HiHeart, HiDotsHorizontal, HiPlus, HiLink, HiShare } from "react-icons/hi";
+import { HiMusicNote, HiHeart, HiDotsHorizontal, HiPlus, HiLink, HiShare, HiClock } from "react-icons/hi";
 import { IoShuffle, IoRepeat } from "react-icons/io5";
 import { HiQueueList } from "react-icons/hi2";
 
@@ -16,15 +16,38 @@ export default function PlayerBar() {
     toggleFavorite, isFavorite, queueOpen, setQueueOpen,
     lyricsOpen, setLyricsOpen, addToQueue,
     playlists, addSongToPlaylist, isLoadingStream,
+    sleepTimer, setSleepTimer,
+    crossfade, setCrossfade,
   } = usePlayer();
   const { showToast } = useToast();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [sleepMenuOpen, setSleepMenuOpen] = useState(false);
   const menuRef = useRef(null);
+  const sleepMenuRef = useRef(null);
 
   const liked = currentSong ? isFavorite(currentSong.id) : false;
 
   // Use click outside hook để đóng menu
   useClickOutside(menuRef, () => setMenuOpen(false));
+  useClickOutside(sleepMenuRef, () => setSleepMenuOpen(false));
+
+  const handleSleepTimer = useCallback((option) => {
+    setSleepTimer(option);
+    setSleepMenuOpen(false);
+    if (option === null || option === 'off') {
+      showToast('⏱️ Đã tắt hẹn giờ', 'info');
+    } else if (option === 'end') {
+      showToast('⏱️ Sẽ dừng sau bài này', 'success');
+    } else {
+      showToast(`⏱️ Hẹn giờ: ${option} phút`, 'success');
+    }
+  }, [setSleepTimer, showToast]);
+
+  const handleCrossfade = useCallback((val) => {
+    setCrossfade(val);
+    setSleepMenuOpen(false);
+    showToast(val > 0 ? `🔀 Crossfade: ${val}s` : '🔀 Đã tắt crossfade', val > 0 ? 'success' : 'info');
+  }, [setCrossfade, showToast]);
 
   const handleLike = useCallback(() => {
     if (!currentSong) return;
@@ -180,6 +203,40 @@ export default function PlayerBar() {
 
               {/* Extras (Queue, Lyrics) moved to absolute for perfect centering */}
               <div className="absolute right-0 flex items-center gap-1 sm:gap-2">
+                <div className="relative" ref={sleepMenuRef}>
+                  <button onClick={() => setSleepMenuOpen(!sleepMenuOpen)} className={`p-1 flex-shrink-0 relative ${sleepTimer ? 'text-neon' : 'text-gray-600'}`}>
+                    <HiClock className="text-[14px]" />
+                    {sleepTimer && <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 bg-neon rounded-full" />}
+                  </button>
+                  {sleepMenuOpen && (
+                    <div className="absolute bottom-full right-0 mb-2 bg-[#1a1a2e] border border-white/10 rounded-xl shadow-2xl py-2 w-44 z-50">
+                      <p className="px-3 py-1 text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Hẹn giờ tắt nhạc</p>
+                      {[15, 30, 45, 60].map(m => (
+                        <button key={m} onClick={() => handleSleepTimer(m)} className={`w-full px-4 py-2 text-[13px] text-left hover:bg-white/5 ${sleepTimer === m ? 'text-neon' : 'text-gray-300'}`}>
+                          {m} phút {sleepTimer === m && '✓'}
+                        </button>
+                      ))}
+                      <button onClick={() => handleSleepTimer('end')} className={`w-full px-4 py-2 text-[13px] text-left hover:bg-white/5 ${sleepTimer === 'end' ? 'text-neon' : 'text-gray-300'}`}>
+                        Hết bài này {sleepTimer === 'end' && '✓'}
+                      </button>
+                      {sleepTimer && (
+                        <>
+                          <div className="mx-3 my-1 h-px bg-white/5" />
+                          <button onClick={() => handleSleepTimer('off')} className="w-full px-4 py-2 text-[13px] text-red-400 text-left hover:bg-white/5">
+                            Tắt hẹn giờ
+                          </button>
+                        </>
+                      )}
+                      <div className="mx-3 my-1 h-px bg-white/5" />
+                      <p className="px-3 py-1 text-[10px] font-semibold text-gray-500 uppercase tracking-wider">🔀 Crossfade</p>
+                      {[0, 3, 5, 8].map(v => (
+                        <button key={v} onClick={() => handleCrossfade(v)} className={`w-full px-4 py-2 text-[13px] text-left hover:bg-white/5 ${crossfade === v ? 'text-neon' : 'text-gray-300'}`}>
+                          {v === 0 ? 'Tắt' : `${v} giây`} {crossfade === v && '✓'}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
                 <div className="hidden min-[360px]:block w-14 sm:w-16"><VolumeControl /></div>
                 <button onClick={() => setQueueOpen(!queueOpen)} className={`p-1 flex-shrink-0 ${queueOpen ? "text-neon" : "text-gray-600"}`}>
                   <HiQueueList className="text-base" />
@@ -200,7 +257,14 @@ export default function PlayerBar() {
                     <img src={currentSong.cover} alt="" className="w-full h-full object-cover" />
                   </div>
                   <div className="min-w-0">
-                    <p className="text-xs sm:text-sm font-semibold text-white truncate">{currentSong.title}</p>
+                    <div className="flex items-center gap-1.5">
+                      <p className="text-xs sm:text-sm font-semibold text-white truncate">{currentSong.title}</p>
+                      {isPlaying && (
+                        <div className="playing-bars flex-shrink-0">
+                          <span /><span /><span /><span />
+                        </div>
+                      )}
+                    </div>
                     <p className="text-[10px] sm:text-xs text-gray-500 truncate">{currentSong.artist}</p>
                   </div>
                   <button onClick={handleLike} className={`flex-shrink-0 p-1 rounded-full transition-all ${liked ? "text-red-500" : "text-gray-600 hover:text-gray-300"}`}>
@@ -280,10 +344,51 @@ export default function PlayerBar() {
 
             {/* RIGHT: Extras */}
             <div className="flex items-center justify-end gap-2 w-[28%] sm:w-[25%] lg:w-[28%]">
-              <button data-player-lyrics-btn onClick={() => setLyricsOpen(!lyricsOpen)} className={`p-1 rounded-lg text-xs font-bold transition-all hidden sm:block ${lyricsOpen ? "text-neon bg-neon/10" : "text-gray-600 hover:text-gray-300"}`}>
-                <span className="text-[10px] sm:text-[11px]">LRC</span>
+              <button data-player-lyrics-btn onClick={() => setLyricsOpen(!lyricsOpen)} className={`p-1.5 rounded-lg transition-all hidden sm:block ${lyricsOpen ? "text-neon bg-neon/10" : "text-gray-600 hover:text-gray-300"}`} title="Lời bài hát">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="3" y1="6" x2="13" y2="6" /><line x1="3" y1="11" x2="16" y2="11" /><line x1="3" y1="16" x2="11" y2="16" />
+                  <circle cx="19" cy="16" r="2" fill="currentColor" /><line x1="21" y1="16" x2="21" y2="9" /><line x1="21" y1="9" x2="24" y2="9" />
+                </svg>
               </button>
-              <div className="hidden md:block"><VolumeControl /></div>
+              {/* Sleep Timer */}
+              <div className="relative hidden sm:block" ref={sleepMenuRef}>
+                <button onClick={() => setSleepMenuOpen(!sleepMenuOpen)} className={`p-1 rounded-lg transition-all relative ${sleepTimer ? 'text-neon bg-neon/10' : 'text-gray-600 hover:text-gray-300'}`} title="Hẹn giờ">
+                  <HiClock className="text-base" />
+                  {sleepTimer && <span className="absolute top-0 right-0 w-1.5 h-1.5 bg-neon rounded-full" />}
+                </button>
+                {sleepMenuOpen && (
+                  <div className="absolute bottom-full right-0 mb-2 bg-[#1a1a2e] border border-white/10 rounded-xl shadow-2xl py-2 w-48 z-50">
+                    <p className="px-3 py-1.5 text-[10px] font-semibold text-gray-500 uppercase tracking-wider">⏱️ Hẹn giờ tắt nhạc</p>
+                    {[15, 30, 45, 60].map(m => (
+                      <button key={m} onClick={() => handleSleepTimer(m)} className={`w-full flex justify-between px-4 py-2.5 text-[13px] text-left hover:bg-white/5 ${sleepTimer === m ? 'text-neon' : 'text-gray-300'}`}>
+                        <span>{m} phút</span>
+                        {sleepTimer === m && <span className="text-neon">✓</span>}
+                      </button>
+                    ))}
+                    <button onClick={() => handleSleepTimer('end')} className={`w-full flex justify-between px-4 py-2.5 text-[13px] text-left hover:bg-white/5 ${sleepTimer === 'end' ? 'text-neon' : 'text-gray-300'}`}>
+                      <span>Hết bài này</span>
+                      {sleepTimer === 'end' && <span className="text-neon">✓</span>}
+                    </button>
+                    {sleepTimer && (
+                      <>
+                        <div className="mx-3 my-1 h-px bg-white/5" />
+                        <button onClick={() => handleSleepTimer('off')} className="w-full px-4 py-2.5 text-[13px] text-red-400 text-left hover:bg-white/5">
+                          Tắt hẹn giờ
+                        </button>
+                      </>
+                    )}
+                    <div className="mx-3 my-1 h-px bg-white/5" />
+                    <p className="px-3 py-1.5 text-[10px] font-semibold text-gray-500 uppercase tracking-wider">🔀 Crossfade</p>
+                    {[0, 3, 5, 8].map(v => (
+                      <button key={v} onClick={() => handleCrossfade(v)} className={`w-full flex justify-between px-4 py-2.5 text-[13px] text-left hover:bg-white/5 ${crossfade === v ? 'text-neon' : 'text-gray-300'}`}>
+                        <span>{v === 0 ? 'Tắt' : `${v} giây`}</span>
+                        {crossfade === v && <span className="text-neon">✓</span>}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+              <div data-player-mute-btn className="hidden md:block"><VolumeControl /></div>
               <button onClick={() => setQueueOpen(!queueOpen)} className={`p-1 rounded-lg transition-all ${queueOpen ? "text-neon bg-neon/10" : "text-gray-600 hover:text-gray-300"}`}>
                 <HiQueueList className="text-base" />
               </button>

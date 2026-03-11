@@ -294,3 +294,84 @@ input[type="range"]::-moz-range-thumb {
     height: 500px;
   }
 }
+
+/* ── Equalizer Slider ─────────────────────────────────────── */
+.eq-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  background: linear-gradient(to right, #ef4444 0%, #3a3a50 30%, #3a3a50 70%, #00ffcc 100%);
+  border-radius: 2px;
+  cursor: pointer;
+}
+
+.eq-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #00ffcc;
+  cursor: pointer;
+  box-shadow: 0 0 8px rgba(0, 255, 204, 0.5);
+  border: 2px solid #0a0e14;
+}
+
+.eq-slider::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #00ffcc;
+  cursor: pointer;
+  border: 2px solid #0a0e14;
+  box-shadow: 0 0 8px rgba(0, 255, 204, 0.5);
+}
+
+.eq-slider:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+/* ── Playing Indicator Bars ───────────────────────────────── */
+.playing-bars {
+  display: flex;
+  align-items: flex-end;
+  gap: 1px;
+  height: 14px;
+}
+
+.playing-bars span {
+  width: 2px;
+  background: #00ffcc;
+  border-radius: 1px;
+  animation: bar-bounce 1.2s ease-in-out infinite;
+}
+
+.playing-bars span:nth-child(1) { height: 40%; animation-delay: 0s; }
+.playing-bars span:nth-child(2) { height: 70%; animation-delay: 0.2s; }
+.playing-bars span:nth-child(3) { height: 50%; animation-delay: 0.4s; }
+.playing-bars span:nth-child(4) { height: 80%; animation-delay: 0.1s; }
+
+@keyframes bar-bounce {
+  0%, 100% { transform: scaleY(0.3); }
+  50% { transform: scaleY(1); }
+}
+
+/* ── Page Transition ──────────────────────────────────────── */
+.page-enter {
+  animation: page-fade-in 0.3s ease-out;
+}
+
+@keyframes page-fade-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Hover Card Lift ──────────────────────────────────────── */
+.card-hover {
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+}
+
+.card-hover:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 40px rgba(0, 255, 204, 0.1);
+}

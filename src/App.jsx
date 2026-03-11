@@ -12,6 +12,7 @@ import { ErrorBoundary } from "./components/ErrorBoundary";
 import { AuthProvider } from "./context/AuthContext";
 import { HiMenuAlt2, HiArrowLeft } from "react-icons/hi";
 import React, { Suspense } from "react";
+import { useColorExtractor } from "./hooks/useColorExtractor";
 
 // Lazy-loaded pages (Phase 2: Code Splitting)
 const Home = React.lazy(() => import("./pages/Home"));
@@ -26,6 +27,7 @@ const ArtistDetail = React.lazy(() => import("./pages/ArtistDetail"));
 const ExternalPlaylistPage = React.lazy(() => import("./pages/ExternalPlaylistPage"));
 const ProfilePage = React.lazy(() => import("./pages/ProfilePage"));
 const AllArtists = React.lazy(() => import("./pages/AllArtists"));
+const AllPlaylists = React.lazy(() => import("./pages/AllPlaylists"));
 const SuggestedPlaylistDetail = React.lazy(() => import("./pages/SuggestedPlaylistDetail"));
 const Login = React.lazy(() => import("./pages/Login"));
 const Register = React.lazy(() => import("./pages/Register"));
@@ -54,6 +56,13 @@ function AppContent() {
   } = usePlayer();
   const navigate = useNavigate();
   const location = useLocation();
+
+  // Dynamic background from album art
+  const { currentSong } = usePlayer();
+  const colorInfo = useColorExtractor(currentSong?.cover);
+  const dynamicStyle = colorInfo?.gradient
+    ? { background: colorInfo.gradient, transition: 'background 1.5s ease' }
+    : {};
 
   // ── Keyboard Shortcuts (Phase 3: #10) ──────────────────────────────────────
   useEffect(() => {
@@ -93,7 +102,7 @@ function AppContent() {
   }, []);
 
   return (
-    <div className="animated-bg h-[100dvh] w-full max-w-[100vw] overflow-hidden flex">
+    <div className="animated-bg h-[100dvh] w-full max-w-[100vw] overflow-hidden flex" style={dynamicStyle}>
       {/* YouTube IFrame Player ẩn – dùng cho Deezer songs */}
       <YouTubeAudioPlayer
         ref={ytPlayerRef}
@@ -146,6 +155,7 @@ function AppContent() {
               <Route path="/admin" element={<AdminPage />} />
               <Route path="/admin/setup" element={<SetupAdmin />} />
               <Route path="/artists" element={<AllArtists />} />
+              <Route path="/playlists" element={<AllPlaylists />} />
               <Route path="/suggested-playlist" element={<SuggestedPlaylistDetail />} />
               <Route path="*" element={<NotFound />} />
             </Routes>

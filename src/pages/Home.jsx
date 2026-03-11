@@ -13,6 +13,7 @@ import ArtistSection from "../components/home/ArtistSection";
 import SuggestedPlaylistSection from "../components/home/SuggestedPlaylistSection";
 import RecentlyPlayed from "../components/home/RecentlyPlayed";
 import RandomDiscovery from "../components/home/RandomDiscovery";
+import DailyMixSection from "../components/home/DailyMixSection";
 export default function Home() {
   const { error, allSongs, playSong, recentHistory } = usePlayer();
 
@@ -46,6 +47,9 @@ export default function Home() {
 
         {/* Random Discovery Widget */}
         <RandomDiscovery onDiscover={handleRandomDiscover} />
+
+        {/* Daily Mix — gợi ý dựa trên lịch sử nghe */}
+        <DailyMixSection />
 
         {/* Moods & Genres Grid */}
         <MoodGenreSection />

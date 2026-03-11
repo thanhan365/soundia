@@ -93,7 +93,7 @@ export default function SuggestedPlaylistSection() {
                         <h2 className="text-xl font-bold text-white">Playlist Gợi Ý</h2>
                     </div>
                     <button
-                        onClick={() => navigate('/genres')}
+                        onClick={() => navigate('/playlists')}
                         className="flex items-center gap-1 text-sm text-gray-400 hover:text-neon transition-colors group"
                     >
                         Xem thêm
@@ -119,7 +119,7 @@ export default function SuggestedPlaylistSection() {
                     <h2 className="text-xl font-bold text-white">Playlist Gợi Ý</h2>
                 </div>
                 <button
-                    onClick={() => navigate('/genres')}
+                    onClick={() => navigate('/playlists')}
                     className="flex items-center gap-1 text-sm text-gray-400 hover:text-neon transition-colors group"
                 >
                     Xem thêm

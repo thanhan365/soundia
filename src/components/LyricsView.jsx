@@ -326,8 +326,11 @@ export default function LyricsView() {
 
           {/* RIGHT: LRC, Volume, Queue */}
           <div className="flex items-center justify-end gap-3 w-[28%]">
-            <button onClick={() => setLyricsOpen(false)} className="p-1 rounded-lg text-xs font-bold text-neon bg-neon/10 transition-all">
-              <span className="text-[11px]">LRC</span>
+            <button onClick={() => setLyricsOpen(false)} className="p-1.5 rounded-lg text-neon bg-neon/10 transition-all" title="Đóng lời bài hát">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="3" y1="6" x2="13" y2="6" /><line x1="3" y1="11" x2="16" y2="11" /><line x1="3" y1="16" x2="11" y2="16" />
+                <circle cx="19" cy="16" r="2" fill="currentColor" /><line x1="21" y1="16" x2="21" y2="9" /><line x1="21" y1="9" x2="24" y2="9" />
+              </svg>
             </button>
             <div className="hidden sm:block">
               <VolumeControl />
