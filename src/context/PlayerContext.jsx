@@ -40,7 +40,7 @@ export function PlayerProvider({ children }) {
     volume, error, setError, shuffle, repeatMode,
     isLoadingStream, setIsLoadingStream, isYTMode, setIsYTMode,
     recentHistory, crossfade, setCrossfade, crossfadeTriggeredRef,
-    audioRef, ytPlayerRef, isYTModeRef, currentSongRef, playSongRef, playNextRef, ytPlayStartedRef,
+    audioRef, ytPlayerRef, isYTModeRef, currentSongRef, playSongRef, playNextRef, ytPlayStartedRef, sleepTimerRef,
     addToRecent, handleAudioError,
     handleYTReady, handleYTStateChange, handleYTTimeUpdate, handleYTError,
     togglePlay, seekTo, changeVolume, toggleShuffle, toggleRepeat,
@@ -63,11 +63,11 @@ export function PlayerProvider({ children }) {
   // ── Sleep Timer ────────────────────────────────────────────────────────────
   const [sleepTimer, setSleepTimerState] = useState(null); // null | 'end' | minutes remaining display
   const [sleepTimerEnd, setSleepTimerEnd] = useState(null); // timestamp khi timer hết
-  const sleepTimerRef = useRef(null);
+  const sleepIntervalRef = useRef(null);
 
   const setSleepTimer = useCallback((option) => {
     // Clear existing timer
-    if (sleepTimerRef.current) { clearInterval(sleepTimerRef.current); sleepTimerRef.current = null; }
+    if (sleepIntervalRef.current) { clearInterval(sleepIntervalRef.current); sleepIntervalRef.current = null; }
     if (option === null || option === 'off') {
       setSleepTimerState(null);
       setSleepTimerEnd(null);
@@ -89,16 +89,16 @@ export function PlayerProvider({ children }) {
 
   // Countdown effect
   useEffect(() => {
-    if (sleepTimerRef.current) clearInterval(sleepTimerRef.current);
+    if (sleepIntervalRef.current) clearInterval(sleepIntervalRef.current);
     if (!sleepTimerEnd && sleepTimer !== 'end') return;
 
     if (sleepTimerEnd) {
-      sleepTimerRef.current = setInterval(() => {
+      sleepIntervalRef.current = setInterval(() => {
         const remaining = sleepTimerEnd - Date.now();
         if (remaining <= 0) {
           // Timer hết — pause nhạc
-          clearInterval(sleepTimerRef.current);
-          sleepTimerRef.current = null;
+          clearInterval(sleepIntervalRef.current);
+          sleepIntervalRef.current = null;
           setSleepTimerState(null);
           setSleepTimerEnd(null);
           if (audioRef.current) audioRef.current.pause();
@@ -110,21 +110,24 @@ export function PlayerProvider({ children }) {
         }
       }, 10000); // update mỗi 10s
     }
-    return () => { if (sleepTimerRef.current) clearInterval(sleepTimerRef.current); };
+    return () => { if (sleepIntervalRef.current) clearInterval(sleepIntervalRef.current); };
   }, [sleepTimerEnd]); // eslint-disable-line
 
-  // Sleep timer 'end' mode — pause khi bài kết thúc
+  // Sync sleepTimerRef for usePlayback to check
   useEffect(() => {
-    if (sleepTimer !== 'end') return;
-    const audio = audioRef.current;
-    const handleEnded = () => {
+    sleepTimerRef.current = sleepTimer;
+    // When sleep timer 'end' mode triggers (song ends in usePlayback), reset state
+    // The actual playing stop is handled in usePlayback onEnd
+  }, [sleepTimer]);
+
+  // Show toast when sleep timer 'end' finishes (detected by isPlaying going false while sleepTimer='end')
+  useEffect(() => {
+    if (sleepTimer === 'end' && !isPlaying && currentSong) {
+      // Song ended with sleep timer active — clean up
       setSleepTimerState(null);
-      setIsPlaying(false);
       showToast('⏱️ Hết bài — đã tạm dừng nhạc', 'info');
-    };
-    if (audio) audio.addEventListener('ended', handleEnded);
-    return () => { if (audio) audio.removeEventListener('ended', handleEnded); };
-  }, [sleepTimer]); // eslint-disable-line
+    }
+  }, [isPlaying]); // eslint-disable-line
 
   // ── Auto-populate queue ────────────────────────────────────────────────────
   useEffect(() => {
@@ -301,6 +304,16 @@ export function PlayerProvider({ children }) {
   // ── playNext / playPrev ────────────────────────────────────────────────────
   const playNext = useCallback(async () => {
     if (!currentSong) return;
+    // Sleep timer 'end' mode — dừng phát thay vì chuyển bài
+    if (sleepTimerRef.current === 'end') {
+      if (audioRef.current) audioRef.current.pause();
+      if (ytPlayerRef.current?.pauseVideo) ytPlayerRef.current.pauseVideo();
+      setIsPlaying(false);
+      setSleepTimerState(null);
+      sleepTimerRef.current = null;
+      showToast('⏱️ Hết bài — đã tạm dừng nhạc', 'info');
+      return;
+    }
     if (manualQueue.length > 0) {
       const next = manualQueue[0];
       setManualQueue((q) => q.slice(1));

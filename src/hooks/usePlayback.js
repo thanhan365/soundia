@@ -34,6 +34,7 @@ export function usePlayback({ showToast }) {
     const crossfadeTriggeredRef = useRef(false);
     const crossfadeRef = useRef(crossfade);
     const volumeRef = useRef(volume);
+    const sleepTimerRef = useRef(null); // synced from PlayerContext
 
     // Sync refs
     useEffect(() => { currentSongRef.current = currentSong; }, [currentSong]);
@@ -77,6 +78,11 @@ export function usePlayback({ showToast }) {
                 crossfadeTriggeredRef.current = false;
                 return;
             }
+            // Sleep timer 'end' mode — dừng phát
+            if (sleepTimerRef.current === 'end') {
+                setIsPlaying(false);
+                return;
+            }
             if (repeatModeRef.current === "one") {
                 if (currentSongRef.current && playSongRef.current) playSongRef.current(currentSongRef.current, true);
             } else { playNextRef.current?.(); }
@@ -106,8 +112,10 @@ export function usePlayback({ showToast }) {
                             audio.volume = targetVol; // restore for next song
                         }
                     }, stepTime);
-                    // Trigger next song sớm (crossfade overlap)
-                    setTimeout(() => { playNextRef.current?.(); }, Math.max(0, (remaining - 0.5) * 1000));
+                    // Trigger next song sớm (crossfade overlap) — unless sleep timer 'end'
+                    if (sleepTimerRef.current !== 'end') {
+                        setTimeout(() => { playNextRef.current?.(); }, Math.max(0, (remaining - 0.5) * 1000));
+                    }
                 }
             }
         };
@@ -140,6 +148,11 @@ export function usePlayback({ showToast }) {
         }
         else if (state === 2) { setIsPlaying(false); }
         else if (state === 0) {
+            // Sleep timer 'end' mode — dừng phát
+            if (sleepTimerRef.current === 'end') {
+                setIsPlaying(false);
+                return;
+            }
             if (repeatModeRef.current === "one") {
                 if (currentSongRef.current && playSongRef.current) playSongRef.current(currentSongRef.current, true);
             } else { playNextRef.current?.(); }
@@ -199,7 +212,7 @@ export function usePlayback({ showToast }) {
         volume, error, setError, shuffle, repeatMode,
         isLoadingStream, setIsLoadingStream, isYTMode, setIsYTMode,
         recentHistory, crossfade, setCrossfade, crossfadeTriggeredRef,
-        audioRef, ytPlayerRef, isYTModeRef, currentSongRef, playSongRef, playNextRef, ytPlayStartedRef,
+        audioRef, ytPlayerRef, isYTModeRef, currentSongRef, playSongRef, playNextRef, ytPlayStartedRef, sleepTimerRef,
         addToRecent, handleAudioError,
         handleYTReady, handleYTStateChange, handleYTTimeUpdate, handleYTError,
         togglePlay, seekTo, changeVolume, toggleShuffle, toggleRepeat,

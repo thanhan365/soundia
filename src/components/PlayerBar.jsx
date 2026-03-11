@@ -22,6 +22,7 @@ export default function PlayerBar() {
   const { showToast } = useToast();
   const [menuOpen, setMenuOpen] = useState(false);
   const [sleepMenuOpen, setSleepMenuOpen] = useState(false);
+  const [customMinutes, setCustomMinutes] = useState('');
   const menuRef = useRef(null);
   const sleepMenuRef = useRef(null);
 
@@ -219,6 +220,23 @@ export default function PlayerBar() {
                       <button onClick={() => handleSleepTimer('end')} className={`w-full px-4 py-2 text-[13px] text-left hover:bg-white/5 ${sleepTimer === 'end' ? 'text-neon' : 'text-gray-300'}`}>
                         Hết bài này {sleepTimer === 'end' && '✓'}
                       </button>
+                      <div className="mx-3 my-1 h-px bg-white/5" />
+                      <div className="px-3 py-1.5 flex items-center gap-2">
+                        <input
+                          type="number"
+                          min="1"
+                          max="999"
+                          placeholder="Tùy chọn"
+                          value={customMinutes}
+                          onChange={(e) => setCustomMinutes(e.target.value)}
+                          onKeyDown={(e) => { if (e.key === 'Enter' && customMinutes) { handleSleepTimer(Number(customMinutes)); setCustomMinutes(''); } }}
+                          className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-[13px] text-white placeholder-gray-500 focus:outline-none focus:border-neon/50 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                        />
+                        <button
+                          onClick={() => { if (customMinutes) { handleSleepTimer(Number(customMinutes)); setCustomMinutes(''); } }}
+                          className="text-neon text-xs font-semibold px-2 py-1.5 rounded-lg hover:bg-neon/10 transition-colors whitespace-nowrap"
+                        >OK</button>
+                      </div>
                       {sleepTimer && (
                         <>
                           <div className="mx-3 my-1 h-px bg-white/5" />
@@ -369,6 +387,23 @@ export default function PlayerBar() {
                       <span>Hết bài này</span>
                       {sleepTimer === 'end' && <span className="text-neon">✓</span>}
                     </button>
+                    <div className="mx-3 my-1 h-px bg-white/5" />
+                    <div className="px-3 py-1.5 flex items-center gap-2">
+                      <input
+                        type="number"
+                        min="1"
+                        max="999"
+                        placeholder="Tùy chọn (phút)"
+                        value={customMinutes}
+                        onChange={(e) => setCustomMinutes(e.target.value)}
+                        onKeyDown={(e) => { if (e.key === 'Enter' && customMinutes) { handleSleepTimer(Number(customMinutes)); setCustomMinutes(''); } }}
+                        className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-[13px] text-white placeholder-gray-500 focus:outline-none focus:border-neon/50 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                      />
+                      <button
+                        onClick={() => { if (customMinutes) { handleSleepTimer(Number(customMinutes)); setCustomMinutes(''); } }}
+                        className="text-neon text-xs font-semibold px-2 py-1.5 rounded-lg hover:bg-neon/10 transition-colors whitespace-nowrap"
+                      >OK</button>
+                    </div>
                     {sleepTimer && (
                       <>
                         <div className="mx-3 my-1 h-px bg-white/5" />
