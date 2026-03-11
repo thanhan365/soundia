@@ -100,40 +100,6 @@ export function PlayerProvider({ children }) {
     const isItunesPreview = song.source === 'itunes' && song.audio &&
       (song.audio.includes('audio.itunes.apple.com') || song.audio.includes('audio-ssl.itunes.apple.com'));
 
-    // NCT stream resolution — resolve khi chưa có audio, hoặc khi là iTunes preview 30s
-    if (!song.audio || song.audio === 'YT_STREAM' || isItunesPreview) {
-      setIsLoadingStream(true); // Show loading spinner immediately
-      try {
-        // Run NCT lookups in parallel with a 4s timeout — fall back to YT quickly if NCT is slow
-        const withTimeout = (promise, ms) => Promise.race([
-          promise,
-          new Promise(r => setTimeout(() => r(null), ms))
-        ]);
-
-        let streamUrl = null;
-        // Try NCT key and title search in parallel
-        const [keyResult, titleResult] = await Promise.all([
-          song.nctKey ? withTimeout(getNctStreamUrl(song.nctKey), 4000) : Promise.resolve(null),
-          song.title ? withTimeout(resolveNctStream(song.title, song.artist), 4000) : Promise.resolve(null),
-        ]);
-        streamUrl = keyResult || titleResult;
-
-        if (streamUrl) {
-          console.log(`[Stream] NCT resolved: "${song.title}" by ${song.artist}`);
-          song.audio = streamUrl;
-        } else {
-          console.log(`[Stream] NCT no match for "${song.title}" by ${song.artist} → YouTube fallback`);
-          if (isItunesPreview) song.audio = "YT_STREAM"; // Fallback YT thay vì preview 30s
-        }
-      } catch (err) {
-        console.log(`[Stream] NCT resolve failed for "${song.title}":`, err.message, '→ YouTube fallback');
-        if (isItunesPreview) song.audio = "YT_STREAM"; // Fallback YT
-      }
-    }
-
-    const hasDirectUrl = song.audio && song.audio !== "YT_STREAM" && (song.audio.startsWith("http") || song.audio.startsWith("/api/"));
-    const needsYT = !hasDirectUrl && (!song.audio || song.audio === "YT_STREAM");
-
     const parseDurationStr = (str) => {
       if (typeof str === 'number') return str;
       if (!str || typeof str !== 'string') return 0;
@@ -141,11 +107,59 @@ export function PlayerProvider({ children }) {
       if (parts.length === 2) return parseInt(parts[0], 10) * 60 + parseInt(parts[1], 10);
       return 0;
     };
+    const expectedDur = parseDurationStr(song.duration);
+    const ytQuery = `${song.artist} - ${song.title} official audio`;
+
+    // Biến lưu videoId đã pre-fetch (nếu có)
+    let ytPreFetchedVideoId = null;
+
+    // NCT stream resolution — resolve khi chưa có audio, hoặc khi là iTunes preview 30s
+    if (!song.audio || song.audio === 'YT_STREAM' || isItunesPreview) {
+      setIsLoadingStream(true); // Show loading spinner immediately
+      try {
+        const withTimeout = (promise, ms) => Promise.race([
+          promise,
+          new Promise(r => setTimeout(() => r(null), ms))
+        ]);
+
+        const BACKEND = import.meta.env.VITE_API_URL || 'http://localhost:5066/api';
+
+        // ═══ SONG SONG: NCT + YouTube pre-fetch cùng lúc ═══
+        const [keyResult, titleResult, ytPreResult] = await Promise.all([
+          song.nctKey ? withTimeout(getNctStreamUrl(song.nctKey), 4000) : Promise.resolve(null),
+          song.title ? withTimeout(resolveNctStream(song.title, song.artist), 4000) : Promise.resolve(null),
+          // Pre-fetch YouTube videoId (không chờ NCT fail — tiết kiệm thời gian)
+          withTimeout(
+            fetch(`${BACKEND}/stream/video-id?query=${encodeURIComponent(ytQuery)}${expectedDur > 0 ? `&expectedDuration=${Math.round(expectedDur)}` : ''}`)
+              .then(r => r.ok ? r.json() : null)
+              .catch(() => null),
+            5000
+          ),
+        ]);
+        const streamUrl = keyResult || titleResult;
+
+        if (streamUrl) {
+          console.log(`[Stream] NCT resolved: "${song.title}" by ${song.artist}`);
+          song.audio = streamUrl;
+        } else {
+          console.log(`[Stream] NCT no match for "${song.title}" by ${song.artist} → YouTube fallback`);
+          if (isItunesPreview) song.audio = "YT_STREAM";
+          // Lưu pre-fetched videoId để dùng bên dưới
+          ytPreFetchedVideoId = ytPreResult?.videoId || null;
+        }
+      } catch (err) {
+        console.log(`[Stream] NCT resolve failed for "${song.title}":`, err.message, '→ YouTube fallback');
+        if (isItunesPreview) song.audio = "YT_STREAM";
+      }
+    }
+
+    const hasDirectUrl = song.audio && song.audio !== "YT_STREAM" && (song.audio.startsWith("http") || song.audio.startsWith("/api/"));
+    const needsYT = !hasDirectUrl && (!song.audio || song.audio === "YT_STREAM");
 
     if (needsYT) {
       setIsYTMode(true);
       isYTModeRef.current = true;
-      ytPlayStartedRef.current = false; // Reset — state 3 will show spinner until state 1 fires
+      ytPlayStartedRef.current = false;
       audio.pause();
       audio.src = "";
       setCurrentSong(song);
@@ -153,11 +167,16 @@ export function PlayerProvider({ children }) {
       setIsPlaying(true);
       setIsLoadingStream(true);
       setCurrentTime(0);
-      const expectedDur = parseDurationStr(song.duration);
       if (expectedDur > 0) setDuration(expectedDur);
       else setDuration(0);
-      const query = `${song.artist} - ${song.title} official audio`;
-      ytPlayerRef.current?.loadAndPlay(query, expectedDur);
+
+      if (ytPreFetchedVideoId) {
+        // 🚀 VideoId đã pre-fetch sẵn → skip API call, load tức thì
+        console.log(`[Stream] YouTube pre-fetched videoId: ${ytPreFetchedVideoId} → loading tức thì`);
+        ytPlayerRef.current?.loadAndPlay(ytQuery, expectedDur, ytPreFetchedVideoId);
+      } else {
+        ytPlayerRef.current?.loadAndPlay(ytQuery, expectedDur);
+      }
     } else {
       if (isYTMode) {
         ytPlayerRef.current?.pause();
@@ -191,9 +210,7 @@ export function PlayerProvider({ children }) {
         setIsPlaying(true);
         setIsLoadingStream(true);
         setCurrentTime(0);
-        const expectedDur = parseDurationStr(song.duration);
-        const query = `${song.artist} - ${song.title} official audio`;
-        ytPlayerRef.current?.loadAndPlay(query, expectedDur);
+        ytPlayerRef.current?.loadAndPlay(ytQuery, expectedDur);
       }
     }
   };

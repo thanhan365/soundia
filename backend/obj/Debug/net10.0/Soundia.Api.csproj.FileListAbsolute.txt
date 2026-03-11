@@ -308,4 +308,3 @@ D:\WORKSPACE\soundia\backend\build-check\runtimes\win\lib\net9.0\Microsoft.Data.
 D:\WORKSPACE\soundia\backend\build-check\runtimes\win-arm64\native\Microsoft.Data.SqlClient.SNI.dll
 D:\WORKSPACE\soundia\backend\build-check\runtimes\win-x64\native\Microsoft.Data.SqlClient.SNI.dll
 D:\WORKSPACE\soundia\backend\build-check\runtimes\win-x86\native\Microsoft.Data.SqlClient.SNI.dll
-D:\WORKSPACE\soundia\backend\obj\Debug\net10.0\staticwebassets.upToDateCheck.txt

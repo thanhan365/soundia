@@ -102,19 +102,67 @@ namespace Soundia.Api.Controllers
             }
         }
 
+        // ── Cache NCT Top chart (15 phút) ────────────────────────────────────
+        private static List<object>? _cachedNctTop;
+        private static DateTime _nctTopCacheExpiry = DateTime.MinValue;
+
+        /// <summary>
+        /// Tự động tạo chart key theo ngày hiện tại.
+        /// Format NCT: "1-{weekOfYear}-d{dayOfYear}-{year}" (ví dụ: "1-5-d64-2026")
+        /// Nếu key không hoạt động, thử key ngày hôm qua.
+        /// </summary>
+        private static string GenerateNctChartKey()
+        {
+            var now = DateTime.UtcNow.AddHours(7); // UTC+7 Vietnam
+            var culture = System.Globalization.CultureInfo.InvariantCulture;
+            var cal = culture.Calendar;
+            int week = cal.GetWeekOfYear(now, System.Globalization.CalendarWeekRule.FirstDay, DayOfWeek.Monday);
+            int dayOfYear = now.DayOfYear;
+            int year = now.Year;
+            return $"1-{week}-d{dayOfYear}-{year}";
+        }
+
         [HttpGet("nct-top")]
         public async Task<ActionResult> NctTop()
         {
+            // Trả cache nếu còn hiệu lực (15 phút)
+            if (_cachedNctTop != null && DateTime.UtcNow < _nctTopCacheExpiry)
+                return Ok(new { success = true, data = _cachedNctTop });
+
             try
             {
-                // Use NCT's internal chart API directly — returns Top 50 with stream URLs
                 using var client = new System.Net.Http.HttpClient();
                 client.DefaultRequestHeaders.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36");
                 
-                var chartUrl = "https://graph.nhaccuatui.com/api/v1/playlist/charts/1-5-d64-2026?key=1-5-d64-2026&isShowLoading=false";
-                var json = await client.GetStringAsync(chartUrl);
-                using var doc = System.Text.Json.JsonDocument.Parse(json);
+                // NCT chart key format: "1-5-d{dayOfYear}-{year}"
+                // Thử key hôm nay → lùi dần tối đa 7 ngày để tìm chart có data
+                var now = DateTime.UtcNow.AddHours(7); // UTC+7 Vietnam
+                string json = "";
+                bool found = false;
 
+                for (int offset = 0; offset <= 7 && !found; offset++)
+                {
+                    var day = now.AddDays(-offset);
+                    var chartKey = $"1-5-d{day.DayOfYear}-{day.Year}";
+                    var chartUrl = $"https://graph.nhaccuatui.com/api/v1/playlist/charts/{chartKey}?key={chartKey}&isShowLoading=false";
+                    try
+                    {
+                        json = await client.GetStringAsync(chartUrl);
+                        using var checkDoc = System.Text.Json.JsonDocument.Parse(json);
+                        var checkItems = checkDoc.RootElement.GetProperty("data").GetProperty("items");
+                        if (checkItems.GetArrayLength() > 0)
+                        {
+                            found = true;
+                            Console.WriteLine($"[NctTop] Using chart key: {chartKey} ({checkItems.GetArrayLength()} items)");
+                        }
+                    }
+                    catch { /* try next day */ }
+                }
+
+                if (!found)
+                    return StatusCode(500, new { message = "NCT chart unavailable — no chart data found" });
+
+                using var doc = System.Text.Json.JsonDocument.Parse(json);
                 var dataNode = doc.RootElement.GetProperty("data");
                 var items = dataNode.GetProperty("items");
 
@@ -122,29 +170,24 @@ namespace Soundia.Api.Controllers
                 int count = 0;
                 foreach (var item in items.EnumerateArray())
                 {
-                    if (count >= 20) break; // Only take top 20
+                    if (count >= 20) break;
 
                     var name = item.GetProperty("name").GetString() ?? "";
                     
                     var artistName = "Unknown";
                     if (item.TryGetProperty("artistName", out var aName))
-                    {
                          artistName = aName.GetString() ?? "Unknown";
-                    }
                     else if (item.TryGetProperty("artist", out var artistArr) && artistArr.GetArrayLength() > 0)
-                    {
                          artistName = artistArr[0].GetProperty("name").GetString() ?? "Unknown";
-                    }
                     
                     var image = item.GetProperty("image").GetString() ?? "";
                     var key = item.GetProperty("key").GetString() ?? "";
                     var duration = item.TryGetProperty("duration", out var dur) ? dur.GetInt32() : 0;
 
-                    // Get best non-VIP stream URL (prefer 320kbps)
+                    // Lấy stream URL không VIP (ưu tiên 320kbps)
                     string streamUrl = "";
                     if (item.TryGetProperty("streamURL", out var streamUrls) && streamUrls.ValueKind == System.Text.Json.JsonValueKind.Array)
                     {
-                        // Try 320kbps first, then 128kbps
                         foreach (var su in streamUrls.EnumerateArray())
                         {
                             var onlyVIP = su.TryGetProperty("onlyVIP", out var vip) && vip.GetBoolean();
@@ -156,7 +199,7 @@ namespace Soundia.Api.Controllers
                             if (!string.IsNullOrEmpty(stream))
                             {
                                 streamUrl = stream;
-                                if (type == "320") break; // Prefer 320kbps
+                                if (type == "320") break;
                             }
                         }
                     }
@@ -173,6 +216,10 @@ namespace Soundia.Api.Controllers
                     });
                     count++;
                 }
+
+                // Cache 15 phút
+                _cachedNctTop = songs;
+                _nctTopCacheExpiry = DateTime.UtcNow.AddMinutes(15);
 
                 return Ok(new { success = true, data = songs });
             }
