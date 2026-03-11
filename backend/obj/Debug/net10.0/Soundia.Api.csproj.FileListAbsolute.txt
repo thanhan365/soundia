@@ -309,3 +309,4 @@ D:\WORKSPACE\soundia\backend\build-check\runtimes\win-arm64\native\Microsoft.Dat
 D:\WORKSPACE\soundia\backend\build-check\runtimes\win-x64\native\Microsoft.Data.SqlClient.SNI.dll
 D:\WORKSPACE\soundia\backend\build-check\runtimes\win-x86\native\Microsoft.Data.SqlClient.SNI.dll
 D:\WORKSPACE\soundia\backend\bin\Debug\net10.0\BouncyCastle.Cryptography.dll
+D:\WORKSPACE\soundia\backend\bin\Debug\net10.0\Soundia.Api.staticwebassets.runtime.json

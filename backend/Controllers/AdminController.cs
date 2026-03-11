@@ -229,6 +229,159 @@ namespace Soundia.Api.Controllers
             await _context.SaveChangesAsync();
 
             return Ok(new { message = $"Song '{song.Title}' deleted." });
+        }        // ── Public Playlists (no auth) ──────────────────────────────────────────
+        [HttpGet("public-playlists")]
+        [AllowAnonymous]
+        public async Task<ActionResult> GetPublicPlaylists()
+        {
+            var playlists = await _context.Playlists
+                .Where(p => p.IsPublic)
+                .OrderByDescending(p => p.CreatedAt)
+                .Select(p => new
+                {
+                    p.Id,
+                    p.Name,
+                    songCount = p.PlaylistSongs.Count,
+                    cover = p.PlaylistSongs
+                        .OrderBy(ps => ps.AddedAt)
+                        .Where(ps => ps.Song.CoverUrl != null && ps.Song.CoverUrl != "")
+                        .Select(ps => ps.Song.CoverUrl)
+                        .FirstOrDefault() ?? "",
+                    songs = p.PlaylistSongs
+                        .OrderBy(ps => ps.AddedAt)
+                        .Select(ps => new
+                        {
+                            ps.Song.Id,
+                            ps.Song.Title,
+                            ps.Song.Artist,
+                            ps.Song.Duration,
+                            ps.Song.CoverUrl,
+                            ps.Song.AudioUrl
+                        }).ToList()
+                })
+                .ToListAsync();
+
+            return Ok(playlists);
+        }
+
+        // ── Import Songs from Link (Zing/NCT) ─────────────────────────────────
+        [HttpPost("import-songs")]
+        public async Task<ActionResult> ImportSongs([FromBody] ImportSongsRequest request)
+        {
+            if (!await IsAdmin()) return Forbid();
+
+            if (request.Songs == null || request.Songs.Count == 0)
+                return BadRequest("No songs provided.");
+
+            var adminId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
+            var savedSongs = new List<Soundia.Api.Models.Song>();
+            var skipped = 0;
+
+            foreach (var s in request.Songs)
+            {
+                if (string.IsNullOrWhiteSpace(s.Title)) continue;
+
+                // Check if song already exists (same Title + Artist)
+                var existing = await _context.Songs.FirstOrDefaultAsync(
+                    x => x.Title == s.Title && x.Artist == (s.Artist ?? "Unknown"));
+
+                if (existing != null)
+                {
+                    savedSongs.Add(existing);
+                    skipped++;
+                    continue;
+                }
+
+                var song = new Soundia.Api.Models.Song
+                {
+                    Title = s.Title?.Trim() ?? "",
+                    Artist = s.Artist?.Trim() ?? "Unknown",
+                    Duration = s.Duration ?? "0:00",
+                    CoverUrl = s.Cover ?? "",
+                    AudioUrl = s.Audio ?? "YT_STREAM"
+                };
+                _context.Songs.Add(song);
+                await _context.SaveChangesAsync(); // Save to get ID
+                savedSongs.Add(song);
+            }
+
+            // Create playlist if name provided (skip if already exists)
+            int? playlistId = null;
+            bool playlistExisted = false;
+            if (!string.IsNullOrWhiteSpace(request.PlaylistName) && savedSongs.Count > 0)
+            {
+                var trimmedName = request.PlaylistName.Trim();
+                var existingPlaylist = await _context.Playlists
+                    .FirstOrDefaultAsync(p => p.Name == trimmedName);
+
+                Soundia.Api.Models.Playlist playlist;
+                if (existingPlaylist != null)
+                {
+                    playlist = existingPlaylist;
+                    playlist.IsPublic = true; // Mark as public since it's admin-imported
+                    playlistExisted = true;
+                }
+                else
+                {
+                    playlist = new Soundia.Api.Models.Playlist
+                    {
+                        UserId = adminId,
+                        Name = trimmedName,
+                        CreatedAt = DateTime.UtcNow,
+                        IsPublic = true
+                    };
+                    _context.Playlists.Add(playlist);
+                    await _context.SaveChangesAsync();
+                }
+                playlistId = playlist.Id;
+
+                // Link songs to playlist
+                var order = 0;
+                foreach (var song in savedSongs)
+                {
+                    var exists = await _context.PlaylistSongs
+                        .AnyAsync(ps => ps.PlaylistId == playlist.Id && ps.SongId == song.Id);
+                    if (!exists)
+                    {
+                        _context.PlaylistSongs.Add(new Soundia.Api.Models.PlaylistSong
+                        {
+                            PlaylistId = playlist.Id,
+                            SongId = song.Id,
+                            AddedAt = DateTime.UtcNow
+                        });
+                    }
+                    order++;
+                }
+                await _context.SaveChangesAsync();
+            }
+
+            return Ok(new
+            {
+                message = $"Đã lưu {savedSongs.Count - skipped} bài mới, {skipped} bài đã có sẵn.",
+                totalSaved = savedSongs.Count,
+                newSongs = savedSongs.Count - skipped,
+                skipped,
+                playlistId,
+                playlistName = request.PlaylistName,
+                playlistExisted
+            });
+        }
+
+        public class ImportSongsRequest
+        {
+            public string? PlaylistName { get; set; }
+            public string? Source { get; set; }
+            public string? CoverImage { get; set; }
+            public List<ImportSongItem> Songs { get; set; } = new();
+        }
+
+        public class ImportSongItem
+        {
+            public string? Title { get; set; }
+            public string? Artist { get; set; }
+            public string? Duration { get; set; }
+            public string? Cover { get; set; }
+            public string? Audio { get; set; }
         }
     }
 }

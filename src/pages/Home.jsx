@@ -8,12 +8,11 @@ import BannerSlider from "../components/BannerSlider";
 import TrendingSection from "../components/home/TrendingSection";
 import TopTrendingSection from "../components/home/TopTrendingSection";
 import MoodGenreSection from "../components/home/MoodGenreSection";
-import PlaylistSection from "../components/home/PlaylistSection";
+
 import ArtistSection from "../components/home/ArtistSection";
 import SuggestedPlaylistSection from "../components/home/SuggestedPlaylistSection";
 import RecentlyPlayed from "../components/home/RecentlyPlayed";
 import RandomDiscovery from "../components/home/RandomDiscovery";
-import DailyMixSection from "../components/home/DailyMixSection";
 export default function Home() {
   const { error, allSongs, playSong, recentHistory } = usePlayer();
 
@@ -48,17 +47,12 @@ export default function Home() {
         {/* Random Discovery Widget */}
         <RandomDiscovery onDiscover={handleRandomDiscover} />
 
-        {/* Daily Mix — gợi ý dựa trên lịch sử nghe */}
-        <DailyMixSection />
-
         {/* Moods & Genres Grid */}
         <MoodGenreSection />
 
         {/* Top Trending from iTunes/NCT */}
         <TopTrendingSection />
 
-        {/* Playlists */}
-        <PlaylistSection />
 
         {/* Playlist Gợi Ý */}
         <SuggestedPlaylistSection />

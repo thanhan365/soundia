@@ -229,12 +229,12 @@ export default function LyricsView() {
                       key={i}
                       ref={isActive ? activeLineRef : null}
                       className={`text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold transform-gpu cursor-default
-                        transition-all duration-500 ease-out
-                        ${isActive ? "text-white scale-105 origin-left" :
+                        transition-colors duration-700 ease-out
+                        ${isActive ? "text-white" :
                           isPassed ? "text-white/40" : "text-white/20"}
                       `}
                       style={{
-                        textShadow: isActive ? "0 0 30px rgba(255,255,255,0.3), 0 0 60px rgba(255,255,255,0.1)" : "none",
+                        textShadow: isActive ? "0 0 20px rgba(255,255,255,0.15)" : "none",
                         paddingLeft: "1rem",
                       }}
                     >

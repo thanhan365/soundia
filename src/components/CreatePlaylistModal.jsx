@@ -3,18 +3,29 @@ import { HiX, HiMusicNote } from "react-icons/hi";
 import { usePlayer } from "../context/PlayerContext";
 import { useToast } from "../context/ToastContext";
 
-export default function CreatePlaylistModal({ isOpen, onClose }) {
+export default function CreatePlaylistModal({ isOpen, onClose, songToAdd = null }) {
   const [name, setName] = useState("");
-  const { createPlaylist } = usePlayer();
+  const { createPlaylist, addSongToPlaylist } = usePlayer();
   const { showToast } = useToast();
 
   if (!isOpen) return null;
 
-  const handleCreate = () => {
+  const handleCreate = async () => {
     const trimmed = name.trim();
     if (!trimmed) return;
-    createPlaylist(trimmed);
-    showToast(`Đã tạo playlist "${trimmed}"`, "success");
+    try {
+      const newId = await createPlaylist(trimmed);
+      if (newId && songToAdd) {
+        await addSongToPlaylist(newId, songToAdd);
+        showToast(`Đã tạo playlist "${trimmed}" và thêm "${songToAdd.title}"`, "success");
+      } else if (newId) {
+        showToast(`Đã tạo playlist "${trimmed}"`, "success");
+      } else {
+        showToast("Không thể tạo playlist", "error");
+      }
+    } catch (e) {
+      showToast("Lỗi khi tạo playlist", "error");
+    }
     setName("");
     onClose();
   };

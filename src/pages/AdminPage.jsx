@@ -336,16 +336,47 @@ function ImportTab() {
     const [result, setResult] = useState(null);
     const [error, setError] = useState('');
     const [activeImportMode, setActiveImportMode] = useState('upload'); // 'upload' | 'link'
+    const [saving, setSaving] = useState(false);
+    const [saveMsg, setSaveMsg] = useState(null); // { type, text }
 
-    const detectLink = (url) => {
-        const t = url.trim();
+    const detectLink = (raw) => {
+        let t = raw.trim();
+
+        // ── Step 1: Extract URL from iframe embed code ──
+        const iframeMatch = t.match(/\<iframe[^>]+src=["']([^"']+)["']/i);
+        if (iframeMatch) t = iframeMatch[1];
+
+        // Also handle src= without iframe tag
+        const srcMatch = t.match(/^src=["']([^"']+)["']/i);
+        if (srcMatch) t = srcMatch[1];
+
+        // ── Step 2: Normalize URL domains ──
+        t = t.replace(/mp3\.zing\.vn/gi, 'zingmp3.vn');
+
+        // ── Step 3: Pattern matching ──
         const m = (r) => t.match(r);
-        if (m(/zingmp3\.vn\/embed\/playlist\/([A-Z0-9]+)/i)) return { source: 'zing', type: 'playlist', id: m(/zingmp3\.vn\/embed\/playlist\/([A-Z0-9]+)/i)[1] };
+
+        // Zing MP3 — Embed playlist/song/chart
+        if (m(/zingmp3\.vn\/embed\/(song|bai-hat)\/([A-Z0-9]+)/i)) return { source: 'zing', type: 'song', id: m(/zingmp3\.vn\/embed\/(song|bai-hat)\/([A-Z0-9]+)/i)[2] };
+        if (m(/zingmp3\.vn\/embed\/(playlist|album)\/([A-Z0-9]+)/i)) return { source: 'zing', type: 'playlist', id: m(/zingmp3\.vn\/embed\/(playlist|album)\/([A-Z0-9]+)/i)[2] };
+        if (m(/zingmp3\.vn\/embed\/chart\/([A-Z0-9]+)/i)) return { source: 'zing', type: 'playlist', id: m(/zingmp3\.vn\/embed\/chart\/([A-Z0-9]+)/i)[1] };
+
+        // Zing MP3 — Direct links
         if (m(/zingmp3\.vn\/(?:playlist|album)\/[^/]+\/([A-Z0-9]+)/i)) return { source: 'zing', type: 'playlist', id: m(/zingmp3\.vn\/(?:playlist|album)\/[^/]+\/([A-Z0-9]+)/i)[1] };
-        if (m(/zingmp3\.vn\/bai-hat\/[^/]+\/([A-Z0-9]+)/i)) return { source: 'zing', type: 'song', id: m(/zingmp3\.vn\/bai-hat\/[^/]+\/([A-Z0-9]+)/i)[1] };
+        if (m(/zingmp3\.vn\/(?:bai-hat|song)\/[^/]+\/([A-Z0-9]+)/i)) return { source: 'zing', type: 'song', id: m(/zingmp3\.vn\/(?:bai-hat|song)\/[^/]+\/([A-Z0-9]+)/i)[1] };
+        if (m(/zingmp3\.vn\/[^/]*chart[^/]*/i)) return { source: 'zing', type: 'playlist', id: 'ZO68OC68' }; // BXH Zing default
+
+        // NhacCuaTui — Embed iframe
+        if (m(/nhaccuatui\.com\/flash\/player\?.*key=([a-zA-Z0-9]+)/i)) return { source: 'nct', type: 'song', key: m(/nhaccuatui\.com\/flash\/player\?.*key=([a-zA-Z0-9]+)/i)[1] };
+        if (m(/nhaccuatui\.com\/embed\/.*?([a-zA-Z0-9]{10,})/i)) return { source: 'nct', type: 'song', key: m(/nhaccuatui\.com\/embed\/.*?([a-zA-Z0-9]{10,})/i)[1] };
+
+        // NhacCuaTui — Direct links
         if (m(/nhaccuatui\.com\/playlist\/[^.]+\.([a-zA-Z0-9]+)\.html/i)) return { source: 'nct', type: 'playlist', key: m(/nhaccuatui\.com\/playlist\/[^.]+\.([a-zA-Z0-9]+)\.html/i)[1] };
         if (m(/nhaccuatui\.com\/bai-hat\/[^.]+\.([a-zA-Z0-9]+)\.html/i)) return { source: 'nct', type: 'song', key: m(/nhaccuatui\.com\/bai-hat\/[^.]+\.([a-zA-Z0-9]+)\.html/i)[1] };
+
+        // Fallback: 8-char Zing code
         if (m(/^([A-Z0-9]{8})$/i)) return { source: 'zing', type: 'playlist', id: m(/^([A-Z0-9]{8})$/i)[1] };
+
         return null;
     };
 
@@ -387,6 +418,33 @@ function ImportTab() {
         result.tracks.slice(1).forEach(s => addToQueue({ ...s, audio: s.audio || 'YT_STREAM' }));
     };
 
+    const handleSaveToLibrary = async () => {
+        if (!result?.tracks?.length) return;
+        setSaving(true);
+        setSaveMsg(null);
+        try {
+            const playlistName = result.name || `Import ${new Date().toLocaleDateString('vi-VN')}`;
+            const payload = {
+                playlistName,
+                source: result.source,
+                coverImage: result.image || '',
+                songs: result.tracks.map(t => ({
+                    title: t.title,
+                    artist: t.artist,
+                    duration: t.duration ? `${Math.floor(t.duration / 60)}:${String(t.duration % 60).padStart(2, '0')}` : '0:00',
+                    cover: t.cover || '',
+                    audio: t.audio || 'YT_STREAM',
+                }))
+            };
+            const res = await api.post('/admin/import-songs', payload);
+            setSaveMsg({ type: 'success', text: `✅ ${res.data.message} • Playlist "${playlistName}" ${res.data.playlistExisted ? 'đã cập nhật!' : 'đã thêm lên Home!'}` });
+        } catch (err) {
+            setSaveMsg({ type: 'error', text: err.response?.data?.message || err.message || 'Lỗi khi lưu' });
+        } finally {
+            setSaving(false);
+        }
+    };
+
     return (
         <div className="space-y-4">
             {/* Mode switcher */}
@@ -413,12 +471,16 @@ function ImportTab() {
             {/* Input */}
             <div className="bg-white/5 rounded-xl p-4 border border-white/5">
                 <p className="text-xs text-gray-400 mb-3">
-                    Dán link hoặc mã nhúng iframe từ <span className="text-purple-400">Zing MP3</span> / <span className="text-green-400">NhacCuaTui</span> — playlist hoặc bài hát đơn lẻ
+                    Dán <span className="text-amber-300">link trực tiếp</span> hoặc <span className="text-amber-300">mã nhúng iframe</span> từ <span className="text-purple-400">Zing MP3</span> / <span className="text-green-400">NhacCuaTui</span>
                 </p>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-3">
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mb-3">
                     {[
-                        { l: 'Zing Playlist', c: 'text-purple-400' }, { l: 'Zing Embed/iframe', c: 'text-purple-400' },
-                        { l: 'NCT Playlist', c: 'text-green-400' }, { l: 'NCT Bài hát', c: 'text-green-400' },
+                        { l: 'Zing Playlist/Album', c: 'text-purple-400' },
+                        { l: 'Zing Bài hát', c: 'text-purple-400' },
+                        { l: 'Zing Embed/iframe', c: 'text-purple-400' },
+                        { l: 'NCT Playlist', c: 'text-green-400' },
+                        { l: 'NCT Bài hát', c: 'text-green-400' },
+                        { l: 'NCT Embed/iframe', c: 'text-green-400' },
                     ].map((x, i) => (
                         <div key={i} className="flex items-center gap-1.5 px-2 py-1.5 bg-black/20 rounded-lg">
                             <HiCheck className={`text-[10px] ${x.c}`} /><span className="text-[11px] text-gray-300">{x.l}</span>
@@ -456,7 +518,17 @@ function ImportTab() {
                             className="px-3 py-2 bg-gradient-to-r from-neon to-purple-500 text-white text-sm font-semibold rounded-lg hover:scale-105 transition-all flex items-center gap-1.5 flex-shrink-0">
                             <HiPlay /> Phát tất cả
                         </button>
+                        <button onClick={handleSaveToLibrary} disabled={saving}
+                            className="px-3 py-2 bg-gradient-to-r from-amber-500 to-orange-500 text-white text-sm font-semibold rounded-lg hover:scale-105 transition-all flex items-center gap-1.5 flex-shrink-0 disabled:opacity-50">
+                            {saving ? <><HiRefresh className="animate-spin" /> Đang lưu...</> : <><HiPlusCircle /> Thêm Playlist lên Home</>}
+                        </button>
                     </div>
+                    {saveMsg && (
+                        <div className={`mx-4 mt-2 px-3 py-2 rounded-lg text-sm ${saveMsg.type === 'success' ? 'bg-green-500/10 text-green-400 border border-green-500/20' : 'bg-red-500/10 text-red-400 border border-red-500/20'}`}>
+                            {saveMsg.type === 'success' ? <HiCheck className="inline mr-1" /> : <HiX className="inline mr-1" />}
+                            {saveMsg.text}
+                        </div>
+                    )}
                     <div className="max-h-[45vh] overflow-y-auto">
                         {result.tracks.map((song, idx) => (
                             <div key={song.id || idx} className="flex items-center gap-2.5 px-4 py-2 hover:bg-white/5 transition-colors border-b border-white/[0.03] last:border-0 group">
@@ -610,7 +682,7 @@ const AdminPage = () => {
     if (!user || user.role !== 'admin') return null;
 
     return (
-        <div className="max-w-5xl mx-auto pb-8">
+        <div className="max-w-5xl mx-auto pb-36">
             {/* Header */}
             <div className="flex items-center gap-3 mb-5">
                 <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center shadow-lg shadow-amber-500/20">

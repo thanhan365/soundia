@@ -145,6 +145,18 @@ export function PlayerProvider({ children }) {
     return () => clearInterval(id);
   }, [isLoadingStream, isYTMode]); // eslint-disable-line
 
+  // ── Record listening event to backend ─────────────────────────────────────
+  const recordListening = (song) => {
+    if (!user) return; // chỉ ghi khi đã login
+    api.post('/history', {
+      songId: song.id && typeof song.id === 'number' ? song.id : null,
+      externalTitle: song.title || '',
+      externalArtist: song.artist || '',
+      externalCoverUrl: song.cover || song.coverUrl || '',
+      durationListened: 0,
+    }).catch(() => {}); // fire-and-forget
+  };
+
   // ── playSong (needs access to all hooks) ───────────────────────────────────
   const playSong = async (song, forceReload = false) => {
     const audio = audioRef.current;
@@ -231,6 +243,7 @@ export function PlayerProvider({ children }) {
       audio.src = "";
       setCurrentSong(song);
       addToRecent(song);
+      recordListening(song);
       setIsPlaying(true);
       setIsLoadingStream(true);
       setCurrentTime(0);
@@ -253,6 +266,7 @@ export function PlayerProvider({ children }) {
       try {
         setCurrentSong(song);
         addToRecent(song);
+        recordListening(song);
         setIsPlaying(true);
         setCurrentTime(0);
         setDuration(0);

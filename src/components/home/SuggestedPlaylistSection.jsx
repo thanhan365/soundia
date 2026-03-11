@@ -55,13 +55,38 @@ export default function SuggestedPlaylistSection() {
         const fetchPlaylists = async () => {
             try {
                 const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5066/api';
-                const res = await fetch(`${apiUrl}/songs/suggested-playlists`);
-                if (res.ok) {
-                    const data = await res.json();
-                    if (data.success && data.data) {
-                        setPlaylists(data.data);
-                    }
+
+                // Fetch both: external suggested + DB imported playlists
+                const [suggestedRes, dbRes] = await Promise.allSettled([
+                    fetch(`${apiUrl}/songs/suggested-playlists`),
+                    fetch(`${apiUrl}/admin/public-playlists`),
+                ]);
+
+                let external = [];
+                if (suggestedRes.status === 'fulfilled' && suggestedRes.value.ok) {
+                    const data = await suggestedRes.value.json();
+                    if (data.success && data.data) external = data.data;
                 }
+
+                let dbPlaylists = [];
+                if (dbRes.status === 'fulfilled' && dbRes.value.ok) {
+                    const dbData = await dbRes.value.json();
+                    dbPlaylists = (dbData || [])
+                        .filter(p => p.songCount > 0)
+                        .map(p => ({
+                            id: `db_${p.id}`,
+                            dbId: p.id,
+                            name: p.name,
+                            description: `${p.songCount} bài hát`,
+                            cover: p.cover || '',
+                            gradient: 'from-amber-500 to-orange-600',
+                            songCount: p.songCount,
+                            isDbPlaylist: true,
+                        }));
+                }
+
+                // DB playlists first, then external
+                setPlaylists([...dbPlaylists, ...external]);
             } catch (err) {
                 console.error("Failed to fetch suggested playlists:", err);
             } finally {
@@ -72,6 +97,10 @@ export default function SuggestedPlaylistSection() {
     }, []);
 
     const handlePlaylistClick = (playlist) => {
+        if (playlist.isDbPlaylist) {
+            navigate(`/playlist-detail/${playlist.dbId}`);
+            return;
+        }
         const params = new URLSearchParams({
             name: playlist.name,
             q: playlist.searchQuery,

@@ -136,7 +136,7 @@ function AppContent() {
         </header>
 
         {/* Pages */}
-        <div className="flex-1 px-3 sm:px-4 lg:px-6 xl:px-8 py-4 sm:py-6 pb-32 overflow-y-auto">
+        <div className="flex-1 px-3 sm:px-4 lg:px-6 xl:px-8 py-4 sm:py-6 overflow-y-auto">
           <Suspense fallback={<PageLoader />}>
             <Routes>
               <Route path="/" element={<Home />} />
@@ -160,6 +160,7 @@ function AppContent() {
               <Route path="*" element={<NotFound />} />
             </Routes>
           </Suspense>
+          <div className="h-32 flex-shrink-0" />
         </div>
       </main>
 

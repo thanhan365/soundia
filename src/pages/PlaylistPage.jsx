@@ -4,7 +4,8 @@ import { usePlayer } from "../context/PlayerContext";
 import { useToast } from "../context/ToastContext";
 import PlaylistSongRow from "../components/PlaylistSongRow";
 import { HiTrash, HiPlay, HiPause, HiPencil, HiPhotograph, HiClock } from "react-icons/hi";
-import { HiMusicalNote } from "react-icons/hi2";
+import { HiMusicalNote, HiQueueList } from "react-icons/hi2";
+import { FaRandom } from "react-icons/fa";
 
 function parseDuration(str) {
   if (!str) return 0;
@@ -27,7 +28,7 @@ export default function PlaylistPage() {
   const {
     playlists, allSongs, deletePlaylist, removeSongFromPlaylist,
     playSong, currentSong, isPlaying, togglePlay,
-    reorderPlaylistSongs, renamePlaylist, setPlaylistCover
+    reorderPlaylistSongs, renamePlaylist, setPlaylistCover, addToQueue
   } = usePlayer();
   const { showToast } = useToast();
   const [editing, setEditing] = useState(false);
@@ -35,7 +36,7 @@ export default function PlaylistPage() {
   const [dragIdx, setDragIdx] = useState(null);
   const fileInputRef = useRef(null);
 
-  const playlist = playlists.find((pl) => pl.id === id);
+  const playlist = playlists.find((pl) => String(pl.id) === id);
 
   if (!playlist) {
     return (
@@ -55,6 +56,18 @@ export default function PlaylistPage() {
   // Actions
   const playAll = () => { if (songs.length) { playSong(songs[0]); showToast(`Đang phát "${playlist.name}"`, "success"); } };
   const toggleAll = () => { isCurrentPl && isPlaying ? togglePlay() : playAll(); };
+  const shufflePlay = () => {
+    if (!songs.length) return;
+    const shuffled = [...songs].sort(() => Math.random() - 0.5);
+    playSong(shuffled[0]);
+    shuffled.slice(1).forEach(s => addToQueue(s));
+    showToast(`Phát ngẫu nhiên "${playlist.name}"`, "success");
+  };
+  const addAllToQueue = () => {
+    if (!songs.length) return;
+    songs.forEach(s => addToQueue(s));
+    showToast(`Đã thêm ${songs.length} bài vào hàng chờ`, "success");
+  };
   const delPlaylist = () => { deletePlaylist(id); showToast(`Đã xóa "${playlist.name}"`, "info"); navigate("/library"); };
   const removeSong = (sid) => { removeSongFromPlaylist(id, sid); showToast("Đã xóa bài khỏi playlist", "info"); };
   const startEdit = () => {
@@ -179,6 +192,15 @@ export default function PlaylistPage() {
               >
                 {isCurrentPl && isPlaying ? <HiPause className="text-xl" /> : <HiPlay className="text-xl" />}
                 {isCurrentPl && isPlaying ? "Tạm dừng" : "Phát tất cả"}
+              </button>
+
+              <button onClick={shufflePlay} disabled={!songs.length}
+                className="w-10 h-10 rounded-full flex items-center justify-center text-gray-400 hover:text-purple-300 hover:bg-purple-500/10 transition-all disabled:opacity-30" title="Phát ngẫu nhiên">
+                <FaRandom className="text-base" />
+              </button>
+              <button onClick={addAllToQueue} disabled={!songs.length}
+                className="w-10 h-10 rounded-full flex items-center justify-center text-gray-400 hover:text-cyan-300 hover:bg-cyan-500/10 transition-all disabled:opacity-30" title="Thêm tất cả vào hàng chờ">
+                <HiQueueList className="text-lg" />
               </button>
 
               <button onClick={startEdit} className="w-10 h-10 rounded-full flex items-center justify-center text-gray-400 hover:text-white hover:bg-white/10 transition-all" title="Đổi tên">

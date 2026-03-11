@@ -16,6 +16,9 @@ namespace Soundia.Api.Models
 
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
+        // Only true for admin-imported playlists shown on Home
+        public bool IsPublic { get; set; } = false;
+
         // Navigation Properties
         public User User { get; set; } = null!;
         public ICollection<PlaylistSong> PlaylistSongs { get; set; } = new List<PlaylistSong>();

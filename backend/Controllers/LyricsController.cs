@@ -46,9 +46,13 @@ namespace Soundia.Api.Controllers
             cleanTrack = System.Text.RegularExpressions.Regex.Replace(cleanTrack,
                 @"\s*[-–]\s*(Official|MV|Lyric|Audio|Video|Music Video).*", "",
                 System.Text.RegularExpressions.RegexOptions.IgnoreCase).Trim();
-            var cleanArtist = artist.Split(",")[0].Trim();
+            // Clean each artist name, but keep ALL artists for search
+            var artistParts = artist.Split(new[] { ',', '/', '&' }, StringSplitOptions.RemoveEmptyEntries)
+                .Select(a => a.Trim()).Where(a => a.Length > 0).ToList();
+            var cleanArtist = artistParts.FirstOrDefault() ?? artist.Trim();
+            var fullArtist = string.Join(" ", artistParts); // all artists joined
 
-            Console.WriteLine($"[Lyrics] Searching for: {track} - {artist} (clean: {cleanTrack} - {cleanArtist})");
+            Console.WriteLine($"[Lyrics] Searching for: {track} - {artist} (clean: {cleanTrack} - {cleanArtist}, full: {fullArtist})");
 
             // Biến lưu NCT plain lyrics fallback (dùng cuối nếu LRCLib không có synced)
             string? nctFallbackPlain = null;
@@ -249,7 +253,7 @@ namespace Soundia.Api.Controllers
             // Strategy 2: LRCLib search (fuzzy)
             try
             {
-                var q = Uri.EscapeDataString($"{cleanTrack} {cleanArtist}");
+                var q = Uri.EscapeDataString($"{cleanTrack} {fullArtist}");
                 var url = $"https://lrclib.net/api/search?q={q}";
                 var res = await http.GetAsync(url);
                 if (res.IsSuccessStatusCode)
@@ -265,12 +269,25 @@ namespace Soundia.Api.Controllers
                         {
                             if (item.TryGetProperty("syncedLyrics", out var sl) && sl.ValueKind != JsonValueKind.Null)
                             {
-                                best = item;
-                                break;
+                                // Validate: check if result matches our song
+                                var resultArtistS = item.TryGetProperty("artistName", out var raS) ? raS.GetString()?.ToLowerInvariant() ?? "" : "";
+                                var resultTrackS = item.TryGetProperty("trackName", out var rtS) ? rtS.GetString()?.ToLowerInvariant() ?? "" : "";
+                                bool artistMatchS = artistParts.Any(a => resultArtistS.Contains(a.ToLowerInvariant()) || a.ToLowerInvariant().Contains(resultArtistS));
+                                bool trackMatchS = resultTrackS.Contains(cleanTrack.ToLowerInvariant()) || cleanTrack.ToLowerInvariant().Contains(resultTrackS);
+                                if (artistMatchS || trackMatchS)
+                                {
+                                    best = item;
+                                    break;
+                                }
                             }
                             if (best == null && item.TryGetProperty("plainLyrics", out var pl) && pl.ValueKind != JsonValueKind.Null)
                             {
-                                best = item;
+                                // Validate: check if result artist matches at least one of our artists
+                                var resultArtist = item.TryGetProperty("artistName", out var ra) ? ra.GetString()?.ToLowerInvariant() ?? "" : "";
+                                var resultTrack = item.TryGetProperty("trackName", out var rt) ? rt.GetString()?.ToLowerInvariant() ?? "" : "";
+                                bool artistMatch = artistParts.Any(a => resultArtist.Contains(a.ToLowerInvariant()) || a.ToLowerInvariant().Contains(resultArtist));
+                                bool trackMatch = resultTrack.Contains(cleanTrack.ToLowerInvariant()) || cleanTrack.ToLowerInvariant().Contains(resultTrack);
+                                if (artistMatch || trackMatch) best = item;
                             }
                         }
 
