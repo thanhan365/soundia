@@ -61,7 +61,7 @@ export default function ArtistSection() {
   }, []);
 
   const handleArtistClick = (artist) => {
-    navigate(`/search?q=${encodeURIComponent(artist.name)}`);
+    navigate(`/artist-detail/${encodeURIComponent(artist.name)}`);
   };
 
   if (loading) {

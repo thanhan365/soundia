@@ -157,7 +157,7 @@ export function PlayerProvider({ children }) {
       externalArtist: song.artist || '',
       externalCoverUrl: song.cover || song.coverUrl || '',
       durationListened: 0,
-    }).catch(() => {}); // fire-and-forget
+    }).catch(() => { }); // fire-and-forget
   };
 
   // ── playSong (needs access to all hooks) ───────────────────────────────────
@@ -225,19 +225,18 @@ export function PlayerProvider({ children }) {
         const streamUrl = keyResult || resolvedUrl;
 
         if (streamUrl) {
-          console.log(`[Stream] NCT resolved: "${song.title}" by ${song.artist}`);
           song.audio = streamUrl;
           // Lưu nctKey cho lyrics lookup (nếu chưa có)
           if (!song.nctKey && resolvedNctKey) song.nctKey = resolvedNctKey;
         } else {
-          console.log(`[Stream] NCT no match for "${song.title}" by ${song.artist} → YouTube fallback`);
+
           if (isItunesPreview) song.audio = "YT_STREAM";
           // Lưu pre-fetched videoId + matchedDuration để dùng bên dưới
           ytPreFetchedVideoId = ytPreResult?.videoId || null;
           ytMatchedDuration = ytPreResult?.matchedDuration || 0;
         }
       } catch (err) {
-        console.log(`[Stream] NCT resolve failed for "${song.title}":`, err.message, '→ YouTube fallback');
+
         if (isItunesPreview) song.audio = "YT_STREAM";
       }
     }
@@ -264,7 +263,7 @@ export function PlayerProvider({ children }) {
 
       if (ytPreFetchedVideoId) {
         // 🚀 VideoId đã pre-fetch sẵn → skip API call, load tức thì
-        console.log(`[Stream] YouTube pre-fetched videoId: ${ytPreFetchedVideoId} (duration: ${ytMatchedDuration}s) → loading tức thì`);
+
         ytPlayerRef.current?.loadAndPlay(ytQuery, expectedDur, ytPreFetchedVideoId);
       } else {
         ytPlayerRef.current?.loadAndPlay(ytQuery, expectedDur, null, song.title, song.artist);

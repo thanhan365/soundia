@@ -234,76 +234,78 @@ namespace Soundia.Api.Controllers
         {
             try
             {
-                // Scrape NCT homepage để lấy nghệ sĩ trending
                 using var client = new System.Net.Http.HttpClient();
                 client.DefaultRequestHeaders.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64)");
-                
+
                 var artists = new List<object>();
                 var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-                
-                // 1) Lấy artist từ top chart (reuse nct-top data)
+
+                // 1) Lấy artist từ top chart
                 try
                 {
                     var chartUrl = "https://graph.nhaccuatui.com/api/v1/playlist/charts/1-5-d64-2026?key=1-5-d64-2026&isShowLoading=false";
                     var json = await client.GetStringAsync(chartUrl);
                     using var doc = System.Text.Json.JsonDocument.Parse(json);
                     var items = doc.RootElement.GetProperty("data").GetProperty("items");
-                    
+
                     foreach (var item in items.EnumerateArray())
                     {
-                        var artistName = item.TryGetProperty("artistName", out var an) ? an.GetString() : null;
-                        if (string.IsNullOrEmpty(artistName)) continue;
-                        
-                        // Tách multi-artist (ví dụ "Sơn Tùng M-TP, Binz")
-                        var primaryArtist = artistName.Split(',')[0].Trim();
-                        if (seen.Contains(primaryArtist)) continue;
-                        seen.Add(primaryArtist);
-                        
-                        var image = item.TryGetProperty("image", out var img) ? img.GetString() : null;
-                        var artistKey = item.TryGetProperty("artist", out var artistArr) && artistArr.ValueKind == System.Text.Json.JsonValueKind.Array && artistArr.GetArrayLength() > 0
-                            ? (artistArr[0].TryGetProperty("key", out var ak) ? ak.GetString() : null) : null;
-                        
-                        var artistImage = artistArr.ValueKind == System.Text.Json.JsonValueKind.Array && artistArr.GetArrayLength() > 0
-                            ? (artistArr[0].TryGetProperty("image", out var ai) ? ai.GetString() : null) : null;
-                        
-                        artists.Add(new {
-                            id = artistKey ?? primaryArtist,
-                            name = primaryArtist,
-                            picture = artistImage ?? image ?? ""
-                        });
+                        if (item.TryGetProperty("artist", out var artistArr) && artistArr.ValueKind == System.Text.Json.JsonValueKind.Array)
+                        {
+                            foreach (var a in artistArr.EnumerateArray())
+                            {
+                                var aName = a.TryGetProperty("name", out var an) ? an.GetString() ?? "" : "";
+                                var aImage = a.TryGetProperty("image", out var ai) ? ai.GetString() ?? "" : "";
+                                var aKey = a.TryGetProperty("key", out var ak) ? ak.GetString() ?? "" : "";
+
+                                if (string.IsNullOrEmpty(aName) || string.IsNullOrEmpty(aImage) || seen.Contains(aName))
+                                    continue;
+
+                                seen.Add(aName);
+                                artists.Add(new { id = aKey, name = aName, picture = aImage });
+                            }
+                        }
                     }
                 }
-                catch { /* best effort */ }
-                
-                // 2) Bổ sung thêm nghệ sĩ VN nổi bật (nếu chưa đủ 16)
-                var extraArtists = new (string name, string key, string image)[]
+                catch { }
+
+                // 2) Bổ sung từ trending search
+                if (artists.Count < 16)
                 {
-                    ("Sơn Tùng M-TP", "3086972", "https://avatar-ex-swe.nixcdn.com/song/2024/06/12/3/a/8/2/1718191316723.jpg"),
-                    ("HIEUTHUHAI", "16717489", "https://avatar-ex-swe.nixcdn.com/singer/avatar/2024/02/04/d/6/1/3/1707033093906.jpg"),
-                    ("Phan Mạnh Quỳnh", "3143752", "https://avatar-ex-swe.nixcdn.com/singer/avatar/2023/09/20/f/f/f/e/1695181003746.jpg"),
-                    ("Đức Phúc", "3068698", "https://avatar-ex-swe.nixcdn.com/singer/avatar/2023/03/24/4/c/1/f/1679629085068.jpg"),
-                    ("Vũ.", "14993651", "https://avatar-ex-swe.nixcdn.com/singer/avatar/2022/11/28/b/6/5/e/1669609012297.jpg"),
-                    ("Hoàng Thùy Linh", "65358", "https://avatar-ex-swe.nixcdn.com/singer/avatar/2023/07/19/8/7/0/1/1689752508023.jpg"),
-                    ("Trúc Nhân", "3038580", "https://avatar-ex-swe.nixcdn.com/singer/avatar/2024/01/12/d/2/d/c/1705041093249.jpg"),
-                    ("Tóc Tiên", "69654", "https://avatar-ex-swe.nixcdn.com/singer/avatar/2022/12/29/7/6/2/b/1672296143073.jpg"),
-                    ("Erik", "14792551", "https://avatar-ex-swe.nixcdn.com/singer/avatar/2023/05/05/c/0/7/6/1683268505645.jpg"),
-                    ("Bích Phương", "3036468", "https://avatar-ex-swe.nixcdn.com/singer/avatar/2023/09/15/9/2/7/1/1694776023618.jpg"),
-                    ("Jack - J97", "16645919", "https://avatar-ex-swe.nixcdn.com/singer/avatar/2023/06/27/4/5/9/a/1687856055773.jpg"),
-                    ("Mỹ Tâm", "65291", "https://avatar-ex-swe.nixcdn.com/singer/avatar/2023/08/14/8/a/7/9/1692004010506.jpg"),
-                    ("Hà Anh Tuấn", "65262", "https://avatar-ex-swe.nixcdn.com/singer/avatar/2023/05/25/f/3/d/1/1684985043853.jpg"),
-                    ("Karik", "3108262", "https://avatar-ex-swe.nixcdn.com/singer/avatar/2023/03/08/1/6/1/9/1678266080155.jpg"),
-                    ("MIN", "3064530", "https://avatar-ex-swe.nixcdn.com/singer/avatar/2023/10/06/7/6/7/2/1696587009843.jpg"),
-                    ("Đen Vâu", "14832691", "https://avatar-ex-swe.nixcdn.com/singer/avatar/2023/12/08/4/c/0/7/1702005087825.jpg"),
-                };
-                
-                foreach (var ea in extraArtists)
-                {
-                    if (artists.Count >= 16) break;
-                    if (seen.Contains(ea.name)) continue;
-                    seen.Add(ea.name);
-                    artists.Add(new { id = ea.key, name = ea.name, picture = ea.image });
+                    try
+                    {
+                        var trendingUrl = "https://graph.nhaccuatui.com/api/v1/search/song?keyword=nhạc%20trẻ%20hot&pageindex=1&pagesize=30&correct=false";
+                        var json = await client.GetStringAsync(trendingUrl);
+                        using var doc = System.Text.Json.JsonDocument.Parse(json);
+                        var data = doc.RootElement.GetProperty("data");
+
+                        if (data.TryGetProperty("songs", out var songsArr))
+                        {
+                            foreach (var s in songsArr.EnumerateArray())
+                            {
+                                if (artists.Count >= 16) break;
+                                if (s.TryGetProperty("artist", out var artistArr))
+                                {
+                                    foreach (var a in artistArr.EnumerateArray())
+                                    {
+                                        if (artists.Count >= 16) break;
+                                        var aName = a.TryGetProperty("name", out var an) ? an.GetString() ?? "" : "";
+                                        var aImage = a.TryGetProperty("image", out var ai) ? ai.GetString() ?? "" : "";
+                                        var aKey = a.TryGetProperty("key", out var ak) ? ak.GetString() ?? "" : "";
+
+                                        if (string.IsNullOrEmpty(aName) || string.IsNullOrEmpty(aImage) || seen.Contains(aName))
+                                            continue;
+
+                                        seen.Add(aName);
+                                        artists.Add(new { id = aKey, name = aName, picture = aImage });
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    catch { }
                 }
-                
+
                 return Ok(new { success = true, data = artists });
             }
             catch (System.Exception ex)
@@ -524,6 +526,104 @@ namespace Soundia.Api.Controllers
             catch (System.Exception ex)
             {
                 return StatusCode(500, new { message = "Error fetching NCT playlist", details = ex.Message });
+            }
+        }
+
+        // GET /api/songs/nct-artist-songs?name=ArtistName&limit=20
+        [HttpGet("nct-artist-songs")]
+        public async Task<ActionResult> NctArtistSongs([FromQuery] string name, [FromQuery] int limit = 20)
+        {
+            if (string.IsNullOrWhiteSpace(name))
+                return BadRequest(new { message = "Artist name is required" });
+
+            try
+            {
+                using var http = new System.Net.Http.HttpClient();
+                http.DefaultRequestHeaders.Add("User-Agent", "Mozilla/5.0");
+                var json = await http.GetStringAsync(
+                    $"https://graph.nhaccuatui.com/api/v1/search/song?keyword={System.Net.WebUtility.UrlEncode(name)}&pageindex=1&pagesize={limit}&correct=false");
+                using var doc = System.Text.Json.JsonDocument.Parse(json);
+                var data = doc.RootElement.GetProperty("data");
+
+                string artistImage = "";
+                int followers = 0;
+                var tracks = new List<object>();
+
+                if (data.TryGetProperty("songs", out var songsArr))
+                {
+                    bool artistFound = false;
+                    foreach (var s in songsArr.EnumerateArray())
+                    {
+                        var key = s.TryGetProperty("key", out var k) ? k.GetString() ?? "" : "";
+                        var title = s.TryGetProperty("name", out var n) ? n.GetString() ?? "" : "";
+                        var artistName2 = s.TryGetProperty("artistName", out var an) ? an.GetString() ?? "" : "";
+                        var image = s.TryGetProperty("image", out var img) ? img.GetString() ?? "" : "";
+                        var dur = s.TryGetProperty("duration", out var d) ? d.GetInt32() : 0;
+
+                        // Extract 128kbps stream URL
+                        string streamUrl = "";
+                        if (s.TryGetProperty("streamURL", out var streams))
+                        {
+                            foreach (var st in streams.EnumerateArray())
+                            {
+                                if (st.TryGetProperty("type", out var t) && t.GetString() == "128"
+                                    && st.TryGetProperty("stream", out var stUrl))
+                                {
+                                    streamUrl = stUrl.GetString() ?? "";
+                                    break;
+                                }
+                            }
+                        }
+
+                        var proxiedUrl = !string.IsNullOrEmpty(streamUrl)
+                            ? $"/api/stream/proxy-audio?url={System.Net.WebUtility.UrlEncode(streamUrl)}"
+                            : "";
+
+                        tracks.Add(new
+                        {
+                            id = $"nct_{key}",
+                            title,
+                            artist = artistName2,
+                            cover = image,
+                            duration = dur,
+                            audio = !string.IsNullOrEmpty(proxiedUrl) ? proxiedUrl : "YT_STREAM",
+                            nctKey = key,
+                            source = "nct"
+                        });
+
+                        // Get artist info from first song
+                        if (!artistFound && s.TryGetProperty("artist", out var artistArr))
+                        {
+                            foreach (var a in artistArr.EnumerateArray())
+                            {
+                                var aName = a.TryGetProperty("name", out var anm) ? anm.GetString() : "";
+                                if (aName != null && aName.Equals(name, StringComparison.OrdinalIgnoreCase))
+                                {
+                                    artistImage = a.TryGetProperty("image", out var ai) ? ai.GetString() ?? "" : "";
+                                    followers = a.TryGetProperty("totalFollow", out var tf) ? tf.GetInt32() : 0;
+                                    artistFound = true;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                }
+
+                return Ok(new
+                {
+                    success = true,
+                    data = new
+                    {
+                        artistName = name,
+                        artistImage,
+                        followers,
+                        tracks
+                    }
+                });
+            }
+            catch (System.Exception ex)
+            {
+                return StatusCode(500, new { message = "Error fetching artist songs", details = ex.Message });
             }
         }
 
@@ -892,6 +992,103 @@ namespace Soundia.Api.Controllers
             return Ok(new { success = true, streamUrl = proxyUrl });
         }
 
+        [HttpGet("nct-song-detail/{key}")]
+        public async Task<ActionResult> NctSongDetail(string key)
+        {
+            try
+            {
+                using var http = new System.Net.Http.HttpClient();
+                http.DefaultRequestHeaders.Add("User-Agent", "Mozilla/5.0");
+
+                // Try Graph API first
+                string title = "", artist = "Unknown", cover = "";
+                int duration = 0;
+                string nctKey = key;
+                bool graphOk = false;
+
+                try
+                {
+                    var json = await http.GetStringAsync($"https://graph.nhaccuatui.com/api/v1/song?key={key}");
+                    using var doc = System.Text.Json.JsonDocument.Parse(json);
+                    var root = doc.RootElement;
+                    if (root.TryGetProperty("data", out var data))
+                    {
+                        title = data.TryGetProperty("title", out var t) ? t.GetString() ?? "" : "";
+                        artist = data.TryGetProperty("artistName", out var a) ? a.GetString() ?? "Unknown" :
+                                 data.TryGetProperty("artist", out var a2) ? a2.GetString() ?? "Unknown" : "Unknown";
+                        cover = data.TryGetProperty("imageUrl", out var img) ? img.GetString() ?? "" :
+                                data.TryGetProperty("thumbnail", out var th) ? th.GetString() ?? "" : "";
+                        duration = data.TryGetProperty("duration", out var dur) ? dur.GetInt32() : 0;
+                        graphOk = true;
+                    }
+                }
+                catch { /* Graph API failed, try scraping */ }
+
+                // Fallback: scrape NCT page for title/artist, then use NCT search
+                if (!graphOk)
+                {
+                    try
+                    {
+                        var html = await http.GetStringAsync($"https://www.nhaccuatui.com/song/{key}");
+                        // Extract from <title>TITLE - ARTIST - mp3 download | lyric - NhacCuaTui</title>
+                        var titleMatch = System.Text.RegularExpressions.Regex.Match(html, @"<title>(.+?)\s*-\s*mp3\s*download", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+                        if (titleMatch.Success)
+                        {
+                            var parts = titleMatch.Groups[1].Value.Split(new[] { " - " }, 2, StringSplitOptions.None);
+                            title = parts[0].Trim();
+                            artist = parts.Length > 1 ? parts[1].Trim() : "Unknown";
+                        }
+                        // Extract og:image for cover
+                        var ogImg = System.Text.RegularExpressions.Regex.Match(html, @"og:image""\s*content=""([^""]+)""");
+                        if (ogImg.Success) cover = ogImg.Groups[1].Value;
+
+                        // Search NCT to find the real key + stream
+                        if (!string.IsNullOrEmpty(title))
+                        {
+                            var searchResults = await _nctApi.SearchSongsAsync($"{title} {artist}", 1, 5);
+                            var match = searchResults.FirstOrDefault();
+                            if (match != null)
+                            {
+                                nctKey = match.Key;
+                                if (string.IsNullOrEmpty(cover)) cover = match.Image ?? "";
+                                duration = match.Duration;
+                            }
+                        }
+                    }
+                    catch { }
+                }
+
+                if (string.IsNullOrEmpty(title))
+                    return NotFound(new { message = "Song not found" });
+
+                // Get stream URL
+                var streamUrl = await _nctApi.GetStreamUrlAsync(nctKey);
+                var proxyUrl = !string.IsNullOrEmpty(streamUrl)
+                    ? $"/api/stream/proxy-audio?url={System.Net.WebUtility.UrlEncode(streamUrl)}"
+                    : "";
+
+                return Ok(new
+                {
+                    success = true,
+                    data = new
+                    {
+                        id = $"nct_{nctKey}",
+                        title,
+                        artist,
+                        cover,
+                        duration,
+                        audio = !string.IsNullOrEmpty(proxyUrl) ? proxyUrl : "YT_STREAM",
+                        nctKey,
+                        source = "nct"
+                    }
+                });
+            }
+            catch (System.Exception ex)
+            {
+                return StatusCode(500, new { message = "Error fetching NCT song", details = ex.Message });
+            }
+        }
+
         [HttpGet("nct-resolve")]
         public async Task<ActionResult> NctResolve([FromQuery] string title, [FromQuery] string artist)
         {
@@ -936,24 +1133,6 @@ namespace Soundia.Api.Controllers
             return Ok(new { success = true, data = top100 });
         }
 
-        [HttpGet("nct-artist/{artistId}/songs")]
-        public async Task<ActionResult> NctArtistSongs(string artistId, [FromQuery] int limit = 20)
-        {
-            var songs = await _nctApi.GetArtistSongsAsync(artistId, 1, limit);
-            var result = songs.Select(s => new
-            {
-                id = $"nct_{s.Key}",
-                title = s.Name,
-                artist = s.ArtistName,
-                cover = s.Image,
-                audio = "YT_STREAM",
-                isExternal = true,
-                source = "nct",
-                duration = s.Duration,
-                nctKey = s.Key,
-            });
-            return Ok(new { success = true, data = result, total = songs.Count });
-        }
 
         [HttpGet("nct-similar/{key}")]
         public async Task<ActionResult> NctSimilar(string key, [FromQuery] int limit = 10)
@@ -1147,6 +1326,30 @@ namespace Soundia.Api.Controllers
             await _context.SaveChangesAsync();
 
             return Ok(new { message = $"Đã xóa {staticSongs.Count} bài hát tĩnh.", count = staticSongs.Count });
+        }
+
+        // ── Search Local Songs (admin-imported) ──────────────────────────────
+        [HttpGet("search-local")]
+        public async Task<ActionResult> SearchLocal([FromQuery] string q, [FromQuery] int limit = 10)
+        {
+            if (string.IsNullOrWhiteSpace(q)) return Ok(new { data = Array.Empty<object>() });
+            var keyword = q.Trim().ToLower();
+            var songs = await _context.Songs
+                .Where(s => s.Title.ToLower().Contains(keyword) || s.Artist.ToLower().Contains(keyword))
+                .OrderByDescending(s => s.Id)
+                .Take(limit)
+                .Select(s => new
+                {
+                    id = $"local_{s.Id}",
+                    s.Title,
+                    s.Artist,
+                    s.Duration,
+                    cover = s.CoverUrl ?? "",
+                    audio = s.AudioUrl ?? "YT_STREAM",
+                    source = "local"
+                })
+                .ToListAsync();
+            return Ok(new { data = songs });
         }
     }
 }

@@ -279,14 +279,33 @@ namespace Soundia.Api.Controllers
                 return NotFound(new { success = false, message = "Không tìm thấy playlist" });
             }
 
-            // Xóa tất cả các bài hát trong playlist trước
+            // Tìm bài hát CHỈ nằm trong playlist này (không nằm ở playlist khác)
+            var songIds = playlist.PlaylistSongs.Select(ps => ps.SongId).ToList();
+            var orphanSongIds = new List<int>();
+            foreach (var songId in songIds)
+            {
+                var otherCount = await _context.PlaylistSongs
+                    .CountAsync(ps => ps.SongId == songId && ps.PlaylistId != id);
+                if (otherCount == 0) orphanSongIds.Add(songId);
+            }
+
+            // Xóa liên kết PlaylistSongs
             _context.PlaylistSongs.RemoveRange(playlist.PlaylistSongs);
             
+            // Xóa bài hát orphan
+            if (orphanSongIds.Count > 0)
+            {
+                var orphanSongs = await _context.Songs
+                    .Where(s => orphanSongIds.Contains(s.Id))
+                    .ToListAsync();
+                _context.Songs.RemoveRange(orphanSongs);
+            }
+
             // Xóa playlist
             _context.Playlists.Remove(playlist);
             await _context.SaveChangesAsync();
 
-            return Ok(new { success = true, message = "Đã xóa playlist thành công" });
+            return Ok(new { success = true, message = $"Đã xóa playlist và {orphanSongIds.Count} bài hát trong playlist đó." });
         }
         // ── Rename Public Playlist ──────────────────────────────────────────
         [HttpPut("public-playlists/{id}/rename")]

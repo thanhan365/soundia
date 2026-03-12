@@ -67,7 +67,7 @@ export default function SearchPage() {
         icon={HiSearch}
         label="Tìm kiếm"
         title={<>Khám phá <span className="text-neon text-glow">Âm nhạc</span></>}
-        description="Kết quả từ iTunes & NhacCuaTui."
+        description="Tìm kiếm bài hát, nghệ sĩ yêu thích của bạn."
       />
       
       {searchQuery && (

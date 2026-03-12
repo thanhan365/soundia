@@ -1,62 +1,211 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { HiArrowLeft } from "react-icons/hi";
-import { FaPlay, FaPause, FaHeart, FaEllipsisH } from "react-icons/fa";
+import { FaPlay, FaPause, FaRandom } from "react-icons/fa";
+import { HiPlay, HiPause, HiHeart, HiDotsHorizontal, HiClock } from "react-icons/hi";
+import { HiQueueList } from "react-icons/hi2";
 import { usePlayer } from "../context/PlayerContext";
-import { searchItunes } from "../services/iTunesService";
+import { useToast } from "../context/ToastContext";
+import { useClickOutside } from "../hooks/useClickOutside";
+import SongContextMenu from "../components/SongContextMenu";
+import axios from "axios";
 
+const API = import.meta.env.VITE_API_URL || "http://localhost:5066/api";
+
+function formatDur(sec) {
+  if (!sec || sec <= 0) return "--:--";
+  const m = Math.floor(sec / 60);
+  const s = sec % 60;
+  return `${m}:${s.toString().padStart(2, "0")}`;
+}
+
+function formatTotalDur(sec) {
+  const h = Math.floor(sec / 3600);
+  const m = Math.floor((sec % 3600) / 60);
+  if (h > 0) return `${h} giờ ${m} phút`;
+  return `${m} phút`;
+}
+
+// ─── Song Row Component (like PlaylistSongRow but without drag/remove) ───
+function ArtistSongRow({ song, index, isPlaying, isCurrent, onPlay }) {
+  const { toggleFavorite, isFavorite, addToQueue } = usePlayer();
+  const { showToast } = useToast();
+  const [menuPos, setMenuPos] = useState(null);
+  const menuRef = useRef(null);
+  const liked = isFavorite(song.id);
+
+  useClickOutside(menuRef, () => setMenuPos(null));
+
+  const handleMenu = useCallback((e) => {
+    e.stopPropagation();
+    setMenuPos({ x: e.clientX, y: e.clientY });
+  }, []);
+
+  return (
+    <div
+      onClick={() => onPlay(song)}
+      className={`
+        group flex items-center gap-2 sm:gap-3 px-2 sm:px-3 py-2 rounded-lg transition-all duration-200 relative cursor-pointer
+        ${isCurrent ? "bg-neon/10 border border-neon/20 shadow-neon-sm" : "hover:bg-white/5 border border-transparent"}
+      `}
+    >
+      {/* Index / playing indicator */}
+      <div className="w-6 sm:w-8 flex items-center justify-center flex-shrink-0">
+        {isCurrent && isPlaying ? (
+          <div className="flex items-end gap-[2px] h-4">
+            <span className="w-[2px] sm:w-[3px] bg-neon rounded-full animate-bounce" style={{ height: "60%", animationDelay: "0ms" }} />
+            <span className="w-[2px] sm:w-[3px] bg-neon rounded-full animate-bounce" style={{ height: "100%", animationDelay: "150ms" }} />
+            <span className="w-[2px] sm:w-[3px] bg-neon rounded-full animate-bounce" style={{ height: "40%", animationDelay: "300ms" }} />
+          </div>
+        ) : (
+          <span className={`text-[10px] sm:text-xs ${isCurrent ? "text-neon font-bold" : "text-gray-600"}`}>
+            {String(index + 1).padStart(2, "0")}
+          </span>
+        )}
+      </div>
+
+      {/* Cover + Play overlay */}
+      <div className="relative w-9 h-9 sm:w-10 sm:h-10 flex-shrink-0 group/cover">
+        <img src={song.cover} alt={song.title} className="w-full h-full rounded-lg object-cover" />
+        <div className={`absolute inset-0 transition-all duration-300 flex items-center justify-center rounded-lg ${isCurrent && isPlaying ? "bg-black/40" : "bg-black/0 group-hover/cover:bg-black/30"}`}>
+          <div className="cursor-pointer w-full h-full flex items-center justify-center">
+            {isCurrent && isPlaying ? (
+              <div className="flex items-center gap-[2px]">
+                <span className="w-[2px] bg-neon rounded-full animate-bounce" style={{ height: "8px", animationDelay: "0ms" }} />
+                <span className="w-[2px] bg-neon rounded-full animate-bounce" style={{ height: "12px", animationDelay: "150ms" }} />
+                <span className="w-[2px] bg-neon rounded-full animate-bounce" style={{ height: "6px", animationDelay: "300ms" }} />
+              </div>
+            ) : (
+              <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-neon flex items-center justify-center transform scale-0 group-hover/cover:scale-100 transition-transform duration-300 shadow-neon">
+                <svg className="w-3.5 h-3.5 text-dark ml-0.5" fill="currentColor" viewBox="0 0 20 20"><path d="M6.3 2.841A1.5 1.5 0 004 4.11V15.89a1.5 1.5 0 002.3 1.269l9.344-5.89a1.5 1.5 0 000-2.538L6.3 2.84z"/></svg>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Title + Artist */}
+      <div className="flex-1 min-w-0">
+        <p className={`text-[12px] sm:text-sm lg:text-base font-semibold truncate ${isCurrent ? "text-neon" : "text-white"}`}>
+          {song.title}
+        </p>
+        <p className="text-[10px] sm:text-xs lg:text-sm text-gray-400 truncate">{song.artist}</p>
+      </div>
+
+      {/* Duration */}
+      <span className="text-[10px] sm:text-xs lg:text-sm text-gray-600 w-10 sm:w-12 text-right hidden sm:block">{formatDur(song.duration)}</span>
+
+      {/* Actions */}
+      <div className="flex items-center gap-0.5 sm:gap-1 flex-shrink-0">
+        {/* Like */}
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            toggleFavorite(song.id);
+            showToast(liked ? "Đã bỏ yêu thích" : "Đã thêm yêu thích", liked ? "info" : "success");
+          }}
+          className={`p-1 sm:p-1.5 rounded-full transition-all ${liked ? "text-red-500" : "text-gray-600 sm:opacity-0 sm:group-hover:opacity-100 hover:text-white"}`}
+        >
+          <HiHeart className="text-[12px] sm:text-sm lg:text-base" />
+        </button>
+
+        {/* 3 dots menu */}
+        <button
+          onClick={handleMenu}
+          className="p-1 sm:p-1.5 rounded-full transition-all text-gray-600 sm:opacity-0 sm:group-hover:opacity-100 hover:text-white"
+        >
+          <HiDotsHorizontal className="text-[12px] sm:text-sm lg:text-base" />
+        </button>
+      </div>
+
+      {/* Context Menu */}
+      {menuPos && (
+        <div ref={menuRef}>
+          <SongContextMenu
+            song={song}
+            position={menuPos}
+            onClose={() => setMenuPos(null)}
+          />
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Main Artist Detail Page ───
 export default function ArtistDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { playSong, currentSong, isPlaying, togglePlay } = usePlayer();
+  const { playSong, currentSong, isPlaying, togglePlay, setQueue, addToQueue } = usePlayer();
+  const { showToast } = useToast();
+  const artistName = decodeURIComponent(id);
 
   const [artist, setArtist] = useState(null);
   const [topTracks, setTopTracks] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // Parse artist name from ID (format: "itunes_artist_{id}" or name-based)
-  const actualId = id.startsWith("itunes_artist_") ? id.replace("itunes_artist_", "") : id;
-
   useEffect(() => {
-    const fetchArtistData = async () => {
+    const fetchArtistSongs = async () => {
       setLoading(true);
       try {
-        // Dùng iTunes search để tìm bài hát của nghệ sĩ
-        // Thử tìm theo tên từ URL hoặc search lại
-        const results = await searchItunes(decodeURIComponent(actualId));
-
-        if (results?.tracks?.length > 0) {
-          const firstTrack = results.tracks[0];
+        const res = await axios.get(`${API}/songs/nct-artist-songs`, {
+          params: { name: artistName, limit: 20 }
+        });
+        const data = res.data;
+        if (data.success && data.data) {
           setArtist({
-            name: firstTrack.artist,
-            picture: firstTrack.cover,
-            fans: 0
+            name: data.data.artistName,
+            picture: data.data.artistImage,
+            followers: data.data.followers || 0
           });
-          setTopTracks(results.tracks);
+          setTopTracks(data.data.tracks || []);
         }
       } catch (e) {
-        console.error(e);
+        console.error("Error fetching artist songs:", e);
       } finally {
         setLoading(false);
       }
     };
+    if (artistName) fetchArtistSongs();
+  }, [artistName]);
 
-    if (actualId) fetchArtistData();
-  }, [actualId]);
+  const isCurrentArtist = topTracks.some(t => t.id === currentSong?.id);
 
-  const handlePlayArtist = () => {
+  const playAll = () => {
     if (topTracks.length > 0) {
-      if (currentSong && topTracks.some(t => t.id === currentSong.id)) {
-        togglePlay();
-      } else {
-        playSong(topTracks[0]);
-      }
+      playSong(topTracks[0]);
+      setQueue(topTracks);
+      showToast(`Đang phát bài hát của ${artist?.name}`, "success");
     }
   };
 
-  const isArtistPlaying = () => {
-    return isPlaying && currentSong && topTracks.some(t => t.id === currentSong.id);
+  const toggleAll = () => {
+    isCurrentArtist && isPlaying ? togglePlay() : playAll();
   };
+
+  const shufflePlay = () => {
+    if (!topTracks.length) return;
+    const shuffled = [...topTracks].sort(() => Math.random() - 0.5);
+    playSong(shuffled[0]);
+    setQueue(shuffled);
+    showToast(`Phát ngẫu nhiên ${artist?.name}`, "success");
+  };
+
+  const addAllToQueue = () => {
+    if (!topTracks.length) return;
+    topTracks.forEach(s => addToQueue(s));
+    showToast(`Đã thêm ${topTracks.length} bài vào hàng chờ`, "success");
+  };
+
+  const handlePlayTrack = (song) => {
+    if (currentSong?.id === song.id) {
+      togglePlay();
+    } else {
+      playSong(song);
+      setQueue(topTracks);
+    }
+  };
+
+  const totalDuration = topTracks.reduce((sum, s) => sum + (s.duration || 0), 0);
 
   if (loading) {
     return (
@@ -79,9 +228,9 @@ export default function ArtistDetail() {
   }
 
   return (
-    <div className="pb-32 px-4 md:px-8 mt-4">
-      {/* Header */}
-      <div className="relative w-full h-64 md:h-80 rounded-3xl overflow-hidden mb-8 shadow-2xl group flex items-end">
+    <div className="-mx-2 sm:-mx-4 lg:-mx-8 -mt-6">
+      {/* ═══════════ HERO BANNER ═══════════ */}
+      <div className="relative w-full h-64 md:h-80 overflow-hidden group">
         {/* Background Cover */}
         <div
           className="absolute inset-0 bg-cover bg-center transition-transform duration-1000 group-hover:scale-105"
@@ -89,112 +238,75 @@ export default function ArtistDetail() {
         />
         <div className="absolute inset-0 bg-gradient-to-t from-[#050511] via-[#050511]/60 to-transparent" />
 
-        {/* Content */}
-        <div className="relative z-10 p-6 md:p-10 w-full flex flex-col md:flex-row items-end gap-6 justify-between">
-          <div>
-            <div className="flex items-center gap-2 mb-2 text-purple-300 text-sm font-semibold uppercase tracking-widest">
-              <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
-              Nghệ Sĩ Được Xác Minh
-            </div>
-            <h1 className="text-5xl md:text-7xl font-black text-white drop-shadow-lg mb-2">
-              {artist.name}
-            </h1>
-            <p className="text-gray-300">
-              {new Intl.NumberFormat('vi-VN').format(artist.fans)} người theo dõi
-            </p>
+        {/* Content overlay */}
+        <div className="relative z-10 h-full flex flex-col justify-end p-6 md:p-10">
+          <div className="flex items-center gap-2 mb-2 text-purple-300 text-sm font-semibold uppercase tracking-widest">
+            <span className="w-2 h-2 rounded-full bg-purple-500 animate-pulse" />
+            Nghệ Sĩ
           </div>
-
-          {/* Action Buttons */}
-          <div className="hidden md:flex items-center gap-4">
-            <button
-              onClick={handlePlayArtist}
-              className="bg-gradient-to-r from-purple-600 to-pink-500 hover:from-purple-500 hover:to-pink-400 text-white rounded-full p-4 shadow-[0_0_20px_rgba(236,72,153,0.4)] transition-all duration-300 hover:scale-105"
-            >
-              {isArtistPlaying() ? <FaPause className="w-6 h-6" /> : <FaPlay className="w-6 h-6 ml-1" />}
-            </button>
-            <button className="border border-white/20 hover:bg-white/10 text-white rounded-full p-4 transition-all duration-300">
-              <FaHeart className="w-6 h-6" />
-            </button>
-            <button className="text-gray-400 hover:text-white transition-colors">
-              <FaEllipsisH className="w-6 h-6" />
-            </button>
-          </div>
+          <h1 className="text-4xl sm:text-5xl md:text-7xl font-black text-white drop-shadow-lg mb-2">
+            {artist.name}
+          </h1>
+          <p className="text-[13px] text-gray-300">
+            {artist.followers > 0 && (
+              <>
+                <span className="font-semibold text-white">{new Intl.NumberFormat('vi-VN').format(artist.followers)}</span> người theo dõi
+                <span className="mx-2 text-gray-500">•</span>
+              </>
+            )}
+            <span className="font-semibold text-white">{topTracks.length}</span> bài hát
+            <span className="mx-2 text-gray-500">•</span>
+            <span>{formatTotalDur(totalDuration)}</span>
+          </p>
         </div>
       </div>
 
-      {/* Mobile Actions */}
-      <div className="flex items-center gap-4 mb-8 md:hidden px-2">
+      {/* Action buttons bar */}
+      <div className="px-4 sm:px-6 lg:px-10 py-4 flex items-center gap-3">
         <button
-          onClick={handlePlayArtist}
-          className="bg-gradient-to-r from-purple-600 to-pink-500 text-white rounded-full p-4 shadow-lg transition-transform active:scale-95"
+          onClick={toggleAll}
+          disabled={!topTracks.length}
+          className="flex items-center gap-2 sm:gap-2.5 px-5 py-2.5 sm:px-7 sm:py-3 bg-neon text-dark rounded-full font-bold text-xs sm:text-sm hover:brightness-110 transition-all disabled:opacity-30 disabled:cursor-not-allowed shadow-neon-sm active:scale-95"
         >
-          {isArtistPlaying() ? <FaPause className="w-5 h-5" /> : <FaPlay className="w-5 h-5 ml-1" />}
+          {isCurrentArtist && isPlaying ? <HiPause className="text-xl" /> : <HiPlay className="text-xl" />}
+          {isCurrentArtist && isPlaying ? "Tạm dừng" : "Phát tất cả"}
         </button>
-        <button className="border border-white/20 text-white rounded-full p-4">
-          <FaHeart className="w-5 h-5" />
+
+        <button onClick={shufflePlay} disabled={!topTracks.length}
+          className="w-10 h-10 rounded-full flex items-center justify-center text-gray-400 hover:text-purple-300 hover:bg-purple-500/10 transition-all disabled:opacity-30" title="Phát ngẫu nhiên">
+          <FaRandom className="text-base" />
+        </button>
+        <button onClick={addAllToQueue} disabled={!topTracks.length}
+          className="w-10 h-10 rounded-full flex items-center justify-center text-gray-400 hover:text-cyan-300 hover:bg-cyan-500/10 transition-all disabled:opacity-30" title="Thêm tất cả vào hàng chờ">
+          <HiQueueList className="text-lg" />
         </button>
       </div>
 
-      {/* Top Tracks List */}
-      <div>
-        <h2 className="text-2xl font-bold text-white mb-6 flex items-center gap-3">
-          <span className="w-1.5 h-8 bg-gradient-to-b from-blue-400 to-emerald-400 rounded-full" />
-          Bài Hát Phổ Biến
-        </h2>
+      {/* ═══════════ SONG TABLE ═══════════ */}
+      <div className="px-4 sm:px-6 lg:px-10 mt-2">
+        {/* Column headers */}
+        <div className="flex items-center gap-3 px-3 py-3 border-b border-white/5 mb-2">
+          <div className="w-8 text-center text-[10px] font-bold text-gray-500 uppercase tracking-wider">#</div>
+          <div className="w-10" />
+          <div className="flex-1 text-[10px] font-bold text-gray-500 uppercase tracking-wider">Tiêu đề</div>
+          <div className="w-12 text-right hidden sm:flex items-center justify-end">
+            <HiClock className="text-gray-500 text-xs" />
+          </div>
+          <div className="w-20 hidden sm:block" />
+        </div>
 
-        <div className="space-y-1">
-          {topTracks.map((song, index) => {
-            const isActive = currentSong?.id === song.id;
-            const isActivePlaying = isActive && isPlaying;
-            return (
-              <div
-                key={song.id}
-                onClick={() => {
-                  if (isActive) togglePlay();
-                  else playSong(song);
-                }}
-                className={`group flex items-center gap-4 p-3 rounded-xl cursor-pointer transition-all duration-200 ${isActive ? "bg-white/10" : "hover:bg-white/5"
-                  }`}
-              >
-                {/* Index / Play indicator */}
-                <div className="w-8 text-center flex-shrink-0 text-gray-500 font-medium">
-                  {isActivePlaying ? (
-                    <div className="flex items-end justify-center gap-0.5 h-4">
-                      <div className="w-1 bg-[#14b8a6] animate-[music-bar_1s_ease-in-out_infinite] h-full" />
-                      <div className="w-1 bg-[#14b8a6] animate-[music-bar_0.8s_ease-in-out_infinite_0.2s] h-3/4" />
-                      <div className="w-1 bg-[#14b8a6] animate-[music-bar_1.2s_ease-in-out_infinite_0.4s] h-full" />
-                    </div>
-                  ) : (
-                    <span className="group-hover:hidden">{index + 1}</span>
-                  )}
-                  <FaPlay className={`w-3 h-3 text-white hidden group-hover:inline-block ${isActivePlaying ? '!hidden' : ''}`} />
-                </div>
-
-                {/* Cover & Title */}
-                <div className="flex items-center gap-3 flex-1 min-w-0">
-                  <img src={song.cover} alt={song.title} className="w-12 h-12 rounded-lg object-cover shadow-sm" />
-                  <div className="min-w-0">
-                    <p className={`font-semibold truncate ${isActive ? "text-[#14b8a6]" : "text-white"}`}>
-                      {song.title}
-                    </p>
-                    <p className="text-sm text-gray-400 truncate">
-                      Lượt nghe khủng
-                    </p>
-                  </div>
-                </div>
-
-                {/* Duration & Actions */}
-                <div className="flex items-center gap-6">
-                  <button onClick={(e) => e.stopPropagation()} className="text-gray-500 hover:text-pink-500 opacity-0 group-hover:opacity-100 transition-all">
-                    <FaHeart />
-                  </button>
-                  <span className="text-gray-400 text-sm font-mono w-12 text-right">
-                    {song.duration}
-                  </span>
-                </div>
-              </div>
-            );
-          })}
+        {/* Songs */}
+        <div className="space-y-0.5 pb-32">
+          {topTracks.map((song, i) => (
+            <ArtistSongRow
+              key={song.id}
+              song={song}
+              index={i}
+              isPlaying={isPlaying}
+              isCurrent={currentSong?.id === song.id}
+              onPlay={handlePlayTrack}
+            />
+          ))}
         </div>
       </div>
     </div>

@@ -119,20 +119,41 @@ export default function LibraryPage() {
           {playlists.length > 0 ? (
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-2 sm:gap-4">
               {playlists.map((pl) => {
-                const resolvedCount = pl.songs.reduce(
-                  (acc, sid) =>
-                    acc +
-                    (allSongs.some((s) => String(s.id) === String(sid)) ? 1 : 0),
-                  0
-                );
+                const resolvedSongs = pl.songs
+                  .map(sid => allSongs.find(s => String(s.id) === String(sid)))
+                  .filter(Boolean);
+                const resolvedCount = resolvedSongs.length;
+                const coverArts = resolvedSongs
+                  .map(s => s.cover)
+                  .filter(Boolean)
+                  .slice(0, 4);
 
                 return (
                   <div
                     key={pl.id}
-                    className="group bg-white/[0.03] rounded-xl p-3 sm:p-4 border border-white/5 hover:border-neon/20 hover:bg-white/[0.05] transition-all duration-300"
+                    className="group bg-white/[0.03] rounded-xl p-3 sm:p-4 border border-white/5 hover:border-neon/20 hover:bg-white/[0.05] transition-all duration-300 cursor-pointer"
+                    onClick={() => window.location.href = `/playlist/${pl.id}`}
                   >
-                    <div className="w-full aspect-square rounded-lg bg-gradient-to-br from-neon/20 to-purple-500/20 flex items-center justify-center mb-3">
-                      <HiCollection className="text-4xl text-neon/60" />
+                    <div className="w-full aspect-square rounded-lg overflow-hidden mb-3 relative">
+                      {coverArts.length >= 4 ? (
+                        <div className="grid grid-cols-2 grid-rows-2 w-full h-full">
+                          {coverArts.map((src, i) => (
+                            <img key={i} src={src} alt="" className="w-full h-full object-cover" />
+                          ))}
+                        </div>
+                      ) : coverArts.length >= 1 ? (
+                        <div className="w-full h-full relative">
+                          <img src={coverArts[0]} alt="" className="w-full h-full object-cover" />
+                          <div className="absolute inset-0 bg-black/20" />
+                        </div>
+                      ) : (
+                        <div className="w-full h-full bg-gradient-to-br from-neon/20 to-purple-500/20 flex items-center justify-center">
+                          <HiCollection className="text-4xl text-neon/60" />
+                        </div>
+                      )}
+                      <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                        <HiPlay className="text-4xl text-white drop-shadow-lg" />
+                      </div>
                     </div>
                     <h3 className="text-sm font-semibold text-white truncate">
                       {pl.name}
@@ -141,7 +162,7 @@ export default function LibraryPage() {
                       {resolvedCount} bài hát
                     </p>
                     <button
-                      onClick={() => deletePlaylist(pl.id)}
+                      onClick={(e) => { e.stopPropagation(); deletePlaylist(pl.id); }}
                       className="text-xs text-gray-600 hover:text-red-400 mt-2 opacity-0 group-hover:opacity-100 transition-opacity"
                     >
                       Xóa playlist

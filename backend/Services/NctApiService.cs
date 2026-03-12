@@ -206,8 +206,6 @@ namespace Soundia.Api.Services
                 // Require minimum score: exact title(10) + no artist info, OR title(7+) + artist(3)
                 if (bestMatch == null || bestScore < 7) return null;
 
-                Console.WriteLine($"[NCT-Resolve] Matched '{title}' by '{artist}' → NCT '{bestMatch.Name}' by '{bestMatch.ArtistName}' (score={bestScore}, key={bestMatch.Key})");
-
                 // Get stream URL for the matched song
                 var streamUrl = await GetStreamUrlAsync(bestMatch.Key);
                 if (streamUrl != null)

@@ -31,12 +31,23 @@ export function useSearchManager({ allSongs }) {
                 (s) => s.title.toLowerCase().includes(q) || s.artist.toLowerCase().includes(q)
             );
 
-            const [nctResults, itunesResults] = await Promise.all([
+            const apiUrl = import.meta.env.VITE_API_URL || '/api';
+            const [nctResults, itunesResults, localDbResults] = await Promise.all([
                 searchNctSongs(rawQ, 15),
-                searchItunes(rawQ)
+                searchItunes(rawQ),
+                fetch(`${apiUrl}/songs/search-local?q=${encodeURIComponent(rawQ)}&limit=10`)
+                    .then(r => r.ok ? r.json() : { data: [] })
+                    .catch(() => ({ data: [] }))
             ]);
 
-            const mergedTracks = [...(nctResults.tracks || [])];
+            // Local DB songs (admin-imported) go first
+            const localDbTracks = (localDbResults.data || []).map(s => ({
+                id: s.id, title: s.title, artist: s.artist, cover: s.cover,
+                audio: s.audio, source: s.source || 'local', duration: s.duration,
+                isExternal: true,
+            }));
+
+            const mergedTracks = [...localDbTracks, ...(nctResults.tracks || [])];
 
             const generateKey = (track) => {
                 const title = normalizeVietnamese(track.title).replace(/[^a-z0-9]/g, "");

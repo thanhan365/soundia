@@ -15,12 +15,12 @@ export default function RangeSlider({
     <div className={`relative flex items-center group ${className}`}>
       <div className="absolute inset-x-0 h-1 bg-gray-dark rounded-full" />
       <div
-        className="absolute inset-y-0 left-0 h-1 bg-gradient-to-r from-cyan-400 to-purple-500 rounded-full"
+        className="absolute inset-y-0 left-0 h-1 bg-gradient-to-r from-[#2EC4B6] to-[#25A89C] rounded-full"
         style={{ width: `${progress}%`, top: '50%', transform: 'translateY(-50%)' }}
       />
       {showGlow && (
         <div
-          className="absolute inset-y-0 left-0 h-1 bg-cyan-400/30 rounded-full blur-sm"
+          className="absolute inset-y-0 left-0 h-1 bg-[#2EC4B6]/30 rounded-full blur-sm"
           style={{ width: `${progress}%`, top: '50%', transform: 'translateY(-50%)' }}
         />
       )}

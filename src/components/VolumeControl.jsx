@@ -32,7 +32,7 @@ export default function VolumeControl() {
         step={0.01}
         onChange={handleChange}
         showGlow={false}
-        className="w-20 h-1"
+        className="w-24 h-1"
       />
     </div>
   );

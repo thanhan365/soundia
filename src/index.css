@@ -365,7 +365,7 @@ input[type="range"]::-moz-range-thumb {
 
 .playing-bars span {
   width: 2px;
-  background: #00ffcc;
+  background: #2EC4B6;
   border-radius: 1px;
   animation: bar-bounce 1.2s ease-in-out infinite;
 }

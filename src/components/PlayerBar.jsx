@@ -103,11 +103,11 @@ export default function PlayerBar() {
     <div
       className={`
         fixed bottom-0 left-0 right-0 z-30
-        bg-gradient-to-r from-slate-900 to-slate-950 sm:backdrop-blur-xl border-t border-cyan-400/10
+        bg-gradient-to-r from-slate-900 to-slate-950 sm:backdrop-blur-xl border-t border-[#2EC4B6]/10
         transition-all duration-500
-        shadow-[0_-4px_30px_rgba(56,189,248,0.08)]
+        shadow-[0_-4px_30px_rgba(46,196,182,0.08)]
         safe-bottom
-        ${isPlaying ? "shadow-[0_-4px_30px_rgba(56,189,248,0.15)]" : ""}
+        ${isPlaying ? "shadow-[0_-4px_30px_rgba(46,196,182,0.15)]" : ""}
       `}
     >
       <div className="mx-auto">
@@ -217,9 +217,9 @@ export default function PlayerBar() {
 
         {/* ═══ TABLET + DESKTOP LAYOUT (>=640px): 1 row ═══ */}
         <div className="hidden sm:block">
-          <div className="flex items-center px-4 py-2 gap-3 lg:gap-4">
+          <div className="flex items-center px-3 py-2 gap-3 lg:gap-4">
             {/* LEFT: Song Info */}
-            <div className="flex items-center gap-2 sm:gap-3 min-w-0 w-[28%] sm:w-[25%] lg:w-[28%]">
+            <div className="flex items-center gap-2 sm:gap-3 min-w-0 w-[25%] pl-6">
               {currentSong ? (
                 <>
                   <div className={`w-10 h-10 sm:w-11 sm:h-11 rounded-full overflow-hidden flex-shrink-0 border-2 border-neon/20 ${isPlaying ? "animate-spin-slow" : ""}`}>
@@ -280,7 +280,7 @@ export default function PlayerBar() {
             </div>
 
             {/* CENTER: Controls */}
-            <div className="flex flex-col items-center gap-1 sm:gap-1.5 flex-1 max-w-xl">
+            <div className="flex flex-col items-center gap-1 sm:gap-1.5 flex-1">
               <div className="flex items-center gap-3 sm:gap-4 lg:gap-5">
                 <button onClick={toggleShuffle} className={`relative p-1 transition-all hidden sm:block ${shuffle ? "text-neon" : "text-gray-600 hover:text-gray-300"}`}>
                   <IoShuffle className="text-[16px] sm:text-[17px]" />
@@ -312,7 +312,7 @@ export default function PlayerBar() {
             </div>
 
             {/* RIGHT: Extras */}
-            <div className="flex items-center justify-end gap-2 w-[28%] sm:w-[25%] lg:w-[28%]">
+            <div className="flex items-center justify-end gap-2 w-[25%]">
               <button data-player-lyrics-btn onClick={() => setLyricsOpen(!lyricsOpen)} className={`p-1.5 rounded-lg transition-all hidden sm:block ${lyricsOpen ? "text-neon bg-neon/10" : "text-gray-600 hover:text-gray-300"}`} title="Lời bài hát">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <line x1="3" y1="6" x2="13" y2="6" /><line x1="3" y1="11" x2="16" y2="11" /><line x1="3" y1="16" x2="11" y2="16" />

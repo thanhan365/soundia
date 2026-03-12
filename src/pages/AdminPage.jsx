@@ -370,9 +370,14 @@ function ImportTab() {
         if (m(/nhaccuatui\.com\/flash\/player\?.*key=([a-zA-Z0-9]+)/i)) return { source: 'nct', type: 'song', key: m(/nhaccuatui\.com\/flash\/player\?.*key=([a-zA-Z0-9]+)/i)[1] };
         if (m(/nhaccuatui\.com\/embed\/.*?([a-zA-Z0-9]{10,})/i)) return { source: 'nct', type: 'song', key: m(/nhaccuatui\.com\/embed\/.*?([a-zA-Z0-9]{10,})/i)[1] };
 
-        // NhacCuaTui — Direct links
+        // NhacCuaTui — Direct links (with .html)
         if (m(/nhaccuatui\.com\/playlist\/[^.]+\.([a-zA-Z0-9]+)\.html/i)) return { source: 'nct', type: 'playlist', key: m(/nhaccuatui\.com\/playlist\/[^.]+\.([a-zA-Z0-9]+)\.html/i)[1] };
         if (m(/nhaccuatui\.com\/bai-hat\/[^.]+\.([a-zA-Z0-9]+)\.html/i)) return { source: 'nct', type: 'song', key: m(/nhaccuatui\.com\/bai-hat\/[^.]+\.([a-zA-Z0-9]+)\.html/i)[1] };
+
+        // NhacCuaTui — Short links (no .html): /playlist/KEY, /bai-hat/KEY, /song/KEY, /chart/...KEY
+        if (m(/nhaccuatui\.com\/playlist\/([a-zA-Z0-9]{8,})\/?(?:\?|$)/i)) return { source: 'nct', type: 'playlist', key: m(/nhaccuatui\.com\/playlist\/([a-zA-Z0-9]{8,})\/?(?:\?|$)/i)[1] };
+        if (m(/nhaccuatui\.com\/(?:bai-hat|song)\/([a-zA-Z0-9]{8,})\/?(?:\?|$)/i)) return { source: 'nct', type: 'song', key: m(/nhaccuatui\.com\/(?:bai-hat|song)\/([a-zA-Z0-9]{8,})\/?(?:\?|$)/i)[1] };
+        if (m(/nhaccuatui\.com\/chart\/[^/]*?([a-zA-Z0-9]{8,})\/?(?:\?|$)/i)) return { source: 'nct', type: 'playlist', key: m(/nhaccuatui\.com\/chart\/[^/]*?([a-zA-Z0-9]{8,})\/?(?:\?|$)/i)[1] };
 
         // Fallback: 8-char Zing code
         if (m(/^([A-Z0-9]{8})$/i)) return { source: 'zing', type: 'playlist', id: m(/^([A-Z0-9]{8})$/i)[1] };
@@ -391,16 +396,18 @@ function ImportTab() {
                 setResult({ source: 'Zing MP3', type: 'Playlist', name: res.data.data.name, image: res.data.data.image, totalSongs: res.data.data.totalSongs, tracks: res.data.data.tracks });
             } else if (d.source === 'nct' && d.type === 'playlist') {
                 const res = await api.get(`/songs/nct-playlist-detail/${d.key}`);
-                const data = res.data;
+                const data = res.data?.data || res.data;
+                const tracks = data.tracks || data.songs || [];
                 setResult({
-                    source: 'NhacCuaTui', type: 'Playlist', name: data.name || data.playlistName || 'NCT Playlist', image: data.image || data.coverUrl || '', totalSongs: data.songs?.length || 0,
-                    tracks: (data.songs || []).map((s, i) => ({ id: s.key || `nct_${i}`, title: s.title || s.name || '', artist: s.artist || s.artistName || 'Unknown', cover: s.cover || s.imageUrl || '', audio: s.streamUrl || s.audio || 'YT_STREAM', nctKey: s.key, source: 'nct' }))
+                    source: 'NhacCuaTui', type: 'Playlist', name: data.name || data.playlistName || 'NCT Playlist', image: data.image || data.coverUrl || '', totalSongs: tracks.length,
+                    tracks: tracks.map((s, i) => ({ id: s.id || s.nctKey || `nct_${i}`, title: s.title || s.name || '', artist: s.artist || s.artistName || 'Unknown', cover: s.cover || s.artwork || s.imageUrl || '', audio: s.audio || s.streamUrl || 'YT_STREAM', nctKey: s.nctKey || s.key, source: 'nct', duration: s.duration || 0 }))
                 });
             } else if (d.source === 'nct' && d.type === 'song') {
-                const res = await api.get(`/songs/nct-stream/${d.key}`);
+                const res = await api.get(`/songs/nct-song-detail/${d.key}`);
+                const song = res.data?.data || res.data;
                 setResult({
-                    source: 'NhacCuaTui', type: 'Bài hát', name: res.data.title || 'NCT Song', totalSongs: 1,
-                    tracks: [{ id: d.key, title: res.data.title || '', artist: res.data.artist || 'Unknown', cover: res.data.cover || '', audio: res.data.streamUrl || 'YT_STREAM', nctKey: d.key, source: 'nct' }]
+                    source: 'NhacCuaTui', type: 'Bài hát', name: song.title || 'NCT Song', image: song.cover || '', totalSongs: 1,
+                    tracks: [{ id: song.id || d.key, title: song.title || '', artist: song.artist || 'Unknown', cover: song.cover || '', audio: song.audio || 'YT_STREAM', nctKey: song.nctKey || d.key, source: 'nct', duration: song.duration || 0 }]
                 });
             } else if (d.source === 'zing' && d.type === 'song') {
                 const res = await api.get(`/songs/zing-song/${d.id}`);
@@ -425,7 +432,8 @@ function ImportTab() {
         setSaving(true);
         setSaveMsg(null);
         try {
-            const playlistName = result.name || `Import ${new Date().toLocaleDateString('vi-VN')}`;
+            const isSingleSong = result.tracks.length === 1;
+            const playlistName = isSingleSong ? null : (result.name || `Import ${new Date().toLocaleDateString('vi-VN')}`);
             const payload = {
                 playlistName,
                 source: result.source,
@@ -439,7 +447,11 @@ function ImportTab() {
                 }))
             };
             const res = await api.post('/admin/import-songs', payload);
-            setSaveMsg({ type: 'success', text: `✅ ${res.data.message} • Playlist "${playlistName}" ${res.data.playlistExisted ? 'đã cập nhật!' : 'đã thêm lên Home!'}` });
+            if (isSingleSong) {
+                setSaveMsg({ type: 'success', text: `✅ Đã thêm "${result.tracks[0].title}" vào kho nhạc!` });
+            } else {
+                setSaveMsg({ type: 'success', text: `✅ ${res.data.message} • Playlist "${playlistName}" ${res.data.playlistExisted ? 'đã cập nhật!' : 'đã thêm lên Home!'}` });
+            }
         } catch (err) {
             setSaveMsg({ type: 'error', text: err.response?.data?.message || err.message || 'Lỗi khi lưu' });
         } finally {
@@ -522,7 +534,7 @@ function ImportTab() {
                             </button>
                             <button onClick={handleSaveToLibrary} disabled={saving}
                                 className="px-3 py-2 bg-gradient-to-r from-amber-500 to-orange-500 text-white text-sm font-semibold rounded-lg hover:scale-105 transition-all flex items-center gap-1.5 flex-shrink-0 disabled:opacity-50">
-                                {saving ? <><HiRefresh className="animate-spin" /> Đang lưu...</> : <><HiPlusCircle /> Thêm Playlist lên Home</>}
+                                {saving ? <><HiRefresh className="animate-spin" /> Đang lưu...</> : result.tracks.length === 1 ? <><HiPlusCircle /> Thêm vào kho nhạc</> : <><HiPlusCircle /> Thêm Playlist lên Home</>}
                             </button>
                         </div>
                         {saveMsg && (
