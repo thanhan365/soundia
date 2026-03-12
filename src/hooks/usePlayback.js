@@ -35,6 +35,7 @@ export function usePlayback({ showToast }) {
     const crossfadeRef = useRef(crossfade);
     const volumeRef = useRef(volume);
     const sleepTimerRef = useRef(null); // synced from PlayerContext
+    const sharedProgressRef = useRef({ time: 0, dur: 0 }); // shared between all ProgressBar instances
 
     // Sync refs
     useEffect(() => { currentSongRef.current = currentSong; }, [currentSong]);
@@ -54,7 +55,7 @@ export function usePlayback({ showToast }) {
     }, [volume]);
 
     const addToRecent = (song) =>
-        setRecentHistory((p) => [song, ...p.filter((s) => s.id !== song.id)].slice(0, 20));
+        setRecentHistory((p) => [song, ...p.filter((s) => s.id !== song.id)].slice(0, 30));
 
     const handleAudioError = (msg) => {
         if (isYTModeRef.current) return;
@@ -71,7 +72,20 @@ export function usePlayback({ showToast }) {
     // HTML5 Audio event listeners (one-time setup)
     useEffect(() => {
         const audio = audioRef.current;
-        const onMeta = () => { const dur = audio.duration; if (dur && !isNaN(dur)) setDuration(dur); };
+        const onMeta = () => {
+          const dur = audio.duration;
+          if (dur && !isNaN(dur) && isFinite(dur)) {
+            setDuration(dur);
+          } else {
+            // Fallback: use song.duration from data (seconds) when browser can't determine
+            const songDur = currentSongRef.current?.duration;
+            if (songDur && typeof songDur === 'number' && songDur > 0) setDuration(songDur);
+            else if (typeof songDur === 'string') {
+              const parts = songDur.split(':');
+              if (parts.length === 2) setDuration(parseInt(parts[0], 10) * 60 + parseInt(parts[1], 10));
+            }
+          }
+        };
         const onEnd = () => {
             // Crossfade: nếu đã trigger sớm thì không playNext lại
             if (crossfadeTriggeredRef.current) {
@@ -212,7 +226,7 @@ export function usePlayback({ showToast }) {
         volume, error, setError, shuffle, repeatMode,
         isLoadingStream, setIsLoadingStream, isYTMode, setIsYTMode,
         recentHistory, crossfade, setCrossfade, crossfadeTriggeredRef,
-        audioRef, ytPlayerRef, isYTModeRef, currentSongRef, playSongRef, playNextRef, ytPlayStartedRef, sleepTimerRef,
+        audioRef, ytPlayerRef, isYTModeRef, currentSongRef, playSongRef, playNextRef, ytPlayStartedRef, sleepTimerRef, sharedProgressRef,
         addToRecent, handleAudioError,
         handleYTReady, handleYTStateChange, handleYTTimeUpdate, handleYTError,
         togglePlay, seekTo, changeVolume, toggleShuffle, toggleRepeat,

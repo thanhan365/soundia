@@ -27,7 +27,7 @@ export default function RecentPage() {
             <div>
               <h2 className="text-lg sm:text-2xl font-bold text-white">Nghe gần đây</h2>
               <p className="text-sm text-gray-500 mt-1">
-                {recentHistory.length} bài (tối đa 20)
+                {recentHistory.length} bài
               </p>
             </div>
           </div>

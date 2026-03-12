@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { usePlayer } from "../context/PlayerContext";
 
 // Import Original Sections
@@ -13,14 +13,39 @@ import ArtistSection from "../components/home/ArtistSection";
 import SuggestedPlaylistSection from "../components/home/SuggestedPlaylistSection";
 import RecentlyPlayed from "../components/home/RecentlyPlayed";
 import RandomDiscovery from "../components/home/RandomDiscovery";
+import api from "../utils/api";
+
 export default function Home() {
   const { error, allSongs, playSong, recentHistory } = usePlayer();
-
-  // We no longer need featuredSong and trendingSongs since BannerSlider and SongList handle them
-  const newReleaseSongs = allSongs.slice(7, 13);
+  const [newReleaseSongs, setNewReleaseSongs] = useState([]);
 
   // Use recent history from context
   const recentSongs = recentHistory || [];
+
+  // Fetch new releases from iTunes API
+  useEffect(() => {
+    const fetchNewReleases = async () => {
+      try {
+        const res = await api.get("/songs/itunes-proxy?term=" + encodeURIComponent("nhạc mới việt nam") + "&entity=song&country=VN&limit=14");
+        if (res?.data?.results) {
+          const songs = res.data.results
+            .filter(s => s.trackId && s.trackName)
+            .map(s => ({
+              id: `itunes_${s.trackId}`,
+              title: s.trackName,
+              artist: s.artistName || "Unknown",
+              cover: (s.artworkUrl100 || "").replace("100x100", "600x600"),
+              audio: s.previewUrl || "YT_STREAM",
+              duration: s.trackTimeMillis ? Math.round(s.trackTimeMillis / 1000) : 0,
+              source: "itunes",
+              isExternal: true,
+            }));
+          setNewReleaseSongs(songs.slice(0, 14));
+        }
+      } catch (err) { console.error("Failed to fetch new releases", err); }
+    };
+    fetchNewReleases();
+  }, []);
 
   const handleRandomDiscover = () => {
     if (allSongs.length > 0) {
@@ -60,9 +85,9 @@ export default function Home() {
         {/* Artists */}
         <ArtistSection />
 
-        {/* More Songs */}
+        {/* Mới Phát Hành — iTunes API */}
         {newReleaseSongs.length > 0 && (
-          <TrendingSection songs={newReleaseSongs} title="Mới Phát Hành" />
+          <TrendingSection songs={newReleaseSongs} title="Đề Xuất Nghe Thử" />
         )}
 
         {/* Recently Played History */}

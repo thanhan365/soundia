@@ -1,8 +1,9 @@
 import React from "react";
 import { FaPlay } from "react-icons/fa";
+import { Link } from "react-router-dom";
 import { usePlayer } from "../../context/PlayerContext";
 
-export default function TrendingSection({ songs, title = "Đang Thịnh Hành" }) {
+export default function TrendingSection({ songs, title = "Đang Thịnh Hành", viewMoreLink }) {
   const { playSong } = usePlayer();
 
   if (!songs || songs.length === 0) return null;
@@ -13,9 +14,11 @@ export default function TrendingSection({ songs, title = "Đang Thịnh Hành" }
         <h2 className="text-2xl md:text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-white to-purple-200">
           {title}
         </h2>
-        <button className="text-sm font-semibold text-cyan-400 hover:text-cyan-300 hover:underline tracking-wide transition-colors">
-          Xem tất cả
-        </button>
+        {viewMoreLink && (
+          <Link to={viewMoreLink} className="text-sm font-semibold text-cyan-400 hover:text-cyan-300 hover:underline tracking-wide transition-colors">
+            Xem tất cả
+          </Link>
+        )}
       </div>
 
       {/* Horizontal scroll on mobile, Grid on desktop */}

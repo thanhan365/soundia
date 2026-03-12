@@ -7,6 +7,15 @@ import { HiHeart, HiDotsHorizontal } from "react-icons/hi";
 import { HiQueueList } from "react-icons/hi2";
 import SongContextMenu from "./SongContextMenu";
 
+function formatDuration(d) {
+  if (!d && d !== 0) return "--:--";
+  if (typeof d === "string" && d.includes(":")) return d;
+  const sec = typeof d === "number" ? d : parseInt(d, 10);
+  if (isNaN(sec) || sec <= 0) return "--:--";
+  const m = Math.floor(sec / 60);
+  const s = sec % 60;
+  return `${m}:${s.toString().padStart(2, "0")}`;
+}
 const SongItem = memo(function SongItem({ song, index }) {
   const { currentSong, isPlaying, playSong, toggleFavorite, isFavorite, addToQueue } = usePlayer();
   const { showToast } = useToast();
@@ -86,7 +95,7 @@ const SongItem = memo(function SongItem({ song, index }) {
 
         {/* Duration */}
         <div className="w-16 text-center text-xs lg:text-sm text-gray-500 font-mono flex-shrink-0 hidden sm:block">
-          {song.duration || "--:--"}
+          {formatDuration(song.duration)}
         </div>
 
         {/* Actions — ẩn khi hover trên desktop, luôn hiển thị trên mobile */}

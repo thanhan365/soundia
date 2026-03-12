@@ -1009,7 +1009,81 @@ namespace Soundia.Api.Controllers
 
         private static readonly Dictionary<string, (List<object> data, DateTime expiry)> _playlistSearchCache = new();
 
-        // ── Database Song Endpoints ────────────────────────────────────────────
+        // ── Zing MP3 New Releases ──────────────────────────────────────────────
+        private static List<object>? _cachedZingNewReleases;
+        private static DateTime _zingNewReleasesCacheExpiry = DateTime.MinValue;
+
+        [HttpGet("zing-new-releases")]
+        public async Task<ActionResult> ZingNewReleases([FromQuery] int limit = 12)
+        {
+            if (_cachedZingNewReleases != null && DateTime.UtcNow < _zingNewReleasesCacheExpiry)
+                return Ok(new { success = true, data = _cachedZingNewReleases.Take(limit) });
+
+            try
+            {
+                var scriptPath = Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "scripts", "zing-new-release.cjs");
+                if (!System.IO.File.Exists(scriptPath))
+                    scriptPath = Path.Combine(Directory.GetCurrentDirectory(), "scripts", "zing-new-release.cjs");
+
+                var psi = new System.Diagnostics.ProcessStartInfo
+                {
+                    FileName = "node",
+                    Arguments = $"\"{scriptPath}\"",
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                    UseShellExecute = false,
+                    CreateNoWindow = true,
+                    WorkingDirectory = Path.Combine(Directory.GetCurrentDirectory(), ".."),
+                    StandardOutputEncoding = System.Text.Encoding.UTF8,
+                    StandardErrorEncoding = System.Text.Encoding.UTF8
+                };
+
+                using var process = System.Diagnostics.Process.Start(psi);
+                if (process == null)
+                    return StatusCode(500, new { success = false, message = "Failed to start Node.js process" });
+
+                var output = await process.StandardOutput.ReadToEndAsync();
+                await process.WaitForExitAsync();
+
+                if (process.ExitCode != 0 || string.IsNullOrEmpty(output))
+                    return StatusCode(500, new { success = false, message = "Failed to fetch new releases" });
+
+                using var doc = System.Text.Json.JsonDocument.Parse(output);
+                var root = doc.RootElement;
+
+                if (root.TryGetProperty("error", out var errEl))
+                    return StatusCode(400, new { success = false, message = errEl.GetString() });
+
+                var songs = new List<object>();
+                if (root.TryGetProperty("songs", out var songsArr))
+                {
+                    foreach (var item in songsArr.EnumerateArray())
+                    {
+                        songs.Add(new
+                        {
+                            id = item.TryGetProperty("id", out var sid) ? sid.GetString() ?? "" : "",
+                            title = item.TryGetProperty("title", out var st) ? st.GetString() ?? "" : "",
+                            artist = item.TryGetProperty("artist", out var sa) ? sa.GetString() ?? "Unknown" : "Unknown",
+                            cover = item.TryGetProperty("cover", out var sc) ? sc.GetString() ?? "" : "",
+                            audio = "YT_STREAM",
+                            source = "zing",
+                            isExternal = true,
+                            duration = item.TryGetProperty("duration", out var sd) ? sd.GetInt32() : 0,
+                        });
+                    }
+                }
+
+                _cachedZingNewReleases = songs;
+                _zingNewReleasesCacheExpiry = DateTime.UtcNow.AddHours(1);
+
+                return Ok(new { success = true, data = songs.Take(limit) });
+            }
+            catch (System.Exception ex)
+            {
+                return StatusCode(500, new { success = false, message = "Error fetching Zing new releases", details = ex.Message });
+            }
+        }
+
         [HttpGet]
         public async Task<ActionResult<IEnumerable<Song>>> GetSongs()
         {

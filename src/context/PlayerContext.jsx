@@ -40,7 +40,7 @@ export function PlayerProvider({ children }) {
     volume, error, setError, shuffle, repeatMode,
     isLoadingStream, setIsLoadingStream, isYTMode, setIsYTMode,
     recentHistory, crossfade, setCrossfade, crossfadeTriggeredRef,
-    audioRef, ytPlayerRef, isYTModeRef, currentSongRef, playSongRef, playNextRef, ytPlayStartedRef, sleepTimerRef,
+    audioRef, ytPlayerRef, isYTModeRef, currentSongRef, playSongRef, playNextRef, ytPlayStartedRef, sleepTimerRef, sharedProgressRef,
     addToRecent, handleAudioError,
     handleYTReady, handleYTStateChange, handleYTTimeUpdate, handleYTError,
     togglePlay, seekTo, changeVolume, toggleShuffle, toggleRepeat,
@@ -194,6 +194,7 @@ export function PlayerProvider({ children }) {
 
     // Biến lưu videoId đã pre-fetch (nếu có)
     let ytPreFetchedVideoId = null;
+    let ytMatchedDuration = 0; // Duration thực tế của YouTube video đã match
 
     // NCT stream resolution — resolve khi chưa có audio, hoặc khi là iTunes preview 30s
     if (!song.audio || song.audio === 'YT_STREAM' || isItunesPreview) {
@@ -212,7 +213,7 @@ export function PlayerProvider({ children }) {
           song.title ? withTimeout(resolveNctStream(song.title, song.artist), 4000) : Promise.resolve(null),
           // Pre-fetch YouTube videoId (không chờ NCT fail — tiết kiệm thời gian)
           withTimeout(
-            fetch(`${BACKEND}/stream/video-id?query=${encodeURIComponent(ytQuery)}${expectedDur > 0 ? `&expectedDuration=${Math.round(expectedDur)}` : ''}`)
+            fetch(`${BACKEND}/stream/video-id?query=${encodeURIComponent(ytQuery)}${expectedDur > 0 ? `&expectedDuration=${Math.round(expectedDur)}` : ''}&songTitle=${encodeURIComponent(song.title || '')}&songArtist=${encodeURIComponent(song.artist || '')}`)
               .then(r => r.ok ? r.json() : null)
               .catch(() => null),
             5000
@@ -226,8 +227,9 @@ export function PlayerProvider({ children }) {
         } else {
           console.log(`[Stream] NCT no match for "${song.title}" by ${song.artist} → YouTube fallback`);
           if (isItunesPreview) song.audio = "YT_STREAM";
-          // Lưu pre-fetched videoId để dùng bên dưới
+          // Lưu pre-fetched videoId + matchedDuration để dùng bên dưới
           ytPreFetchedVideoId = ytPreResult?.videoId || null;
+          ytMatchedDuration = ytPreResult?.matchedDuration || 0;
         }
       } catch (err) {
         console.log(`[Stream] NCT resolve failed for "${song.title}":`, err.message, '→ YouTube fallback');
@@ -250,15 +252,17 @@ export function PlayerProvider({ children }) {
       setIsPlaying(true);
       setIsLoadingStream(true);
       setCurrentTime(0);
-      if (expectedDur > 0) setDuration(expectedDur);
+      // Dùng matchedDuration từ YouTube (thực tế) nếu có, fallback sang expectedDur
+      const ytDur = ytMatchedDuration > 0 ? ytMatchedDuration : expectedDur;
+      if (ytDur > 0) setDuration(ytDur);
       else setDuration(0);
 
       if (ytPreFetchedVideoId) {
         // 🚀 VideoId đã pre-fetch sẵn → skip API call, load tức thì
-        console.log(`[Stream] YouTube pre-fetched videoId: ${ytPreFetchedVideoId} → loading tức thì`);
+        console.log(`[Stream] YouTube pre-fetched videoId: ${ytPreFetchedVideoId} (duration: ${ytMatchedDuration}s) → loading tức thì`);
         ytPlayerRef.current?.loadAndPlay(ytQuery, expectedDur, ytPreFetchedVideoId);
       } else {
-        ytPlayerRef.current?.loadAndPlay(ytQuery, expectedDur);
+        ytPlayerRef.current?.loadAndPlay(ytQuery, expectedDur, null, song.title, song.artist);
       }
     } else {
       if (isYTMode) {
@@ -397,7 +401,7 @@ export function PlayerProvider({ children }) {
         isLoadingStream, isYTMode,
         sleepTimer, setSleepTimer,
         crossfade, setCrossfade,
-        ytPlayerRef, audioRef, isYTModeRef,
+        ytPlayerRef, audioRef, isYTModeRef, sharedProgressRef,
         handleYTReady, handleYTStateChange, handleYTTimeUpdate, handleYTError,
         playSong, togglePlay, playNext, playPrev, seekTo, changeVolume,
         searchArtistsResult, searchPlaylistsResult,

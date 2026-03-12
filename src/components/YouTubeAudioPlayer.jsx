@@ -20,7 +20,7 @@ const YouTubeAudioPlayer = forwardRef(function YouTubeAudioPlayer(
 
   // ── Expose controls via ref ──────────────────────────────────────────────
   useImperativeHandle(ref, () => ({
-    async loadAndPlay(query, expectedDuration = null) {
+    async loadAndPlay(query, expectedDuration = null, preVideoId = null, songTitle = null, songArtist = null) {
       // Chờ player thật sự sẵn sàng (readyRef = true sau onReady)
       let waited = 0;
       while (!readyRef.current && waited < 5000) {
@@ -34,15 +34,22 @@ const YouTubeAudioPlayer = forwardRef(function YouTubeAudioPlayer(
       }
 
       try {
-        // Truyền expectedDuration để backend chọn video có thời lượng gần nhất
-        let apiUrl = `${BACKEND_URL}/stream/video-id?query=${encodeURIComponent(query)}`;
-        if (expectedDuration && expectedDuration > 0) {
-          apiUrl += `&expectedDuration=${Math.round(expectedDuration)}`;
-        }
+        let videoId = preVideoId;
+        if (!videoId) {
+          // Truyền expectedDuration + songTitle/songArtist để backend chọn video chính xác
+          let apiUrl = `${BACKEND_URL}/stream/video-id?query=${encodeURIComponent(query)}`;
+          if (expectedDuration && expectedDuration > 0) {
+            apiUrl += `&expectedDuration=${Math.round(expectedDuration)}`;
+          }
+          if (songTitle) apiUrl += `&songTitle=${encodeURIComponent(songTitle)}`;
+          if (songArtist) apiUrl += `&songArtist=${encodeURIComponent(songArtist)}`;
 
-        const res = await fetch(apiUrl);
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const { videoId } = await res.json();
+          const res = await fetch(apiUrl);
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          ({ videoId } = await res.json());
+        } else {
+          console.log(`[YT] Using pre-fetched videoId: ${videoId}`);
+        }
 
         // playerRef.current là e.target từ onReady → có đầy đủ method
         playerRef.current.loadVideoById({ videoId, startSeconds: 0 });

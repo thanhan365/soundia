@@ -12,18 +12,22 @@ function formatTime(seconds) {
 export default function ProgressBar() {
   const {
     seekTo, duration: ctxDuration, currentSong,
-    ytPlayerRef, audioRef, isPlaying, isYTModeRef
+    ytPlayerRef, audioRef, isPlaying, isYTModeRef, sharedProgressRef
   } = usePlayer();
 
-  const [time, setTime] = useState(0);
-  const [dur, setDur] = useState(0);
+  // Init from shared ref (so LyricsView ProgressBar starts at correct position)
+  const initTime = sharedProgressRef?.current?.time || 0;
+  const initDur = sharedProgressRef?.current?.dur || 0;
+
+  const [time, setTime] = useState(initTime);
+  const [dur, setDur] = useState(initDur);
   const [isDragging, setIsDragging] = useState(false);
   const [dragValue, setDragValue] = useState(0);
 
   const isDraggingRef = useRef(false);
   const rafRef = useRef(null);
-  const syntheticRef = useRef(0);
-  const lastRealRef = useRef(0);
+  const syntheticRef = useRef(initTime);
+  const lastRealRef = useRef(initTime);
   const lastMsRef = useRef(performance.now());
   // Store current song ID at mount to avoid false reset
   const mountedSongIdRef = useRef(currentSong?.id);
@@ -85,6 +89,19 @@ export default function ProgressBar() {
           } catch { }
         }
 
+        // Fallback: use song.duration from metadata when player can't determine duration
+        if (d <= 0 && currentSong?.duration) {
+          const sd = currentSong.duration;
+          if (typeof sd === 'number' && sd > 0) d = sd;
+          else if (typeof sd === 'string' && sd.includes(':')) {
+            const parts = sd.split(':');
+            d = parseInt(parts[0], 10) * 60 + parseInt(parts[1], 10);
+          } else if (typeof sd === 'string') {
+            const parsed = parseInt(sd, 10);
+            if (!isNaN(parsed) && parsed > 0) d = parsed;
+          }
+        }
+
         if (t >= 0) {
           // Got real time from player
           if (lastRealRef.current > 3 && t < lastRealRef.current - 3) {
@@ -100,6 +117,11 @@ export default function ProgressBar() {
         }
 
         if (d > 0) setDur(d);
+        // Write to shared ref so other ProgressBar instances can read
+        if (sharedProgressRef) {
+          sharedProgressRef.current.time = syntheticRef.current;
+          if (d > 0) sharedProgressRef.current.dur = d;
+        }
       } else {
         lastMsRef.current = performance.now();
       }
@@ -133,7 +155,20 @@ export default function ProgressBar() {
   };
 
   const displayTime = isDragging ? dragValue : time;
-  const displayDur = dur > 0 ? dur : (ctxDuration > 0 ? ctxDuration : 0);
+
+  // Fallback chain: polled duration → context duration → song metadata duration
+  let displayDur = dur > 0 ? dur : (ctxDuration > 0 ? ctxDuration : 0);
+  if (displayDur <= 0 && currentSong?.duration) {
+    const sd = currentSong.duration;
+    if (typeof sd === 'number' && sd > 0) displayDur = sd;
+    else if (typeof sd === 'string' && sd.includes(':')) {
+      const parts = sd.split(':');
+      displayDur = parseInt(parts[0], 10) * 60 + parseInt(parts[1], 10);
+    } else if (typeof sd === 'string') {
+      const parsed = parseInt(sd, 10);
+      if (!isNaN(parsed) && parsed > 0) displayDur = parsed;
+    }
+  }
 
   return (
     <div className="flex items-center gap-3 w-full">

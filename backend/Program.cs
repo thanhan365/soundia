@@ -5,6 +5,10 @@ using Microsoft.IdentityModel.Tokens;
 using Soundia.Api.Data;
 using System.Text;
 
+// Fix Vietnamese character encoding on Windows console
+Console.OutputEncoding = Encoding.UTF8;
+Console.InputEncoding = Encoding.UTF8;
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Support Render's PORT environment variable
