@@ -59,15 +59,16 @@ export const resolveNctStream = async (title, artist) => {
   try {
     const res = await api.get(`/nct-resolve?title=${encodeURIComponent(title)}&artist=${encodeURIComponent(artist || "")}`);
     const url = res.data?.success ? res.data.streamUrl : null;
+    const nctKey = res.data?.nctKey || null;
     if (url) {
       if (_streamCache.size >= CACHE_MAX) _streamCache.clear();
-      _streamCache.set(cacheKey, url);
+      _streamCache.set(cacheKey, { url, nctKey });
     } else {
       // Cache negative result for 60s
       _streamCache.set(`_neg_${cacheKey}`, true);
       setTimeout(() => _streamCache.delete(`_neg_${cacheKey}`), 60000);
     }
-    return url;
+    return url ? { url, nctKey } : null;
   } catch { return null; }
 };
 

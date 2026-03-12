@@ -63,7 +63,7 @@ namespace Soundia.Api.Controllers
 
                 foreach (Match block in rendererBlocks)
                 {
-                    if (candidates.Count >= 15) break;
+                    if (candidates.Count >= 7) break;
                     var videoId = block.Groups[1].Value;
                     var blockContent = block.Groups[2].Value;
 

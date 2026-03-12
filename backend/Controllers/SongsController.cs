@@ -897,11 +897,27 @@ namespace Soundia.Api.Controllers
         {
             if (string.IsNullOrWhiteSpace(title))
                 return BadRequest(new { message = "title is required" });
+            
+            // Search NCT to find matching song key + stream URL
+            string? nctKey = null;
+            try
+            {
+                var primaryArtist = artist?.Split(new[] { ',', '/', '&' }, StringSplitOptions.RemoveEmptyEntries)
+                    .FirstOrDefault()?.Trim() ?? "";
+                var keyword = $"{title} {primaryArtist}".Trim();
+                var searchRes = await _nctApi.SearchSongsAsync(keyword, 1, 5);
+                if (searchRes.Count > 0)
+                {
+                    nctKey = searchRes[0].Key;
+                }
+            }
+            catch { }
+
             var url = await _nctApi.ResolveStreamByTitleAsync(title, artist ?? "");
             if (url == null) return NotFound(new { message = "Not found on NCT" });
             // Proxy through backend to bypass CORS
             var proxyUrl = $"/api/stream/proxy-audio?url={System.Net.WebUtility.UrlEncode(url)}";
-            return Ok(new { success = true, streamUrl = proxyUrl });
+            return Ok(new { success = true, streamUrl = proxyUrl, nctKey = nctKey });
         }
 
         [HttpGet("nct-charts")]

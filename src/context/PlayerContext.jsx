@@ -219,11 +219,16 @@ export function PlayerProvider({ children }) {
             5000
           ),
         ]);
-        const streamUrl = keyResult || titleResult;
+        // resolveNctStream now returns { url, nctKey } or null
+        const resolvedUrl = titleResult?.url || null;
+        const resolvedNctKey = titleResult?.nctKey || null;
+        const streamUrl = keyResult || resolvedUrl;
 
         if (streamUrl) {
           console.log(`[Stream] NCT resolved: "${song.title}" by ${song.artist}`);
           song.audio = streamUrl;
+          // Lưu nctKey cho lyrics lookup (nếu chưa có)
+          if (!song.nctKey && resolvedNctKey) song.nctKey = resolvedNctKey;
         } else {
           console.log(`[Stream] NCT no match for "${song.title}" by ${song.artist} → YouTube fallback`);
           if (isItunesPreview) song.audio = "YT_STREAM";

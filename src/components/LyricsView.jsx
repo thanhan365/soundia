@@ -57,9 +57,9 @@ export default function LyricsView() {
       try {
         const trackName = encodeURIComponent(currentSong.title);
         const artistName = encodeURIComponent(currentSong.artist);
-        // Nếu bài từ NCT → truyền nctKey để backend dùng NCT lyrics API (ưu tiên)
-        const nctKeyParam = currentSong.key && currentSong.source === 'nct'
-          ? `&nctKey=${encodeURIComponent(currentSong.key)}` : '';
+        // Truyền nctKey để backend ưu tiên NCT lyrics (khớp timing hơn)
+        const songNctKey = currentSong.nctKey || currentSong.key || '';
+        const nctKeyParam = songNctKey ? `&nctKey=${encodeURIComponent(songNctKey)}` : '';
         const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5066/api';
         const res = await fetch(`${apiUrl}/lyrics?track=${trackName}&artist=${artistName}${nctKeyParam}`);
 

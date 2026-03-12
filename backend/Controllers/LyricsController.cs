@@ -542,6 +542,63 @@ namespace Soundia.Api.Controllers
                 }
                 catch { }
 
+                // === 4) XOR cipher (NCT mới có thể dùng XOR đơn giản) ===
+                try
+                {
+                    var xorOutput = new byte[encryptedBytes.Length];
+                    for (int i = 0; i < encryptedBytes.Length; i++)
+                        xorOutput[i] = (byte)(encryptedBytes[i] ^ keyBytes[i % keyBytes.Length]);
+                    var txt = System.Text.Encoding.UTF8.GetString(xorOutput).TrimEnd('\0').Trim();
+                    if (lrcRegex.Matches(txt).Count >= 3)
+                    {
+                        Console.WriteLine($"[Lyrics] NCT LRC XOR decrypt OK ({txt.Length} chars)");
+                        return txt;
+                    }
+                }
+                catch { }
+
+                // === 5) Blowfish CBC with IV = first 8 bytes ===
+                try
+                {
+                    if (encryptedBytes.Length > 8)
+                    {
+                        var iv = encryptedBytes.Take(8).ToArray();
+                        var cipherData = encryptedBytes.Skip(8).ToArray();
+                        int bfBlockLen = (cipherData.Length / 8) * 8;
+                        var bfInput = cipherData.Take(bfBlockLen).ToArray();
+
+                        var bfEngine = new Org.BouncyCastle.Crypto.Engines.BlowfishEngine();
+                        var bfCbcCipher = new Org.BouncyCastle.Crypto.BufferedBlockCipher(
+                            new Org.BouncyCastle.Crypto.Modes.CbcBlockCipher(bfEngine));
+                        bfCbcCipher.Init(false, new Org.BouncyCastle.Crypto.Parameters.ParametersWithIV(
+                            new Org.BouncyCastle.Crypto.Parameters.KeyParameter(keyBytes), iv));
+
+                        var output = new byte[bfCbcCipher.GetOutputSize(bfInput.Length)];
+                        int len = bfCbcCipher.ProcessBytes(bfInput, 0, bfInput.Length, output, 0);
+                        len += bfCbcCipher.DoFinal(output, len);
+
+                        var txt = System.Text.Encoding.UTF8.GetString(output, 0, len).TrimEnd('\0').Trim();
+                        if (lrcRegex.Matches(txt).Count >= 3)
+                        {
+                            Console.WriteLine($"[Lyrics] NCT LRC Blowfish CBC decrypt OK ({txt.Length} chars)");
+                            return txt;
+                        }
+                    }
+                }
+                catch { }
+
+                // === 6) Raw bytes as UTF-8 (maybe not encrypted, just binary) ===
+                try
+                {
+                    var txt = System.Text.Encoding.UTF8.GetString(encryptedBytes).TrimEnd('\0').Trim();
+                    if (lrcRegex.Matches(txt).Count >= 3)
+                    {
+                        Console.WriteLine($"[Lyrics] NCT LRC raw UTF-8 OK ({txt.Length} chars)");
+                        return txt;
+                    }
+                }
+                catch { }
+
                 Console.WriteLine($"[Lyrics] NCT LRC decrypt: all ciphers failed");
             }
             catch (Exception ex) { Console.WriteLine($"[Lyrics] NCT LRC decrypt error: {ex.Message}"); }
@@ -549,3 +606,4 @@ namespace Soundia.Api.Controllers
         }
     }
 }
+
