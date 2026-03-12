@@ -958,6 +958,57 @@ namespace Soundia.Api.Controllers
             return Ok(new { success = true, data = result, total = songs.Count });
         }
 
+        // ── NCT Playlist Search (for genres/topics) ────────────────────────────
+        [HttpGet("nct-search-playlists")]
+        public async Task<ActionResult> NctSearchPlaylists([FromQuery] string keyword, [FromQuery] int limit = 4)
+        {
+            if (string.IsNullOrWhiteSpace(keyword))
+                return BadRequest(new { message = "keyword is required" });
+
+            var cacheKey = $"nct_pl_search_{keyword}_{limit}";
+            if (_playlistSearchCache.TryGetValue(cacheKey, out var cached) && DateTime.UtcNow < cached.expiry)
+                return Ok(new { success = true, data = cached.data });
+
+            try
+            {
+                using var client = new System.Net.Http.HttpClient();
+                client.DefaultRequestHeaders.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36");
+                var url = $"https://graph.nhaccuatui.com/api/v1/search/playlist?keyword={Uri.EscapeDataString(keyword)}&pageindex=1&pagesize={limit}&correct=false";
+                var json = await client.GetStringAsync(url);
+                using var doc = System.Text.Json.JsonDocument.Parse(json);
+                var root = doc.RootElement;
+
+                if (root.GetProperty("code").GetInt32() != 0)
+                    return Ok(new { success = true, data = new List<object>() });
+
+                var playlists = new List<object>();
+                if (root.TryGetProperty("data", out var data) && data.TryGetProperty("playlists", out var pls))
+                {
+                    foreach (var pl in pls.EnumerateArray())
+                    {
+                        if (playlists.Count >= limit) break;
+                        playlists.Add(new
+                        {
+                            key = pl.TryGetProperty("key", out var k) ? k.GetString() : "",
+                            name = pl.TryGetProperty("name", out var n) ? n.GetString() : "",
+                            image = pl.TryGetProperty("image", out var img) ? img.GetString() : "",
+                            totalSongs = pl.TryGetProperty("totalSongs", out var ts) ? ts.GetInt32() : 0,
+                            description = pl.TryGetProperty("description", out var d2) ? d2.GetString() : "",
+                        });
+                    }
+                }
+
+                _playlistSearchCache[cacheKey] = (playlists.Cast<object>().ToList(), DateTime.UtcNow.AddHours(6));
+                return Ok(new { success = true, data = playlists });
+            }
+            catch (System.Exception ex)
+            {
+                return StatusCode(500, new { message = "Error searching NCT playlists", details = ex.Message });
+            }
+        }
+
+        private static readonly Dictionary<string, (List<object> data, DateTime expiry)> _playlistSearchCache = new();
+
         // ── Database Song Endpoints ────────────────────────────────────────────
         [HttpGet]
         public async Task<ActionResult<IEnumerable<Song>>> GetSongs()
