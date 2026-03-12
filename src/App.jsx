@@ -194,10 +194,21 @@ function AppContent() {
           >
             <HiMenuAlt2 />
           </button>
-          <div className="flex-1 min-w-0">
+          <div className="flex-1 min-w-0 max-w-md lg:max-w-lg xl:max-w-xl">
             <SearchBar />
           </div>
-          <HeaderUserMenu />
+          {/* SOUNDIA Branding */}
+          <div className="hidden sm:flex items-center flex-shrink-0 cursor-pointer group" onClick={() => navigate("/")}>
+            <span
+              className="text-3xl font-black tracking-[0.2em] text-neon group-hover:text-glow transition-all duration-300"
+              style={{ textShadow: '0 0 10px rgba(46,196,182,0.5), 0 0 30px rgba(46,196,182,0.2)' }}
+            >
+              SOUNDIA
+            </span>
+          </div>
+          <div className="ml-auto flex-shrink-0">
+            <HeaderUserMenu />
+          </div>
         </header>
 
         {/* Pages */}
