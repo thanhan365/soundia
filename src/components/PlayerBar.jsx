@@ -101,13 +101,13 @@ export default function PlayerBar() {
 
   return (
     <div
+      style={{ background: 'rgba(10,15,30,0.85)' }}
       className={`
         fixed bottom-0 left-0 right-0 z-30
-        bg-gradient-to-r from-slate-900 to-slate-950 sm:backdrop-blur-xl border-t border-[#2EC4B6]/10
+        backdrop-blur-[12px] border-t border-[#00ffc8]/10
         transition-all duration-500
-        shadow-[0_-4px_30px_rgba(46,196,182,0.08)]
         safe-bottom
-        ${isPlaying ? "shadow-[0_-4px_30px_rgba(46,196,182,0.15)]" : ""}
+        ${isPlaying ? "shadow-[0_-10px_40px_rgba(0,0,0,0.6)]" : "shadow-[0_-10px_40px_rgba(0,0,0,0.5)]"}
       `}
     >
       <div className="mx-auto">

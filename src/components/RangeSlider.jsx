@@ -15,7 +15,7 @@ export default function RangeSlider({
     <div className={`relative flex items-center group ${className}`}>
       <div className="absolute inset-x-0 h-1 bg-gray-dark rounded-full" />
       <div
-        className="absolute inset-y-0 left-0 h-1 bg-gradient-to-r from-[#2EC4B6] to-[#25A89C] rounded-full"
+        className="absolute inset-y-0 left-0 h-1 bg-gradient-to-r from-[#22d3ee] to-[#2dd4bf] rounded-full"
         style={{ width: `${progress}%`, top: '50%', transform: 'translateY(-50%)' }}
       />
       {showGlow && (

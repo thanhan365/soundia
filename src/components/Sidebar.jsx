@@ -71,7 +71,7 @@ export default function Sidebar({ isOpen, onClose }) {
         </div>
 
         {/* Main Nav */}
-        <nav className="px-2 space-y-0.5">
+        <nav className="px-2 space-y-1">
           {mainNav.map(({ to, icon: Icon, label }) => (
             <NavLink
               key={to}
@@ -79,7 +79,7 @@ export default function Sidebar({ isOpen, onClose }) {
               end={to === "/"}
               onClick={onClose}
               className={({ isActive }) => `
-                flex items-center gap-3 px-3 py-2.5 rounded-lg text-[13px] font-semibold
+                flex items-center gap-3 px-3 py-3 rounded-lg text-sm font-semibold
                 no-underline transition-all duration-200 whitespace-nowrap overflow-hidden
                 ${isActive
                   ? "bg-neon/10 text-neon"
@@ -87,7 +87,7 @@ export default function Sidebar({ isOpen, onClose }) {
                 }
               `}
             >
-              <Icon className="text-lg flex-shrink-0" />
+              <Icon className="text-xl flex-shrink-0" />
               <span className={`transition-all duration-300 ${isExpanded ? "opacity-100" : "opacity-0 w-0"}`}>
                 {label}
               </span>
@@ -109,7 +109,7 @@ export default function Sidebar({ isOpen, onClose }) {
               to={to}
               onClick={onClose}
               className={({ isActive }) => `
-                flex items-center gap-3 px-3 py-2.5 rounded-lg text-[13px] font-semibold
+                flex items-center gap-3 px-3 py-3 rounded-lg text-sm font-semibold
                 no-underline transition-all duration-200 whitespace-nowrap overflow-hidden
                 ${isActive
                   ? "bg-neon/10 text-neon"
@@ -117,7 +117,7 @@ export default function Sidebar({ isOpen, onClose }) {
                 }
               `}
             >
-              <Icon className="text-lg flex-shrink-0" />
+              <Icon className="text-xl flex-shrink-0" />
               <span className={`transition-all duration-300 ${isExpanded ? "opacity-100" : "opacity-0 w-0"}`}>
                 {label}
               </span>

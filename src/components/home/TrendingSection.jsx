@@ -11,7 +11,7 @@ export default function TrendingSection({ songs, title = "Đang Thịnh Hành", 
   return (
     <section className="mb-12">
       <div className="flex items-center justify-between mb-6">
-        <h2 className="text-2xl md:text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-white to-purple-200">
+        <h2 className="text-2xl md:text-3xl font-black text-white">
           {title}
         </h2>
         {viewMoreLink && (

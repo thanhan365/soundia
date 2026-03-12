@@ -33,6 +33,8 @@ const Login = React.lazy(() => import("./pages/Login"));
 const Register = React.lazy(() => import("./pages/Register"));
 const AdminPage = React.lazy(() => import("./pages/AdminPage"));
 const SetupAdmin = React.lazy(() => import("./pages/SetupAdmin"));
+const AlbumDetailPage = React.lazy(() => import("./pages/AlbumDetailPage"));
+const MVDetailPage = React.lazy(() => import("./pages/MVDetailPage"));
 const NotFound = React.lazy(() => import("./pages/NotFound"));
 
 // Loading fallback
@@ -178,7 +180,7 @@ function AppContent() {
 
       <main className={`flex-1 min-w-0 w-full max-w-[100vw] flex flex-col h-full transition-all duration-300 lg:pl-[68px] ${queueOpen ? "lg:mr-80" : ""}`}>
         {/* Header */}
-        <header className="flex-shrink-0 sticky top-0 z-50 bg-[#170f23] sm:bg-[#170f23]/80 sm:backdrop-blur-xl border-b border-white/5 px-3 sm:px-4 lg:px-6 xl:px-8 py-2 sm:py-3 flex items-center gap-2 sm:gap-4 shadow-md">
+        <header style={{ background: 'rgba(10,15,30,0.7)', backdropFilter: 'blur(12px)', borderBottom: '1px solid rgba(0,255,200,0.08)' }} className="flex-shrink-0 sticky top-0 z-50 px-3 sm:px-4 lg:px-6 xl:px-8 py-2 sm:py-3 flex items-center gap-2 sm:gap-4 shadow-md">
           <button
             onClick={() => navigate(-1)}
             className="text-gray-400 hover:text-neon transition-colors text-lg sm:text-xl"
@@ -220,6 +222,8 @@ function AppContent() {
               <Route path="/artists" element={<AllArtists />} />
               <Route path="/playlists" element={<AllPlaylists />} />
               <Route path="/suggested-playlist" element={<SuggestedPlaylistDetail />} />
+              <Route path="/album/:key" element={<AlbumDetailPage />} />
+              <Route path="/mv/:key" element={<MVDetailPage />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </Suspense>

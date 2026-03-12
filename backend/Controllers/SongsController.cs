@@ -1351,5 +1351,199 @@ namespace Soundia.Api.Controllers
                 .ToListAsync();
             return Ok(new { data = songs });
         }
+
+        // ─── NCT Album (Top 100 Curated Playlists) ─────────────────────
+        // GET /api/songs/nct-albums?limit=20
+        [HttpGet("nct-albums")]
+        public async Task<IActionResult> NctAlbumSearch([FromQuery] int limit = 20)
+        {
+            try
+            {
+                using var client = new System.Net.Http.HttpClient();
+                client.DefaultRequestHeaders.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36");
+
+                // Fetch curated Top 100 playlists from NCT (updated regularly by NCT editors)
+                var url = "https://graph.nhaccuatui.com/api/v1/app/playlist/top-100";
+                var json = await client.GetStringAsync(url);
+                using var doc = System.Text.Json.JsonDocument.Parse(json);
+                var root = doc.RootElement;
+
+                var results = new List<object>();
+                if (root.TryGetProperty("data", out var areaArr))
+                {
+                    foreach (var area in areaArr.EnumerateArray())
+                    {
+                        if (results.Count >= limit) break;
+                        var areaName = area.TryGetProperty("area", out var an) ? an.GetString() : "";
+                        if (!area.TryGetProperty("data", out var playlists)) continue;
+                        foreach (var pl in playlists.EnumerateArray())
+                        {
+                            if (results.Count >= limit) break;
+                            results.Add(new
+                            {
+                                key = pl.TryGetProperty("key", out var k) ? k.GetString() : "",
+                                name = pl.TryGetProperty("name", out var n) ? n.GetString() : "",
+                                image = pl.TryGetProperty("image", out var img) ? img.GetString() : "",
+                                artistName = pl.TryGetProperty("subName", out var sn) ? sn.GetString() : "",
+                                area = areaName,
+                                totalSongs = 0,
+                                description = "",
+                            });
+                        }
+                    }
+                }
+
+                return Ok(new { success = true, data = results });
+            }
+            catch (System.Exception ex)
+            {
+                return StatusCode(500, new { message = "Error fetching NCT albums", details = ex.Message });
+            }
+        }
+
+        // ─── NCT Video (MV) Search — trending ────────────────────────────
+        // GET /api/songs/nct-videos?limit=20
+        [HttpGet("nct-videos")]
+        public async Task<IActionResult> NctVideoSearch([FromQuery] int limit = 20)
+        {
+            try
+            {
+                using var client = new System.Net.Http.HttpClient();
+                client.DefaultRequestHeaders.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36");
+
+                var results = new List<object>();
+                // Use trending artist/song keywords to get latest MVs
+                var keywords = new[] { "HIEUTHUHAI", "Sơn Tùng MTP", "Đức Phúc", "bích phương", "erik", "hoàng thùy linh", "jack", "amee", "mono", "tlinh" };
+
+                foreach (var kw in keywords)
+                {
+                    if (results.Count >= limit) break;
+                    try
+                    {
+                        var url = $"https://graph.nhaccuatui.com/api/v1/search/video?keyword={Uri.EscapeDataString(kw)}&pageindex=1&pagesize=3&correct=false";
+                        var json = await client.GetStringAsync(url);
+                        using var doc = System.Text.Json.JsonDocument.Parse(json);
+                        var root = doc.RootElement;
+
+                        if (root.GetProperty("code").GetInt32() != 0) continue;
+                        if (!root.TryGetProperty("data", out var data) || !data.TryGetProperty("videos", out var vids)) continue;
+
+                        foreach (var v in vids.EnumerateArray())
+                        {
+                            if (results.Count >= limit) break;
+                            var key = v.TryGetProperty("key", out var k2) ? k2.GetString() : "";
+                            if (results.Any(r => ((dynamic)r).key == key)) continue;
+                            results.Add(new
+                            {
+                                key,
+                                name = v.TryGetProperty("name", out var n) ? n.GetString() : "",
+                                artistName = v.TryGetProperty("artistName", out var a2) ? a2.GetString() : "",
+                                image = v.TryGetProperty("image", out var im2) ? im2.GetString() : "",
+                                duration = v.TryGetProperty("duration", out var d2) ? d2.GetInt32() : 0,
+                            });
+                        }
+                    }
+                    catch { /* skip failed keyword */ }
+                }
+
+                return Ok(new { success = true, data = results });
+            }
+            catch (System.Exception ex)
+            {
+                return StatusCode(500, new { message = "Error fetching NCT videos", details = ex.Message });
+            }
+        }
+
+        // ─── NCT Video Detail ─────────────────────────────────────────
+        // GET /api/songs/nct-video-detail/{key}
+        [HttpGet("nct-video-detail/{key}")]
+        public async Task<IActionResult> NctVideoDetail(string key)
+        {
+            try
+            {
+                using var client = new System.Net.Http.HttpClient();
+                client.DefaultRequestHeaders.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36");
+
+                // Get video detail from NCT graph API
+                var url = $"https://graph.nhaccuatui.com/api/v1/video/detail/{key}";
+                var json = await client.GetStringAsync(url);
+                using var doc = System.Text.Json.JsonDocument.Parse(json);
+                var root = doc.RootElement;
+
+                if (root.GetProperty("code").GetInt32() != 0)
+                    return NotFound(new { message = "Video not found" });
+
+                var data = root.GetProperty("data");
+                var name = data.TryGetProperty("name", out var n) ? n.GetString() : "";
+                var artistName = data.TryGetProperty("artistName", out var an) ? an.GetString() : "";
+                var image = data.TryGetProperty("image", out var img) ? img.GetString() : "";
+                var duration = data.TryGetProperty("duration", out var dur) ? dur.GetInt32() : 0;
+                var linkShare = data.TryGetProperty("linkShare", out var ls) ? ls.GetString() : "";
+
+                // Try to get stream URL from streamURL array
+                string videoUrl = "";
+                if (data.TryGetProperty("streamURL", out var streams))
+                {
+                    foreach (var stream in streams.EnumerateArray())
+                    {
+                        if (stream.TryGetProperty("stream", out var su))
+                        {
+                            videoUrl = su.GetString() ?? "";
+                            break;
+                        }
+                    }
+                }
+
+                // If no stream from API, try scraping the web page
+                if (string.IsNullOrEmpty(videoUrl) && !string.IsNullOrEmpty(linkShare))
+                {
+                    try
+                    {
+                        var html = await client.GetStringAsync(linkShare);
+                        var nuxtMatch = System.Text.RegularExpressions.Regex.Match(html,
+                            @"<script[^>]*id=""__NUXT_DATA__""[^>]*>([\s\S]*?)</script>");
+                        if (nuxtMatch.Success)
+                        {
+                            var nuxtArr = System.Text.Json.JsonSerializer.Deserialize<System.Text.Json.JsonElement[]>(nuxtMatch.Groups[1].Value);
+                            foreach (var item in nuxtArr)
+                            {
+                                if (item.ValueKind != System.Text.Json.JsonValueKind.String) continue;
+                                var v = item.GetString();
+                                if (v != null && (v.Contains(".mp4") || v.Contains("video")) && (v.Contains("stream.nct.vn") || v.Contains("a01.nct.vn")))
+                                {
+                                    videoUrl = v;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                    catch { /* ignore scrape failures */ }
+                }
+
+                // Proxy the video URL
+                var proxiedVideoUrl = !string.IsNullOrEmpty(videoUrl)
+                    ? $"/api/stream/proxy-audio?url={System.Net.WebUtility.UrlEncode(videoUrl)}"
+                    : "";
+
+                return Ok(new
+                {
+                    success = true,
+                    data = new
+                    {
+                        key,
+                        name,
+                        artistName,
+                        image,
+                        duration,
+                        videoUrl = proxiedVideoUrl,
+                        linkShare,
+                    }
+                });
+            }
+            catch (System.Exception ex)
+            {
+                return StatusCode(500, new { message = "Error fetching NCT video detail", details = ex.Message });
+            }
+        }
     }
 }

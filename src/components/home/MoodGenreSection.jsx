@@ -38,7 +38,7 @@ export default function MoodGenreSection() {
         </h2>
         <button
           onClick={() => navigate('/genres')}
-          className="flex items-center gap-1 text-sm text-gray-400 hover:text-neon transition-colors group"
+          className="flex items-center gap-1 text-sm font-bold text-neon hover:text-neon/80 transition-colors group"
         >
           Xem thêm
           <HiChevronRight className="text-base group-hover:translate-x-0.5 transition-transform" />
@@ -51,7 +51,7 @@ export default function MoodGenreSection() {
           <div
             key={mood.id}
             onClick={() => handleMoodClick(mood)}
-            className={`cursor-pointer overflow-hidden rounded-xl md:rounded-2xl p-3 md:p-5 h-24 md:h-36 relative group transition-all duration-500 hover:shadow-[0_15px_30px_rgba(255,255,255,0.08)] flex-shrink-0 w-[calc(50%-6px)] min-w-[140px] snap-start md:w-auto md:min-w-0`}
+            className={`cursor-pointer overflow-hidden rounded-xl md:rounded-2xl p-3 md:p-5 h-24 md:h-36 relative group transition-all duration-500 hover:shadow-[0_15px_30px_rgba(255,255,255,0.08)] hover:scale-[1.03] flex-shrink-0 w-[calc(50%-6px)] min-w-[140px] snap-start md:w-auto md:min-w-0`}
           >
             {/* Background Gradient */}
             <div className={`absolute inset-0 bg-gradient-to-br ${mood.from} ${mood.to} opacity-75 group-hover:opacity-100 transition-opacity duration-300`} />
