@@ -176,7 +176,7 @@ function AppContent() {
 
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
-      <main className={`flex-1 flex flex-col h-full transition-all duration-300 lg:pl-[68px] ${queueOpen ? "lg:mr-80" : ""}`}>
+      <main className={`flex-1 min-w-0 w-full max-w-[100vw] flex flex-col h-full transition-all duration-300 lg:pl-[68px] ${queueOpen ? "lg:mr-80" : ""}`}>
         {/* Header */}
         <header className="flex-shrink-0 sticky top-0 z-50 bg-[#170f23]/80 backdrop-blur-xl border-b border-white/5 px-3 sm:px-4 lg:px-6 xl:px-8 py-2 sm:py-3 flex items-center gap-2 sm:gap-4 shadow-md">
           <button
@@ -192,14 +192,14 @@ function AppContent() {
           >
             <HiMenuAlt2 />
           </button>
-          <div className="flex-1">
+          <div className="flex-1 min-w-0">
             <SearchBar />
           </div>
           <HeaderUserMenu />
         </header>
 
         {/* Pages */}
-        <div className="flex-1 px-3 sm:px-4 lg:px-6 xl:px-8 py-4 sm:py-6 overflow-y-auto">
+        <div className="flex-1 px-3 sm:px-4 lg:px-6 xl:px-8 py-4 sm:py-6 overflow-y-auto overflow-x-hidden">
           <Suspense fallback={<PageLoader />}>
             <Routes>
               <Route path="/" element={<Home />} />

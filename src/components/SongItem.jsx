@@ -75,7 +75,7 @@ const SongItem = memo(function SongItem({ song, index }) {
         </div>
 
         {/* Info */}
-        <div className="flex-1 min-w-0 pr-4 flex flex-col justify-center">
+        <div className="flex-1 min-w-0 pr-1 sm:pr-4 flex flex-col justify-center">
           <p className={`text-sm lg:text-[15px] font-semibold truncate transition-colors ${isActive ? "text-neon" : "text-white"}`}>
             {song.title}
           </p>

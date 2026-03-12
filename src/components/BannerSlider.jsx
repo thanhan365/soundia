@@ -88,13 +88,13 @@ export default function BannerSlider() {
 
   return (
     <div
-      className="relative w-full overflow-hidden rounded-2xl md:rounded-3xl mt-0 md:mt-4 shadow-[0_10px_40px_rgba(0,0,0,0.5)] group/slider mb-4"
+      className="relative w-full max-w-full overflow-hidden rounded-xl sm:rounded-2xl md:rounded-3xl mt-0 md:mt-4 shadow-[0_10px_40px_rgba(0,0,0,0.5)] group/slider mb-4"
       onMouseEnter={() => setPaused(true)}
       onMouseLeave={() => setPaused(false)}
     >
       {/* Slides wrapper */}
       <div
-        className="flex transition-transform duration-700 ease-out h-[260px] md:h-[300px] lg:h-[340px]"
+        className="flex transition-transform duration-700 ease-out h-[200px] sm:h-[260px] md:h-[300px] lg:h-[340px]"
         style={{ transform: `translateX(-${currentIndex * 100}%)` }}
       >
         {songs.map((song) => {
@@ -103,15 +103,15 @@ export default function BannerSlider() {
           return (
             <div
               key={song.id}
-              className="min-w-full relative flex-shrink-0 group overflow-hidden flex items-end p-4 md:p-8 lg:p-10"
+              className="min-w-full relative flex-shrink-0 group overflow-hidden flex items-end p-3 sm:p-4 md:p-8 lg:p-10"
             >
               {/* Background: blurred song cover */}
               <div className="absolute inset-0">
-                <img src={song.cover} alt="" className="w-full h-full object-cover scale-110 blur-xl opacity-40" />
+                <img src={song.cover} alt="" className="w-full h-full object-cover blur-xl opacity-40" />
                 <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/50 to-black/70" />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-transparent to-black/30" />
               </div>
-              <div className="relative z-10 flex flex-col md:flex-row items-end gap-8 w-full">
+              <div className="relative z-10 flex flex-col md:flex-row items-end gap-4 sm:gap-8 w-full">
                 {/* Glow behind the cover image */}
                 <div className="relative group/cover cursor-pointer hidden sm:block" onClick={(e) => handlePlayPause(e, song)}>
                   <div className="absolute -inset-1 bg-gradient-to-r from-cyan-400 via-purple-500 to-pink-500 rounded-2xl blur opacity-30 group-hover/cover:opacity-60 transition duration-500"></div>
@@ -130,24 +130,24 @@ export default function BannerSlider() {
                   </div>
                 </div>
 
-                <div className="flex-1 space-y-2 md:space-y-3 pb-1 md:pb-2 z-20">
-                  <p className="text-[10px] md:text-sm font-bold uppercase tracking-[0.2em] text-[#14b8a6] drop-shadow-[0_0_8px_rgba(20,184,166,0.5)]">
+                <div className="flex-1 space-y-1 sm:space-y-2 md:space-y-3 pb-1 md:pb-2 z-20 min-w-0">
+                  <p className="text-[9px] sm:text-[10px] md:text-sm font-bold uppercase tracking-[0.2em] text-[#14b8a6] drop-shadow-[0_0_8px_rgba(20,184,166,0.5)]">
                     Tâm điểm nổi bật
                   </p>
                   <h1
-                    className="text-2xl md:text-4xl lg:text-5xl font-black text-white hover:text-transparent hover:bg-clip-text hover:bg-gradient-to-r hover:from-[#14b8a6] hover:to-purple-500 cursor-pointer line-clamp-2 drop-shadow-md transition-all duration-300"
+                    className="text-xl sm:text-2xl md:text-4xl lg:text-5xl font-black text-white hover:text-transparent hover:bg-clip-text hover:bg-gradient-to-r hover:from-[#14b8a6] hover:to-purple-500 cursor-pointer line-clamp-1 sm:line-clamp-2 drop-shadow-md transition-all duration-300"
                     onClick={(e) => handlePlayPause(e, song)}
                   >
                     {song.title}
                   </h1>
-                  <p className="text-xs md:text-sm lg:text-lg text-purple-200 font-medium opacity-90 pb-2">
+                  <p className="text-[11px] sm:text-xs md:text-sm lg:text-lg text-purple-200 font-medium opacity-90 pb-1 sm:pb-2 truncate">
                     {song.artist}
                   </p>
 
                   <div className="flex items-center gap-3 pt-2">
                     <button
                       onClick={(e) => handlePlayPause(e, song)}
-                      className="flex items-center gap-2 bg-gradient-to-r from-[#14b8a6] to-purple-600 hover:from-teal-400 hover:to-purple-500 text-white px-5 md:px-6 py-2 md:py-2.5 rounded-full text-xs md:text-sm font-bold transition-all duration-300 hover:scale-105 hover:shadow-[0_0_20px_rgba(20,184,166,0.5)]"
+                      className="flex items-center gap-1.5 sm:gap-2 bg-gradient-to-r from-[#14b8a6] to-purple-600 hover:from-teal-400 hover:to-purple-500 text-white px-3 sm:px-5 md:px-6 py-1.5 sm:py-2 md:py-2.5 rounded-full text-[11px] sm:text-xs md:text-sm font-bold transition-all duration-300 hover:scale-105 hover:shadow-[0_0_20px_rgba(20,184,166,0.5)]"
                     >
                       {isActivePlaying ? (
                         <>

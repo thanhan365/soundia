@@ -7,10 +7,15 @@ using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Support Render's PORT environment variable
+var port = Environment.GetEnvironmentVariable("PORT") ?? "5066";
+builder.WebHost.UseUrls($"http://+:{port}");
+
 // Add services to the container.
 
 // 1. DbContext Configuration
-var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+var connectionString = Environment.GetEnvironmentVariable("DATABASE_URL") 
+    ?? builder.Configuration.GetConnectionString("DefaultConnection");
 builder.Services.AddDbContext<SoundiaDbContext>(options =>
     options.UseSqlServer(connectionString, sqlOptions => 
     {

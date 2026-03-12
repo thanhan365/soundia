@@ -47,7 +47,7 @@ export default function SearchBar() {
   const showDropdown = focused && (searchHistory.length > 0 || suggestions.length > 0);
 
   return (
-    <div ref={ref} className="relative w-full max-w-xl">
+    <div ref={ref} className="relative w-full max-w-xl min-w-0">
       {/* Input */}
       <div className="relative flex items-center">
         <HiSearch className="absolute left-3 text-gray-500 text-base pointer-events-none" />

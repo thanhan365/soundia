@@ -1,0 +1,7 @@
+# Docker
+bin/
+obj/
+.env
+*.user
+*.suo
+*.sln.docstates

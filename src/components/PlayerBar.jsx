@@ -106,6 +106,7 @@ export default function PlayerBar() {
         bg-gradient-to-r from-slate-900 to-slate-950 backdrop-blur-xl border-t border-cyan-400/10
         transition-all duration-500
         shadow-[0_-4px_30px_rgba(56,189,248,0.08)]
+        safe-bottom
         ${isPlaying ? "shadow-[0_-4px_30px_rgba(56,189,248,0.15)]" : ""}
       `}
     >
@@ -165,99 +166,49 @@ export default function PlayerBar() {
           </div>
 
           {/* Row 2: Progress */}
-          <div className="px-2 py-1">
+          <div className="px-3 py-0.5">
             <ProgressBar />
           </div>
 
-          {/* Row 3: Controls + Extras */}
-          <div className="px-2 pb-2">
-            <div className="flex items-center justify-center relative">
-              {/* Center controls */}
-              <div className="flex items-center gap-1 sm:gap-2">
-                <button onClick={toggleShuffle} className={`p-1 flex-shrink-0 ${shuffle ? "text-neon" : "text-gray-600"}`}>
-                  <IoShuffle className="text-[14px]" />
-                </button>
-                <button data-player-prev-btn onClick={playPrev} className="text-gray-400 active:text-white p-1 flex-shrink-0 rounded-full hover:text-gray-300">
-                  <HiBackward className="text-base" />
+          {/* Row 3: Controls — Simplified for mobile */}
+          <div className="px-3 pb-1.5">
+            <div className="flex items-center justify-between">
+              {/* Left: shuffle */}
+              <button onClick={toggleShuffle} className={`p-1.5 flex-shrink-0 ${shuffle ? "text-neon" : "text-gray-600"}`}>
+                <IoShuffle className="text-[16px]" />
+              </button>
+
+              {/* Center: prev / play / next */}
+              <div className="flex items-center gap-3">
+                <button data-player-prev-btn onClick={playPrev} className="text-gray-400 active:text-white p-1.5 flex-shrink-0 rounded-full">
+                  <HiBackward className="text-lg" />
                 </button>
                 <button
                   data-player-play-btn
                   onClick={togglePlay}
                   disabled={!currentSong || isLoadingStream}
-                  className={`w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 ${currentSong ? "bg-white text-dark active:scale-90" : "bg-white/10 text-gray-600"} ${isLoadingStream ? "opacity-70 cursor-wait" : ""}`}
+                  className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${currentSong ? "bg-white text-dark active:scale-90" : "bg-white/10 text-gray-600"} ${isLoadingStream ? "opacity-70 cursor-wait" : ""}`}
                 >
                   {isLoadingStream ? (
                     <div className="w-4 h-4 rounded-full border-2 border-dark border-t-transparent animate-spin" />
-                  ) : isPlaying ? <HiPause className="text-base" /> : <HiPlay className="text-base ml-0.5" />}
+                  ) : isPlaying ? <HiPause className="text-lg" /> : <HiPlay className="text-lg ml-0.5" />}
                 </button>
-                <button data-player-next-btn onClick={playNext} className="text-gray-400 active:text-white p-1 flex-shrink-0 rounded-full hover:text-gray-300">
-                  <HiForward className="text-base" />
-                </button>
-                <button onClick={toggleRepeat} className={`p-1 flex-shrink-0 ${repeatMode !== "none" ? "text-neon" : "text-gray-600"}`}>
-                  <IoRepeat className="text-[14px]" />
-                  {repeatMode === "one" && <span className="inline-block text-[7px] ml-0.5">1</span>}
-                </button>
-                <button data-player-lyrics-btn onClick={() => setLyricsOpen(!lyricsOpen)} className={`p-1 text-xs font-bold flex-shrink-0 ${lyricsOpen ? "text-neon" : "text-gray-600"}`}>
-                  LRC
+                <button data-player-next-btn onClick={playNext} className="text-gray-400 active:text-white p-1.5 flex-shrink-0 rounded-full">
+                  <HiForward className="text-lg" />
                 </button>
               </div>
 
-              {/* Extras (Queue, Lyrics) moved to absolute for perfect centering */}
-              <div className="absolute right-0 flex items-center gap-1 sm:gap-2">
-                <div className="relative" ref={sleepMenuRef}>
-                  <button onClick={() => setSleepMenuOpen(!sleepMenuOpen)} className={`p-1 flex-shrink-0 relative ${sleepTimer ? 'text-neon' : 'text-gray-600'}`}>
-                    <HiClock className="text-[14px]" />
-                    {sleepTimer && <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 bg-neon rounded-full" />}
-                  </button>
-                  {sleepMenuOpen && (
-                    <div className="absolute bottom-full right-0 mb-2 bg-[#1a1a2e] border border-white/10 rounded-xl shadow-2xl py-2 w-44 z-50">
-                      <p className="px-3 py-1 text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Hẹn giờ tắt nhạc</p>
-                      {[15, 30, 45, 60].map(m => (
-                        <button key={m} onClick={() => handleSleepTimer(m)} className={`w-full px-4 py-2 text-[13px] text-left hover:bg-white/5 ${sleepTimer === m ? 'text-neon' : 'text-gray-300'}`}>
-                          {m} phút {sleepTimer === m && '✓'}
-                        </button>
-                      ))}
-                      <button onClick={() => handleSleepTimer('end')} className={`w-full px-4 py-2 text-[13px] text-left hover:bg-white/5 ${sleepTimer === 'end' ? 'text-neon' : 'text-gray-300'}`}>
-                        Hết bài này {sleepTimer === 'end' && '✓'}
-                      </button>
-                      <div className="mx-3 my-1 h-px bg-white/5" />
-                      <div className="px-3 py-1.5 flex items-center gap-2">
-                        <input
-                          type="number"
-                          min="1"
-                          max="999"
-                          placeholder="Tùy chọn"
-                          value={customMinutes}
-                          onChange={(e) => setCustomMinutes(e.target.value)}
-                          onKeyDown={(e) => { if (e.key === 'Enter' && customMinutes) { handleSleepTimer(Number(customMinutes)); setCustomMinutes(''); } }}
-                          className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-[13px] text-white placeholder-gray-500 focus:outline-none focus:border-neon/50 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                        />
-                        <button
-                          onClick={() => { if (customMinutes) { handleSleepTimer(Number(customMinutes)); setCustomMinutes(''); } }}
-                          className="text-neon text-xs font-semibold px-2 py-1.5 rounded-lg hover:bg-neon/10 transition-colors whitespace-nowrap"
-                        >OK</button>
-                      </div>
-                      {sleepTimer && (
-                        <>
-                          <div className="mx-3 my-1 h-px bg-white/5" />
-                          <button onClick={() => handleSleepTimer('off')} className="w-full px-4 py-2 text-[13px] text-red-400 text-left hover:bg-white/5">
-                            Tắt hẹn giờ
-                          </button>
-                        </>
-                      )}
-                      <div className="mx-3 my-1 h-px bg-white/5" />
-                      <p className="px-3 py-1 text-[10px] font-semibold text-gray-500 uppercase tracking-wider">🔀 Crossfade</p>
-                      {[0, 3, 5, 8].map(v => (
-                        <button key={v} onClick={() => handleCrossfade(v)} className={`w-full px-4 py-2 text-[13px] text-left hover:bg-white/5 ${crossfade === v ? 'text-neon' : 'text-gray-300'}`}>
-                          {v === 0 ? 'Tắt' : `${v} giây`} {crossfade === v && '✓'}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-                <div className="hidden min-[360px]:block w-14 sm:w-16"><VolumeControl /></div>
-                <button onClick={() => setQueueOpen(!queueOpen)} className={`p-1 flex-shrink-0 ${queueOpen ? "text-neon" : "text-gray-600"}`}>
-                  <HiQueueList className="text-base" />
+              {/* Right: repeat + lyrics + queue */}
+              <div className="flex items-center gap-0.5">
+                <button onClick={toggleRepeat} className={`p-1.5 flex-shrink-0 ${repeatMode !== "none" ? "text-neon" : "text-gray-600"}`}>
+                  <IoRepeat className="text-[16px]" />
+                  {repeatMode === "one" && <span className="absolute text-[7px] ml-0.5">1</span>}
+                </button>
+                <button data-player-lyrics-btn onClick={() => setLyricsOpen(!lyricsOpen)} className={`p-1.5 text-[10px] font-bold flex-shrink-0 ${lyricsOpen ? "text-neon" : "text-gray-600"}`}>
+                  LRC
+                </button>
+                <button onClick={() => setQueueOpen(!queueOpen)} className={`p-1.5 flex-shrink-0 ${queueOpen ? "text-neon" : "text-gray-600"}`}>
+                  <HiQueueList className="text-[16px]" />
                 </button>
               </div>
             </div>

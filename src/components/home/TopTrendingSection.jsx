@@ -44,7 +44,7 @@ export default function TopTrendingSection() {
   if (songs.length === 0) return null;
 
   return (
-    <div className="mb-10 px-4 md:px-0">
+    <div className="mb-10">
       <div className="flex items-center gap-2 mb-4 md:mb-6">
         <HiFire className="text-orange-500 text-2xl animate-pulse" />
         <h2 className="text-xl md:text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-orange-400 via-red-500 to-pink-500 drop-shadow-[0_0_10px_rgba(239,68,68,0.3)]">
@@ -88,8 +88,8 @@ export default function TopTrendingSection() {
               </div>
 
               {/* Song info */}
-              <div className="flex-1 min-w-0 pr-2">
-                <p className={`text-sm font-semibold truncate transition-colors ${isActive ? "text-neon" : "text-white group-hover:text-orange-400"}`}>
+              <div className="flex-1 min-w-0">
+                <p className={`text-[13px] sm:text-sm font-semibold truncate transition-colors ${isActive ? "text-neon" : "text-white group-hover:text-orange-400"}`}>
                   {song.title}
                 </p>
                 <p className="text-[11px] text-gray-500 truncate mt-0.5">
