@@ -245,7 +245,7 @@ export default function ExternalPlaylistPage() {
                 <HiPlus className="w-5 h-5" />
               </button>
               {headerPlMenu && (
-                <div ref={headerMenuRef} className="absolute left-0 top-14 z-50 w-56 bg-[#282040] border border-white/10 rounded-xl shadow-2xl py-2 animate-fade-in-up">
+                <div ref={headerMenuRef} className="absolute right-0 top-14 z-50 w-56 bg-[#282040] border border-white/10 rounded-xl shadow-2xl py-2 animate-fade-in-up">
                   <p className="px-3 py-1 text-[10px] text-gray-400 uppercase tracking-wider">Thêm tất cả vào playlist</p>
                   {playlists.length > 0 ? playlists.map(pl => (
                     <button key={pl.id} onClick={() => handleAddAllToPlaylist(pl.id)} className="w-full text-left px-3 py-2 text-sm text-white hover:bg-white/10 truncate transition-colors">{pl.name}</button>

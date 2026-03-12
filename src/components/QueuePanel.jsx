@@ -9,12 +9,12 @@ export default function QueuePanel() {
 
   return (
     <>
-      {queueOpen && <div className="fixed inset-0 bg-black/40 z-35 lg:hidden" onClick={() => setQueueOpen(false)} />}
+      {queueOpen && <div className="fixed inset-0 bg-black/40 z-[55] lg:hidden" onClick={() => setQueueOpen(false)} />}
 
       <aside
         className={`
-          fixed top-0 right-0 h-full w-64 sm:w-80 z-40
-          bg-[#170f23]/95 backdrop-blur-xl border-l border-white/5
+          fixed top-0 right-0 h-full w-64 sm:w-80 z-[60]
+          bg-[#170f23]/95 sm:backdrop-blur-xl border-l border-white/5
           flex flex-col transition-transform duration-300
           ${queueOpen ? "translate-x-0" : "translate-x-full"}
         `}
@@ -24,7 +24,7 @@ export default function QueuePanel() {
             <HiQueueList className="text-neon text-sm sm:text-base" />
             <h2 className="text-sm sm:text-base font-bold text-white">Danh sách phát</h2>
           </div>
-          <button onClick={() => setQueueOpen(false)} className="text-gray-500 hover:text-white transition-colors p-1">
+          <button onClick={() => setQueueOpen(false)} className="w-9 h-9 flex items-center justify-center rounded-full bg-white/10 text-white hover:bg-white/20 active:bg-white/30 transition-colors">
             <HiX className="text-lg" />
           </button>
         </div>

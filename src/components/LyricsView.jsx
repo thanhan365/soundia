@@ -153,19 +153,19 @@ export default function LyricsView() {
   if (!lyricsOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[70] bg-black/90 backdrop-blur-2xl flex flex-col items-center justify-center animate-fade-in">
-      {/* Close Button */}
+    <div className="fixed inset-0 z-[70] bg-black/95 flex flex-col items-center justify-center animate-fade-in">
+      {/* Close Button — large touch target, far from browser chrome */}
       <button
         onClick={() => setLyricsOpen(false)}
-        className="absolute top-4 right-4 sm:top-6 sm:right-6 text-gray-400 hover:text-white transition-colors z-10"
+        className="absolute top-12 right-3 sm:top-6 sm:right-6 w-10 h-10 flex items-center justify-center rounded-full bg-white/10 text-white hover:bg-white/20 active:bg-white/30 transition-colors z-20"
       >
-        <HiX className="text-2xl" />
+        <HiX className="text-xl" />
       </button>
 
-      {/* Background Glow */}
+      {/* Background Glow — hidden on mobile for performance */}
       {currentSong && (
         <div
-          className="absolute inset-0 opacity-20 blur-3xl transition-all duration-1000"
+          className="absolute inset-0 opacity-20 blur-3xl transition-all duration-1000 hidden sm:block"
           style={{
             backgroundImage: `url(${currentSong.cover})`,
             backgroundSize: "cover",
@@ -281,8 +281,8 @@ export default function LyricsView() {
 
         {/* Controls Row — full width, 3 columns */}
         <div className="flex items-center px-4 sm:px-6 py-3 gap-4">
-          {/* LEFT: Cover + Song Info */}
-          <div className="flex items-center gap-3 min-w-0 w-[28%]">
+          {/* LEFT: Cover + Song Info — hidden on mobile */}
+          <div className="hidden sm:flex items-center gap-3 min-w-0 w-[28%]">
             {currentSong && (
               <>
                 <div className={`w-10 h-10 rounded-lg overflow-hidden flex-shrink-0 ${isPlaying ? "ring-1 ring-neon/30" : ""}`}>

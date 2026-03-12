@@ -45,7 +45,7 @@ builder.Services.AddCors(options =>
                 "http://localhost:3000",
                 "http://127.0.0.1:5173", "http://127.0.0.1:5174", "http://127.0.0.1:5175", "http://127.0.0.1:5176",
                 "https://soundia-player.netlify.app",
-                "https://attendance-scene-practitioner-sciences.trycloudflare.com"
+                "https://explanation-growing-typing-resolutions.trycloudflare.com"
             )
             .AllowAnyMethod()
             .AllowAnyHeader()

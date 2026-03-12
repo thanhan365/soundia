@@ -103,7 +103,7 @@ export default function PlayerBar() {
     <div
       className={`
         fixed bottom-0 left-0 right-0 z-30
-        bg-gradient-to-r from-slate-900 to-slate-950 backdrop-blur-xl border-t border-cyan-400/10
+        bg-gradient-to-r from-slate-900 to-slate-950 sm:backdrop-blur-xl border-t border-cyan-400/10
         transition-all duration-500
         shadow-[0_-4px_30px_rgba(56,189,248,0.08)]
         safe-bottom
