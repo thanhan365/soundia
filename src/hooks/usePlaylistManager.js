@@ -31,7 +31,12 @@ export function usePlaylistManager({ user, allSongs, setAllSongs }) {
         } catch (e) { console.error(e); return null; }
     };
 
-    const deletePlaylist = (id) => setPlaylists((p) => p.filter((pl) => pl.id !== id));
+    const deletePlaylist = async (id) => {
+        try {
+            await api.delete(`/playlists/${id}`);
+            setPlaylists((p) => p.filter((pl) => String(pl.id) !== String(id)));
+        } catch (e) { console.error("Failed to delete playlist", e); }
+    };
 
     const addSongToPlaylist = async (playlistId, song) => {
         if (!user) return;

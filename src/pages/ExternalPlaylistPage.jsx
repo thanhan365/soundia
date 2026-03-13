@@ -299,7 +299,7 @@ export default function ExternalPlaylistPage() {
                 </div>
                 <div className="flex items-center justify-end gap-2 pr-1">
                   <button onClick={(e) => { e.stopPropagation(); handleToggleFavorite(song); }}
-                    className={`transition-all opacity-0 lg:group-hover:opacity-100 hover:scale-110 active:scale-90 ${liked ? 'text-pink-500 !opacity-100' : 'text-gray-500 hover:text-pink-400'}`}>
+                    className={`transition-all opacity-0 lg:group-hover:opacity-100 hover:scale-110 active:scale-90 ${liked ? 'text-red-500 !opacity-100' : 'text-gray-500 hover:text-red-400'}`}>
                     <FaHeart className="w-3.5 h-3.5" />
                   </button>
                   <button onClick={(e) => {
@@ -328,7 +328,7 @@ export default function ExternalPlaylistPage() {
               <HiPlus className="w-4 h-4 text-green-400" /> Thêm vào playlist
             </button>
             <button onClick={() => handleToggleFavorite(songMenu.song)} className="w-full text-left px-3 py-2.5 text-sm text-white hover:bg-white/10 flex items-center gap-3 transition-colors">
-              <FaHeart className={`w-4 h-4 ${isFavorite(songMenu.song.id) ? 'text-pink-500' : 'text-pink-400'}`} /> {isFavorite(songMenu.song.id) ? 'Bỏ yêu thích' : 'Yêu thích'}
+              <FaHeart className={`w-4 h-4 ${isFavorite(songMenu.song.id) ? 'text-red-500' : 'text-red-400'}`} /> {isFavorite(songMenu.song.id) ? 'Bỏ yêu thích' : 'Yêu thích'}
             </button>
             <div className="border-t border-white/10 my-1" />
             <button onClick={() => handleCopyLink(songMenu.song)} className="w-full text-left px-3 py-2.5 text-sm text-white hover:bg-white/10 flex items-center gap-3 transition-colors">

@@ -172,7 +172,7 @@ export default function AlbumDetailPage() {
                 </div>
                 <div className="flex items-center justify-end gap-2 pr-1">
                   <button onClick={(e) => { e.stopPropagation(); toggleFavorite({ ...song, isExternal: true }); }}
-                    className={`transition-all opacity-0 lg:group-hover:opacity-100 hover:scale-110 active:scale-90 ${liked ? 'text-pink-500 !opacity-100' : 'text-gray-500 hover:text-pink-400'}`}>
+                    className={`transition-all opacity-0 lg:group-hover:opacity-100 hover:scale-110 active:scale-90 ${liked ? 'text-red-500 !opacity-100' : 'text-gray-500 hover:text-red-400'}`}>
                     <FaHeart className="w-3.5 h-3.5" />
                   </button>
                   <span className="text-[11px] md:text-sm text-gray-500 font-mono w-10 text-right group-hover:text-white transition-colors">

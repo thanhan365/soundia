@@ -36,11 +36,11 @@ namespace Soundia.Api.Controllers
             // Check cache
             if (_videoIdCache.TryGetValue(cacheKey, out var cached) && cached.Expiry > DateTime.UtcNow)
             {
-                Console.WriteLine($"[VideoId] Cache HIT → {cached.VideoId}");
+
                 return Ok(new { videoId = cached.VideoId, matchedDuration = cached.MatchedDuration, source = "cache" });
             }
 
-            Console.WriteLine($"[VideoId] Search: \"{songTitle}\" by {songArtist} (dur={expectedDuration}s)");
+            Console.WriteLine($"[VideoId] \"{songTitle}\" by {songArtist}");
 
             using var http = new HttpClient();
             http.Timeout = TimeSpan.FromSeconds(10);
@@ -112,7 +112,7 @@ namespace Soundia.Api.Controllers
                     }
                     catch (Exception jsonEx)
                     {
-                        Console.WriteLine($"[VideoId] JSON parse failed: {jsonEx.Message}");
+
                     }
                 }
 
@@ -149,17 +149,14 @@ namespace Soundia.Api.Controllers
                     {
                         var videoId = fallback.Groups[1].Value;
                         _videoIdCache[cacheKey] = (videoId, 0, DateTime.UtcNow.AddMinutes(60));
-                        Console.WriteLine($"[VideoId] Fallback (no parsed candidates): {videoId}");
+
                         return Ok(new { videoId, matchedDuration = 0, source = "youtube-search" });
                     }
-                    Console.WriteLine($"[VideoId] No video found for: {query}");
+
                     return NotFound(new { message = "No video found for this query" });
                 }
 
-                // Log all candidates
-                Console.WriteLine($"[VideoId] Found {candidates.Count} candidates:");
-                foreach (var c in candidates)
-                    Console.WriteLine($"  {c.VideoId} | {c.DurationSeconds}s | {c.Title}");
+
 
                 // Score candidates: combine title relevance + duration closeness
                 // Build keyword list: split multi-artist by delimiters for individual matching
@@ -218,7 +215,7 @@ namespace Soundia.Api.Controllers
                     var best = scored.First();
                     bestVideoId = best.VideoId;
                     bestMatchedDuration = best.DurationSeconds;
-                    Console.WriteLine($"[VideoId] Best: {best.VideoId} ({best.DurationSeconds}s) \"{best.Title}\"");
+
                 }
                 else
                 {
@@ -232,12 +229,12 @@ namespace Soundia.Api.Controllers
                 }
 
                 _videoIdCache[cacheKey] = (bestVideoId, bestMatchedDuration, DateTime.UtcNow.AddMinutes(60));
-                Console.WriteLine($"[VideoId] → {bestVideoId} | https://youtube.com/watch?v={bestVideoId}");
+                Console.WriteLine($"[VideoId] OK → {bestVideoId}");
                 return Ok(new { videoId = bestVideoId, matchedDuration = bestMatchedDuration, source = "youtube-search" });
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"[VideoId] Error: {ex.Message}");
+
                 return StatusCode(503, new { message = "Could not search YouTube" });
             }
         }

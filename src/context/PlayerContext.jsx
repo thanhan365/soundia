@@ -46,7 +46,7 @@ export function PlayerProvider({ children }) {
     togglePlay, seekTo, changeVolume, toggleShuffle, toggleRepeat,
   } = playback;
 
-  const { favorites, toggleFavorite, isFavorite } = useFavorites({ user, showToast, allSongs, setAllSongs });
+  const { favorites, toggleFavorite, isFavorite } = useFavorites({ user, showToast, allSongs, setAllSongs, currentSong, setCurrentSong });
 
   const queue = useQueue({ currentSong, allSongs });
   const { manualQueue, setManualQueue, autoQueue, setAutoQueue, autoQueueLoadedRef, fetchAutoQueue, addToQueue, getQueue } = queue;
@@ -236,16 +236,16 @@ export function PlayerProvider({ children }) {
 
       const BACKEND = import.meta.env.VITE_API_URL || 'http://localhost:5066/api';
 
-      // ═══ NCT ưu tiên, YouTube chạy ngầm làm backup ═══
+      // ═══ NCT ưu tiên, YouTube chỉ chạy khi không có nctKey ═══
       let nctStream = null;
 
-      // YouTube pre-fetch chạy ngầm (không chờ, chỉ dùng nếu NCT fail)
-      const ytPromise = withTimeout(
+      // YouTube pre-fetch chỉ khi không có nctKey (NCT có thể không có bài này)
+      const ytPromise = !song.nctKey ? withTimeout(
         fetch(`${BACKEND}/stream/video-id?query=${encodeURIComponent(ytQuery)}${expectedDur > 0 ? `&expectedDuration=${Math.round(expectedDur)}` : ''}&songTitle=${encodeURIComponent(song.title || '')}&songArtist=${encodeURIComponent(song.artist || '')}`)
           .then(r => r.ok ? r.json() : null)
           .catch(() => null),
         4000
-      );
+      ) : Promise.resolve(null);
 
       // Chỉ await NCT (3s max) — không chờ YouTube
       try {

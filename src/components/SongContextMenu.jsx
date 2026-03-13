@@ -127,9 +127,9 @@ export default function SongContextMenu({ song, position, onClose, extraItems = 
                 <button
                   key={i}
                   onClick={item.action}
-                  className={`w-full flex items-center gap-4 px-5 py-3.5 text-[14px] active:bg-white/5 transition-colors text-left ${item.highlight ? 'text-cyan-400' : 'text-gray-300'}`}
+                  className={`w-full flex items-center gap-4 px-5 py-3.5 text-[14px] active:bg-white/5 transition-colors text-left ${item.highlight ? (item.icon === HiHeart ? 'text-red-500' : 'text-cyan-400') : 'text-gray-300'}`}
                 >
-                  <item.icon className={`text-base flex-shrink-0 ${item.highlight ? 'text-cyan-400' : 'text-gray-500'}`} />
+                  <item.icon className={`text-base flex-shrink-0 ${item.highlight ? (item.icon === HiHeart ? 'text-red-500' : 'text-cyan-400') : 'text-gray-500'}`} />
                   <span className="truncate">{item.label}</span>
                 </button>
               )
@@ -151,9 +151,9 @@ export default function SongContextMenu({ song, position, onClose, extraItems = 
               <button
                 key={i}
                 onClick={item.action}
-                className={`w-full flex items-center gap-3 px-4 py-2.5 text-[13px] hover:bg-white/5 transition-colors text-left ${item.highlight ? 'text-cyan-400 hover:text-cyan-300' : 'text-gray-300 hover:text-white'}`}
+                className={`w-full flex items-center gap-3 px-4 py-2.5 text-[13px] hover:bg-white/5 transition-colors text-left ${item.highlight ? (item.icon === HiHeart ? 'text-red-500 hover:text-red-400' : 'text-cyan-400 hover:text-cyan-300') : 'text-gray-300 hover:text-white'}`}
               >
-                <item.icon className={`text-sm flex-shrink-0 ${item.highlight ? 'text-cyan-400' : 'text-gray-500'}`} />
+                <item.icon className={`text-sm flex-shrink-0 ${item.highlight ? (item.icon === HiHeart ? 'text-red-500' : 'text-cyan-400') : 'text-gray-500'}`} />
                 <span className="truncate">{item.label}</span>
               </button>
             )

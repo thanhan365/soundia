@@ -37,7 +37,7 @@ namespace Soundia.Api.Controllers
             return await _context.Playlists
                 .Include(p => p.PlaylistSongs)
                 .ThenInclude(ps => ps.Song)
-                .Where(p => p.UserId == userId)
+                .Where(p => p.UserId == userId && !p.IsPublic)
                 .ToListAsync();
         }
 
@@ -90,6 +90,27 @@ namespace Soundia.Api.Controllers
             await _context.SaveChangesAsync();
 
             return Ok(new { message = "Song added to playlist." });
+        }
+
+        [HttpDelete("{id}")]
+        public async Task<ActionResult> DeletePlaylist(int id)
+        {
+            var userId = GetCurrentUserId();
+
+            var playlist = await _context.Playlists
+                .Include(p => p.PlaylistSongs)
+                .FirstOrDefaultAsync(p => p.Id == id && p.UserId == userId);
+
+            if (playlist == null)
+            {
+                return NotFound("Playlist not found or access denied.");
+            }
+
+            _context.PlaylistSongs.RemoveRange(playlist.PlaylistSongs);
+            _context.Playlists.Remove(playlist);
+            await _context.SaveChangesAsync();
+
+            return Ok(new { message = "Playlist deleted." });
         }
     }
 }

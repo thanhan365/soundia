@@ -6,6 +6,7 @@ import { AuthContext } from "../context/AuthContext";
 import { HiPlus } from "react-icons/hi";
 import { HiQueueList } from "react-icons/hi2";
 import { FaPlay, FaPause, FaHeart, FaRandom, FaEllipsisH, FaShareAlt, FaLink } from "react-icons/fa";
+import { resolveNctStream } from "../services/nctService";
 import CreatePlaylistModal from "../components/CreatePlaylistModal";
 
 export default function SuggestedPlaylistDetail() {
@@ -164,6 +165,26 @@ export default function SuggestedPlaylistDetail() {
         setSongMenu(null);
     };
 
+    // Pre-fetch NCT + YouTube on hover for instant playback
+    const prefetchTimerRef = useRef(null);
+    const prefetchSong = (song) => {
+        if (prefetchTimerRef.current) clearTimeout(prefetchTimerRef.current);
+        prefetchTimerRef.current = setTimeout(() => {
+            if (song.title) resolveNctStream(song.title, song.artist).catch(() => {});
+            // Only pre-fetch YouTube if no nctKey
+            if (!song.nctKey) {
+                const BACKEND = import.meta.env.VITE_API_URL || 'http://localhost:5066/api';
+                const ytQuery = `${song.artist} - ${song.title} official audio`;
+                const dur = typeof song.duration === 'number' ? song.duration :
+                    (typeof song.duration === 'string' && song.duration.includes(':')
+                        ? parseInt(song.duration.split(':')[0]) * 60 + parseInt(song.duration.split(':')[1])
+                        : 0);
+                fetch(`${BACKEND}/stream/video-id?query=${encodeURIComponent(ytQuery)}${dur > 0 ? `&expectedDuration=${dur}` : ''}&songTitle=${encodeURIComponent(song.title || '')}&songArtist=${encodeURIComponent(song.artist || '')}`)
+                    .catch(() => {});
+            }
+        }, 300);
+    };
+
     const formatDuration = (val) => {
         if (!val) return "--:--";
         if (typeof val === 'string' && val.includes(':')) return val;
@@ -246,6 +267,7 @@ export default function SuggestedPlaylistDetail() {
                             const liked = isFavorite(song.id);
                             return (
                                 <div key={song.id || i} onClick={() => playSong(song)}
+                                    onMouseEnter={() => { if (!isActive) prefetchSong(song); }}
                                     className={`group grid grid-cols-[40px_1fr_40px] md:grid-cols-[50px_minmax(150px,2fr)_minmax(120px,1fr)_100px] gap-3 md:gap-4 px-2 md:px-6 py-2.5 md:py-3 items-center rounded-xl md:rounded-2xl cursor-pointer transition-all duration-200 ${isActive ? "bg-cyan-500/10 border border-cyan-500/20" : "hover:bg-white/[0.04] border border-transparent"}`}>
                                     <div className="flex justify-center text-sm font-medium text-gray-500">
                                         {isActivePlaying ? (
@@ -270,7 +292,7 @@ export default function SuggestedPlaylistDetail() {
                                     <div className="hidden md:flex items-center min-w-0"><p className="text-xs text-gray-400 truncate group-hover:text-gray-300">{song.artist}</p></div>
                                     <div className="flex items-center justify-end gap-2 pr-1">
                                         <button onClick={(e) => { e.stopPropagation(); handleToggleFavorite(song); }}
-                                            className={`transition-all opacity-0 lg:group-hover:opacity-100 hover:scale-110 active:scale-90 ${liked ? 'text-pink-500 !opacity-100' : 'text-gray-500 hover:text-pink-400'}`}>
+                                            className={`transition-all opacity-0 lg:group-hover:opacity-100 hover:scale-110 active:scale-90 ${liked ? 'text-red-500 !opacity-100' : 'text-gray-500 hover:text-red-400'}`}>
                                             <FaHeart className="w-3.5 h-3.5" />
                                         </button>
                                         <button onClick={(e) => {
@@ -300,7 +322,7 @@ export default function SuggestedPlaylistDetail() {
                             <HiPlus className="w-4 h-4 text-green-400" /> Thêm vào playlist
                         </button>
                         <button onClick={() => handleToggleFavorite(songMenu.song)} className="w-full text-left px-3 py-2.5 text-sm text-white hover:bg-white/10 flex items-center gap-3 transition-colors">
-                            <FaHeart className={`w-4 h-4 ${isFavorite(songMenu.song.id) ? 'text-pink-500' : 'text-pink-400'}`} /> {isFavorite(songMenu.song.id) ? 'Bỏ yêu thích' : 'Yêu thích'}
+                            <FaHeart className={`w-4 h-4 ${isFavorite(songMenu.song.id) ? 'text-red-500' : 'text-red-400'}`} /> {isFavorite(songMenu.song.id) ? 'Bỏ yêu thích' : 'Yêu thích'}
                         </button>
                         <div className="border-t border-white/10 my-1" />
                         <button onClick={() => handleCopyLink(songMenu.song)} className="w-full text-left px-3 py-2.5 text-sm text-white hover:bg-white/10 flex items-center gap-3 transition-colors">

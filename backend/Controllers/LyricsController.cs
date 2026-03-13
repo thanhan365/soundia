@@ -25,7 +25,7 @@ namespace Soundia.Api.Controllers
             // Check cache
             if (_cache.TryGetValue(cacheKey, out var cached) && cached.Expiry > DateTime.UtcNow)
             {
-                Console.WriteLine($"[Lyrics] Cache HIT: {track} - {artist}");
+
                 return Ok(cached.Data);
             }
 
@@ -52,7 +52,7 @@ namespace Soundia.Api.Controllers
             var cleanArtist = artistParts.FirstOrDefault() ?? artist.Trim();
             var fullArtist = string.Join(" ", artistParts); // all artists joined
 
-            Console.WriteLine($"[Lyrics] Searching for: {track} - {artist} (clean: {cleanTrack} - {cleanArtist}, full: {fullArtist})");
+            Console.WriteLine($"[Lyrics] \"{track}\" by {artist}");
 
             // Biến lưu NCT plain lyrics fallback (dùng cuối nếu LRCLib không có synced)
             string? nctFallbackPlain = null;
@@ -62,7 +62,7 @@ namespace Soundia.Api.Controllers
             {
                 try
                 {
-                    Console.WriteLine($"[Lyrics] Trying NCT Graph API for key: {nctKey}");
+
                     
                     var nctLyricUrl = $"https://graph.nhaccuatui.com/api/v1/song/lyric/detail?songKey={nctKey}";
                     var nctRes = await http.GetStringAsync(nctLyricUrl);
@@ -77,7 +77,7 @@ namespace Soundia.Api.Controllers
                         if (nctData.TryGetProperty("content", out var content) && content.ValueKind == JsonValueKind.String)
                         {
                             plainLyrics = content.GetString()?.Trim() ?? "";
-                            Console.WriteLine($"[Lyrics] NCT API plain lyrics: {plainLyrics.Length} chars");
+
                         }
                         
                         // 2) Synced LRC: download + decrypt
@@ -92,7 +92,7 @@ namespace Soundia.Api.Controllers
                             {
                                 try
                                 {
-                                    Console.WriteLine($"[Lyrics] Fetching NCT LRC: {lrcUrl}");
+
                                     var lrcBytes = await lrcHttp.GetByteArrayAsync(lrcUrl);
                                     var lrcRaw = System.Text.Encoding.UTF8.GetString(lrcBytes);
                                     
@@ -100,14 +100,14 @@ namespace Soundia.Api.Controllers
                                     if (lrcRaw.TrimStart().StartsWith("[") && System.Text.RegularExpressions.Regex.IsMatch(lrcRaw, @"\[\d{2}:\d{2}"))
                                     {
                                         syncedLyrics = lrcRaw;
-                                        Console.WriteLine($"[Lyrics] NCT LRC plain text (not encrypted)");
+
                                     }
                                     else
                                     {
                                         syncedLyrics = DecryptNctLrc(lrcBytes, lrcRaw, decryptKey);
                                     }
                                 }
-                                catch (Exception lrcEx) { Console.WriteLine($"[Lyrics] NCT LRC fetch error: {lrcEx.Message}"); }
+                                catch { }
                             }
                         }
                         
@@ -121,7 +121,7 @@ namespace Soundia.Api.Controllers
                                     syncedLyrics, @"\[\d{2}:\d{2}\.\d{2,3}\]", "").Trim();
                             }
                             
-                            Console.WriteLine($"[Lyrics] NCT API success with SYNCED for: {track}");
+                            Console.WriteLine($"[Lyrics] OK → nct (synced)");
                             var result = new { syncedLyrics, plainLyrics, source = "nct" };
                             _cache[cacheKey] = (result, DateTime.UtcNow.AddHours(24));
                             return Ok(result);
@@ -131,18 +131,18 @@ namespace Soundia.Api.Controllers
                         if (!string.IsNullOrWhiteSpace(plainLyrics) && plainLyrics.Length > 20)
                         {
                             nctFallbackPlain = plainLyrics;
-                            Console.WriteLine($"[Lyrics] NCT has plain only ({plainLyrics.Length} chars), continuing to find synced...");
+
                         }
                     }
                 }
-                catch (Exception ex) { Console.WriteLine($"[Lyrics] NCT API error: {ex.Message}"); }
+                catch { }
             }
             
             // ═══ Strategy 0b: NCT Search fallback (search bằng title+artist, cũng lấy synced LRC) ═══
             {
                 try
                 {
-                    Console.WriteLine($"[Lyrics] Trying NCT search for lyrics: {cleanTrack} - {cleanArtist}");
+
                     var searchUrl = $"https://graph.nhaccuatui.com/api/v1/search/song?keyword={Uri.EscapeDataString($"{cleanTrack} {cleanArtist}")}&pageindex=0&pagesize=5&correct=false";
                     var searchJson = await http.GetStringAsync(searchUrl);
                     var searchDoc = JsonSerializer.Deserialize<JsonElement>(searchJson);
@@ -200,7 +200,7 @@ namespace Soundia.Api.Controllers
                                         {
                                             if (string.IsNullOrWhiteSpace(searchPlain))
                                                 searchPlain = System.Text.RegularExpressions.Regex.Replace(searchSynced, @"\[\d{2}:\d{2}\.\d{2,3}\]", "").Trim();
-                                            Console.WriteLine($"[Lyrics] NCT search found SYNCED for: {cleanTrack} (key: {foundKey})");
+                                            Console.WriteLine($"[Lyrics] OK → nct-search (synced)");
                                             var result = new { syncedLyrics = searchSynced, plainLyrics = searchPlain, source = "nct-search" };
                                             _cache[cacheKey] = (result, DateTime.UtcNow.AddHours(24));
                                             return Ok(result);
@@ -209,7 +209,7 @@ namespace Soundia.Api.Controllers
                                         if (searchPlain.Length > 20 && string.IsNullOrWhiteSpace(nctFallbackPlain))
                                         {
                                             nctFallbackPlain = searchPlain;
-                                            Console.WriteLine($"[Lyrics] NCT search found plain for: {cleanTrack} (key: {foundKey})");
+
                                         }
                                     }
                                 }
@@ -218,7 +218,7 @@ namespace Soundia.Api.Controllers
                         }
                     }
                 }
-                catch (Exception ex) { Console.WriteLine($"[Lyrics] NCT search lyrics error: {ex.Message}"); }
+                catch { }
             }
 
             // Strategy 1: LRCLib exact match
@@ -236,7 +236,7 @@ namespace Soundia.Api.Controllers
 
                     if (hasSynced || hasPlain)
                     {
-                        Console.WriteLine($"[Lyrics] LRCLib exact match found for: {track}");
+                        Console.WriteLine($"[Lyrics] OK → lrclib-exact");
                         var result = new
                         {
                             syncedLyrics = hasSynced ? synced.GetString() : null,
@@ -248,7 +248,7 @@ namespace Soundia.Api.Controllers
                     }
                 }
             }
-            catch (Exception ex) { Console.WriteLine($"[Lyrics] LRCLib exact error: {ex.Message}"); }
+            catch { }
 
             // Strategy 2: LRCLib search (fuzzy)
             try
@@ -297,7 +297,7 @@ namespace Soundia.Api.Controllers
                             var hasSynced = b.TryGetProperty("syncedLyrics", out var synced) && synced.ValueKind != JsonValueKind.Null;
                             var hasPlain = b.TryGetProperty("plainLyrics", out var plain) && plain.ValueKind != JsonValueKind.Null;
 
-                            Console.WriteLine($"[Lyrics] LRCLib search found for: {cleanTrack}");
+                            Console.WriteLine($"[Lyrics] OK → lrclib-search");
                             var result = new
                             {
                                 syncedLyrics = hasSynced ? synced.GetString() : null,
@@ -310,7 +310,7 @@ namespace Soundia.Api.Controllers
                     }
                 }
             }
-            catch (Exception ex) { Console.WriteLine($"[Lyrics] LRCLib search error: {ex.Message}"); }
+            catch { }
 
             // Strategy 3: lyrics.ovh fallback (short timeout vì API này hay chậm)
             try
@@ -328,7 +328,7 @@ namespace Soundia.Api.Controllers
                         var lyricsText = lyrics.GetString();
                         if (!string.IsNullOrWhiteSpace(lyricsText))
                         {
-                            Console.WriteLine($"[Lyrics] lyrics.ovh found for: {cleanTrack}");
+                            Console.WriteLine($"[Lyrics] OK → lyrics.ovh");
                             var result = new
                             {
                                 syncedLyrics = (string?)null,
@@ -341,7 +341,7 @@ namespace Soundia.Api.Controllers
                     }
                 }
             }
-            catch (Exception ex) { Console.WriteLine($"[Lyrics] lyrics.ovh error: {ex.Message}"); }
+            catch { }
 
             // Strategy 4: Genius search + scrape (nguồn lyrics lớn nhất, hỗ trợ tiếng Việt tốt)
             try
@@ -404,7 +404,7 @@ namespace Soundia.Api.Controllers
                     var geniusLyrics = lyricsBuilder.ToString().Trim();
                     if (!string.IsNullOrWhiteSpace(geniusLyrics) && geniusLyrics.Length > 20)
                     {
-                        Console.WriteLine($"[Lyrics] Genius found for: {cleanTrack}");
+                        Console.WriteLine($"[Lyrics] OK → genius");
                         var result = new
                         {
                             syncedLyrics = (string?)null,
@@ -416,19 +416,19 @@ namespace Soundia.Api.Controllers
                     }
                 }
             }
-            catch (Exception ex) { Console.WriteLine($"[Lyrics] Genius error: {ex.Message}"); }
+            catch { }
 
             // Trước khi return 404, check NCT fallback
             if (!string.IsNullOrWhiteSpace(nctFallbackPlain))
             {
-                Console.WriteLine($"[Lyrics] Using NCT fallback plain lyrics for: {track}");
+                Console.WriteLine($"[Lyrics] OK → nct (plain fallback)");
                 var nctResult = new { syncedLyrics = (string?)null, plainLyrics = nctFallbackPlain, source = "nct" };
                 _cache[cacheKey] = (nctResult, DateTime.UtcNow.AddHours(24));
                 return Ok(nctResult);
             }
 
             // All strategies failed
-            Console.WriteLine($"[Lyrics] No lyrics found for: {track} - {artist}");
+            Console.WriteLine($"[Lyrics] MISS → no lyrics found");
             var notFound = new { syncedLyrics = (string?)null, plainLyrics = (string?)null, source = "none" };
             _cache[cacheKey] = (notFound, DateTime.UtcNow.AddHours(1));
             return NotFound(new { message = "Không tìm thấy lời bài hát." });
@@ -465,7 +465,7 @@ namespace Soundia.Api.Controllers
                     {
                         encryptedBytes = Enumerable.Range(0, hexClean.Length / 2)
                             .Select(i => Convert.ToByte(hexClean.Substring(i * 2, 2), 16)).ToArray();
-                        Console.WriteLine($"[Lyrics] NCT LRC hex → {encryptedBytes.Length} bytes");
+
                     }
                     catch { encryptedBytes = null; }
                 }
@@ -494,11 +494,11 @@ namespace Soundia.Api.Controllers
                     var txt = System.Text.Encoding.UTF8.GetString(output, 0, len).TrimEnd('\0').Trim();
                     if (lrcRegex.Matches(txt).Count >= 3)
                     {
-                        Console.WriteLine($"[Lyrics] NCT LRC Blowfish ECB decrypt OK ({txt.Length} chars)");
+
                         return txt;
                     }
                 }
-                catch (Exception bfEx) { Console.WriteLine($"[Lyrics] Blowfish decrypt error: {bfEx.Message}"); }
+                catch { }
 
                 // === 2) DES ECB fallback ===
                 try
@@ -515,7 +515,7 @@ namespace Soundia.Api.Controllers
                     var txt = System.Text.Encoding.UTF8.GetString(db).TrimEnd('\0').Trim();
                     if (lrcRegex.Matches(txt).Count >= 3)
                     {
-                        Console.WriteLine($"[Lyrics] NCT LRC DES ECB decrypt OK ({txt.Length} chars)");
+
                         return txt;
                     }
                 }
@@ -536,7 +536,7 @@ namespace Soundia.Api.Controllers
                     var txt = System.Text.Encoding.UTF8.GetString(db).TrimEnd('\0').Trim();
                     if (lrcRegex.Matches(txt).Count >= 3)
                     {
-                        Console.WriteLine($"[Lyrics] NCT LRC AES ECB decrypt OK ({txt.Length} chars)");
+
                         return txt;
                     }
                 }
@@ -551,7 +551,7 @@ namespace Soundia.Api.Controllers
                     var txt = System.Text.Encoding.UTF8.GetString(xorOutput).TrimEnd('\0').Trim();
                     if (lrcRegex.Matches(txt).Count >= 3)
                     {
-                        Console.WriteLine($"[Lyrics] NCT LRC XOR decrypt OK ({txt.Length} chars)");
+
                         return txt;
                     }
                 }
@@ -580,7 +580,7 @@ namespace Soundia.Api.Controllers
                         var txt = System.Text.Encoding.UTF8.GetString(output, 0, len).TrimEnd('\0').Trim();
                         if (lrcRegex.Matches(txt).Count >= 3)
                         {
-                            Console.WriteLine($"[Lyrics] NCT LRC Blowfish CBC decrypt OK ({txt.Length} chars)");
+    
                             return txt;
                         }
                     }
@@ -593,15 +593,15 @@ namespace Soundia.Api.Controllers
                     var txt = System.Text.Encoding.UTF8.GetString(encryptedBytes).TrimEnd('\0').Trim();
                     if (lrcRegex.Matches(txt).Count >= 3)
                     {
-                        Console.WriteLine($"[Lyrics] NCT LRC raw UTF-8 OK ({txt.Length} chars)");
+
                         return txt;
                     }
                 }
                 catch { }
 
-                Console.WriteLine($"[Lyrics] NCT LRC decrypt: all ciphers failed");
+
             }
-            catch (Exception ex) { Console.WriteLine($"[Lyrics] NCT LRC decrypt error: {ex.Message}"); }
+            catch { }
             return null;
         }
     }

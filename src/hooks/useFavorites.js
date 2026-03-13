@@ -4,7 +4,7 @@ import api from "../utils/api";
 /**
  * useFavorites — manage favorite songs (synced with backend)
  */
-export function useFavorites({ user, showToast, allSongs, setAllSongs }) {
+export function useFavorites({ user, showToast, allSongs, setAllSongs, currentSong, setCurrentSong }) {
     const [favorites, setFavorites] = useState([]);
 
     // Load favorites when user changes
@@ -35,6 +35,11 @@ export function useFavorites({ user, showToast, allSongs, setAllSongs }) {
                     audioUrl: song.audio || song.audioUrl || "YT_STREAM"
                 });
                 songToSave = res.data;
+                // Update currentSong's ID via React setState so isFavorite() matches
+                if (currentSong && (currentSong.id === song.id ||
+                    (currentSong.title === song.title && currentSong.artist === song.artist))) {
+                    setCurrentSong(prev => prev ? { ...prev, id: songToSave.id } : prev);
+                }
             }
             const songId = songToSave.id;
             await api.post("/favorites", { songId });
