@@ -28,7 +28,7 @@ export default function SuggestedPlaylistDetail() {
     const [createModalSong, setCreateModalSong] = useState(null);
     const menuRef = useRef(null);
     const headerMenuRef = useRef(null);
-    const { playSong, currentSong, isPlaying, togglePlay, isFavorite, toggleFavorite, addToQueue, playlists, addSongToPlaylist, createPlaylist } = usePlayer();
+    const { playSong, currentSong, isPlaying, togglePlay, isFavorite, toggleFavorite, addToQueue, playlists, addSongToPlaylist, createPlaylist, setPlayContext } = usePlayer();
     const { showToast } = useToast();
     const { user } = useContext(AuthContext);
 
@@ -90,7 +90,7 @@ export default function SuggestedPlaylistDetail() {
     const isCurrentSong = (song) => currentSong?.title === song.title && currentSong?.artist === song.artist;
     const isPlaylistPlaying = isPlaying && songs.some(s => isCurrentSong(s));
 
-    const handlePlayAll = () => { if (songs.length) playSong(songs[0]); };
+    const handlePlayAll = () => { if (songs.length) { setPlayContext(songs); playSong(songs[0]); } };
     const handleToggleAll = () => { isPlaylistPlaying ? togglePlay() : handlePlayAll(); };
 
     // Autoplay when songs loaded
@@ -104,6 +104,7 @@ export default function SuggestedPlaylistDetail() {
     const handleShufflePlay = () => {
         if (!songs.length) return;
         const shuffled = [...songs].sort(() => Math.random() - 0.5);
+        setPlayContext(songs);
         playSong(shuffled[0]);
         shuffled.slice(1).forEach(s => addToQueue(s));
         showToast("Phát ngẫu nhiên", "success");
@@ -268,13 +269,13 @@ export default function SuggestedPlaylistDetail() {
                             return (
                                 <div key={song.id || i} onClick={() => playSong(song)}
                                     onMouseEnter={() => { if (!isActive) prefetchSong(song); }}
-                                    className={`group grid grid-cols-[40px_1fr_40px] md:grid-cols-[50px_minmax(150px,2fr)_minmax(120px,1fr)_100px] gap-3 md:gap-4 px-2 md:px-6 py-2.5 md:py-3 items-center rounded-xl md:rounded-2xl cursor-pointer transition-all duration-200 ${isActive ? "bg-cyan-500/10 border border-cyan-500/20" : "hover:bg-white/[0.04] border border-transparent"}`}>
+                                    className={`group grid grid-cols-[40px_1fr_40px] md:grid-cols-[50px_minmax(150px,2fr)_minmax(120px,1fr)_100px] gap-3 md:gap-4 px-2 md:px-6 py-2.5 md:py-3 items-center rounded-xl md:rounded-2xl cursor-pointer transition-all duration-200 ${isActive ? "bg-neon/10 border border-neon/20" : "hover:bg-white/[0.04] border border-transparent"}`}>
                                     <div className="flex justify-center text-sm font-medium text-gray-500">
                                         {isActivePlaying ? (
-                                            <div className="flex items-end justify-center w-4 h-4 gap-[2px]">
-                                                <div className="w-[3px] bg-cyan-400 animate-[music-bar_1s_ease-in-out_infinite] h-full" />
-                                                <div className="w-[3px] bg-cyan-400 animate-[music-bar_0.8s_ease-in-out_infinite_0.2s] h-3/4" />
-                                                <div className="w-[3px] bg-cyan-400 animate-[music-bar_1.2s_ease-in-out_infinite_0.4s] h-[80%]" />
+                                            <div className="flex items-center gap-[2px]">
+                                                <span className="w-[2px] bg-neon rounded-full animate-bounce" style={{ height: "8px", animationDelay: "0ms" }} />
+                                                <span className="w-[2px] bg-neon rounded-full animate-bounce" style={{ height: "12px", animationDelay: "150ms" }} />
+                                                <span className="w-[2px] bg-neon rounded-full animate-bounce" style={{ height: "6px", animationDelay: "300ms" }} />
                                             </div>
                                         ) : (<span className="group-hover:hidden">{i + 1}</span>)}
                                         <FaPlay className={`w-3 h-3 text-white hidden group-hover:inline-block ${isActivePlaying ? '!hidden' : ''}`} />
@@ -285,7 +286,7 @@ export default function SuggestedPlaylistDetail() {
                                                 onError={(e) => { e.target.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect fill='%231a1a2e' width='100' height='100'/%3E%3Ctext x='50' y='55' text-anchor='middle' fill='%23555' font-size='30'%3E♫%3C/text%3E%3C/svg%3E"; }} />
                                         </div>
                                         <div className="flex flex-col min-w-0">
-                                            <p className={`text-[13px] md:text-sm font-semibold truncate ${isActive ? "text-cyan-400" : "text-white group-hover:text-cyan-200"}`}>{song.title}</p>
+                                            <p className={`text-[13px] md:text-sm font-semibold truncate ${isActive ? "text-neon" : "text-white group-hover:text-neon/80"}`}>{song.title}</p>
                                             <p className="text-[11px] md:text-xs text-gray-400 truncate md:hidden mt-0.5">{song.artist}</p>
                                         </div>
                                     </div>

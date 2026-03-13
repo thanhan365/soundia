@@ -28,7 +28,7 @@ export default function PlaylistPage() {
   const {
     playlists, allSongs, deletePlaylist, removeSongFromPlaylist,
     playSong, currentSong, isPlaying, togglePlay,
-    reorderPlaylistSongs, renamePlaylist, setPlaylistCover, addToQueue
+    reorderPlaylistSongs, renamePlaylist, setPlaylistCover, addToQueue, setPlayContext
   } = usePlayer();
   const { showToast } = useToast();
   const [editing, setEditing] = useState(false);
@@ -37,6 +37,25 @@ export default function PlaylistPage() {
   const fileInputRef = useRef(null);
 
   const playlist = playlists.find((pl) => String(pl.id) === id);
+
+  // Drag hooks — must be called before any early return (React rules of hooks)
+  const onDragStart = useCallback((e, i) => { setDragIdx(i); e.dataTransfer.effectAllowed = "move"; }, []);
+  const onDragOver = useCallback((e) => { e.preventDefault(); e.dataTransfer.dropEffect = "move"; }, []);
+  const onDrop = useCallback((e, dropI) => {
+    e.preventDefault();
+    if (dragIdx === null || dragIdx === dropI) return;
+    if (!playlist) return;
+
+    // Create new array of song IDs
+    const newSongs = [...playlist.songs];
+    const [draggedSong] = newSongs.splice(dragIdx, 1);
+    newSongs.splice(dropI, 0, draggedSong);
+
+    reorderPlaylistSongs(id, newSongs);
+    showToast("Đã thay đổi vị trí", "success");
+    setDragIdx(null);
+  }, [dragIdx, id, playlist, reorderPlaylistSongs, showToast]);
+  const onDragEnd = useCallback(() => setDragIdx(null), []);
 
   if (!playlist) {
     return (
@@ -54,11 +73,12 @@ export default function PlaylistPage() {
   const covers = songs.slice(0, 4).map((s) => s.cover);
 
   // Actions
-  const playAll = () => { if (songs.length) { playSong(songs[0]); showToast(`Đang phát "${playlist.name}"`, "success"); } };
+  const playAll = () => { if (songs.length) { setPlayContext(songs); playSong(songs[0]); showToast(`Đang phát "${playlist.name}"`, "success"); } };
   const toggleAll = () => { isCurrentPl && isPlaying ? togglePlay() : playAll(); };
   const shufflePlay = () => {
     if (!songs.length) return;
     const shuffled = [...songs].sort(() => Math.random() - 0.5);
+    setPlayContext(songs);
     playSong(shuffled[0]);
     shuffled.slice(1).forEach(s => addToQueue(s));
     showToast(`Phát ngẫu nhiên "${playlist.name}"`, "success");
@@ -96,24 +116,6 @@ export default function PlaylistPage() {
       reader.readAsDataURL(file);
     }
   };
-
-  // Drag
-  const onDragStart = useCallback((e, i) => { setDragIdx(i); e.dataTransfer.effectAllowed = "move"; }, []);
-  const onDragOver = useCallback((e) => { e.preventDefault(); e.dataTransfer.dropEffect = "move"; }, []);
-  const onDrop = useCallback((e, dropI) => {
-    e.preventDefault();
-    if (dragIdx === null || dragIdx === dropI) return;
-
-    // Create new array of song IDs
-    const newSongs = [...playlist.songs];
-    const [draggedSong] = newSongs.splice(dragIdx, 1);
-    newSongs.splice(dropI, 0, draggedSong);
-
-    reorderPlaylistSongs(id, newSongs);
-    showToast("Đã thay đổi vị trí", "success");
-    setDragIdx(null);
-  }, [dragIdx, id, playlist, reorderPlaylistSongs, showToast]);
-  const onDragEnd = useCallback(() => setDragIdx(null), []);
 
   return (
     <div className="-mx-2 sm:-mx-4 lg:-mx-8 -mt-6">

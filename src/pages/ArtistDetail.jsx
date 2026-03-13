@@ -135,7 +135,7 @@ function ArtistSongRow({ song, index, isPlaying, isCurrent, onPlay }) {
 export default function ArtistDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { playSong, currentSong, isPlaying, togglePlay, setQueue, addToQueue } = usePlayer();
+  const { playSong, currentSong, isPlaying, togglePlay, setPlayContext, addToQueue } = usePlayer();
   const { showToast } = useToast();
   const artistName = decodeURIComponent(id);
 
@@ -172,8 +172,8 @@ export default function ArtistDetail() {
 
   const playAll = () => {
     if (topTracks.length > 0) {
+      setPlayContext(topTracks);
       playSong(topTracks[0]);
-      setQueue(topTracks);
       showToast(`Đang phát bài hát của ${artist?.name}`, "success");
     }
   };
@@ -185,8 +185,8 @@ export default function ArtistDetail() {
   const shufflePlay = () => {
     if (!topTracks.length) return;
     const shuffled = [...topTracks].sort(() => Math.random() - 0.5);
+    setPlayContext(topTracks);
     playSong(shuffled[0]);
-    setQueue(shuffled);
     showToast(`Phát ngẫu nhiên ${artist?.name}`, "success");
   };
 
@@ -200,8 +200,8 @@ export default function ArtistDetail() {
     if (currentSong?.id === song.id) {
       togglePlay();
     } else {
+      setPlayContext(topTracks);
       playSong(song);
-      setQueue(topTracks);
     }
   };
 

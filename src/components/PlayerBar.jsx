@@ -63,10 +63,14 @@ export default function PlayerBar() {
     setMenuOpen(false);
   }, [currentSong, addToQueue, showToast]);
 
-  const handleAddToPlaylist = useCallback((pl) => {
+  const handleAddToPlaylist = useCallback(async (pl) => {
     if (!currentSong) return;
-    addSongToPlaylist(pl.id, currentSong.id);
-    showToast(`Đã thêm vào "${pl.name}"`, "success");
+    try {
+      await addSongToPlaylist(pl.id, currentSong);
+      showToast(`Đã thêm vào "${pl.name}"`, "success");
+    } catch (e) {
+      showToast("Lỗi khi thêm vào playlist", "error");
+    }
     setMenuOpen(false);
   }, [currentSong, addSongToPlaylist, showToast]);
 

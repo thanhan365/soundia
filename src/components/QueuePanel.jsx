@@ -1,11 +1,43 @@
+import { useState, useCallback } from "react";
 import { usePlayer } from "../context/PlayerContext";
-import { HiX } from "react-icons/hi";
+import { HiX, HiSwitchVertical } from "react-icons/hi";
 import { HiPlay } from "react-icons/hi2";
 import { HiQueueList } from "react-icons/hi2";
 
 export default function QueuePanel() {
-  const { queueOpen, setQueueOpen, getQueue, currentSong, isPlaying, playSong, manualQueue } = usePlayer();
+  const { queueOpen, setQueueOpen, getQueue, currentSong, isPlaying, playSong, manualQueue, reorderAutoQueue, removeFromAutoQueue } = usePlayer();
   const queue = getQueue();
+  const autoSongs = queue.filter((_, i) => i >= manualQueue.length);
+
+  // Drag state
+  const [dragIdx, setDragIdx] = useState(null);
+  const [dragOverIdx, setDragOverIdx] = useState(null);
+
+  const onDragStart = useCallback((e, i) => {
+    setDragIdx(i);
+    e.dataTransfer.effectAllowed = "move";
+    e.dataTransfer.setData("text/plain", i);
+  }, []);
+
+  const onDragOver = useCallback((e, i) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+    setDragOverIdx(i);
+  }, []);
+
+  const onDrop = useCallback((e, dropI) => {
+    e.preventDefault();
+    if (dragIdx !== null && dragIdx !== dropI) {
+      reorderAutoQueue(dragIdx, dropI);
+    }
+    setDragIdx(null);
+    setDragOverIdx(null);
+  }, [dragIdx, reorderAutoQueue]);
+
+  const onDragEnd = useCallback(() => {
+    setDragIdx(null);
+    setDragOverIdx(null);
+  }, []);
 
   return (
     <>
@@ -58,14 +90,34 @@ export default function QueuePanel() {
           </div>
         )}
 
-        {/* Auto queue - trending suggestions */}
+        {/* Auto queue - draggable */}
         <div className="flex-1 overflow-y-auto pb-28">
           <p className="px-3 sm:px-4 pt-2 sm:pt-3 pb-1 text-[9px] sm:text-[10px] font-bold text-gray-500 uppercase tracking-widest">
-            {manualQueue.length > 0 ? "Tiếp theo" : "Gợi ý cho bạn"} ({queue.length - manualQueue.length})
+            {manualQueue.length > 0 ? "Tiếp theo" : "Gợi ý cho bạn"} ({autoSongs.length})
           </p>
           <div className="px-2">
-            {queue.filter((_, i) => i >= manualQueue.length).map((song, i) => (
-              <QueueItem key={`q-${song.id}-${i}`} song={song} index={i + 1} onClick={() => playSong(song)} />
+            {autoSongs.map((song, i) => (
+              <div
+                key={`q-${song.id}-${i}`}
+                draggable
+                onDragStart={(e) => onDragStart(e, i)}
+                onDragOver={(e) => onDragOver(e, i)}
+                onDrop={(e) => onDrop(e, i)}
+                onDragEnd={onDragEnd}
+                className={`
+                  transition-all duration-150 rounded-lg
+                  ${dragIdx === i ? "opacity-40 scale-95" : ""}
+                  ${dragOverIdx === i && dragIdx !== i ? "border-t-2 border-neon/50" : "border-t-2 border-transparent"}
+                `}
+              >
+                <QueueItem
+                  song={song}
+                  index={i + 1}
+                  onClick={() => playSong(song)}
+                  onRemove={() => removeFromAutoQueue(i)}
+                  draggable
+                />
+              </div>
             ))}
           </div>
         </div>
@@ -74,19 +126,27 @@ export default function QueuePanel() {
   );
 }
 
-function QueueItem({ song, index, onClick }) {
+function QueueItem({ song, index, onClick, onRemove, draggable }) {
   return (
-    <button
-      onClick={onClick}
-      className="w-full flex items-center gap-2 px-1.5 sm:px-2 py-1.5 rounded-lg text-left hover:bg-white/5 group transition-colors"
-    >
+    <div className="w-full flex items-center gap-2 px-1.5 sm:px-2 py-1.5 rounded-lg text-left hover:bg-white/5 group transition-colors">
+      {/* Drag handle */}
+      {draggable && (
+        <span className="cursor-grab active:cursor-grabbing p-1 text-gray-600 hover:text-white flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" title="Kéo để sắp xếp">
+          <HiSwitchVertical className="text-sm" />
+        </span>
+      )}
       <span className="text-[9px] sm:text-[10px] text-gray-600 font-mono w-3 sm:w-4 text-right flex-shrink-0">{index}</span>
       <img src={song.cover} alt={song.title} className="w-7 h-7 sm:w-8 sm:h-8 rounded-md object-cover flex-shrink-0" />
-      <div className="min-w-0 flex-1 pl-0.5">
+      <button onClick={onClick} className="min-w-0 flex-1 pl-0.5 text-left">
         <p className="text-[11px] sm:text-xs text-gray-300 truncate group-hover:text-white leading-tight">{song.title}</p>
         <p className="text-[9px] sm:text-[10px] text-gray-600 truncate leading-tight">{song.artist}</p>
+      </button>
+      <div className="flex items-center gap-0.5 flex-shrink-0">
+        <HiPlay onClick={onClick} className="text-neon text-[10px] sm:text-xs opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer" />
+        {onRemove && (
+          <HiX onClick={(e) => { e.stopPropagation(); onRemove(); }} className="text-gray-600 hover:text-red-400 text-[10px] sm:text-xs opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer" />
+        )}
       </div>
-      <HiPlay className="text-neon text-[10px] sm:text-xs opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" />
-    </button>
+    </div>
   );
 }

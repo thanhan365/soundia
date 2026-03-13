@@ -10,7 +10,7 @@ function ArtistCard({ artist, onClick }) {
       onClick={() => onClick(artist)}
       className="flex flex-col items-center gap-2.5 flex-shrink-0 cursor-pointer group w-24 md:w-auto"
     >
-      <div className="relative w-20 h-20 md:w-28 md:h-28 rounded-full overflow-hidden shadow-lg ring-2 ring-white/10 group-hover:ring-4 group-hover:ring-pink-400/60 transition-all duration-300">
+      <div className="relative w-20 h-20 md:w-28 md:h-28 rounded-full overflow-hidden shadow-lg ring-2 ring-white/10 group-hover:ring-4 group-hover:ring-emerald-400/60 transition-all duration-300">
         {artist.picture && !imgFailed ? (
           <img
             src={artist.picture}

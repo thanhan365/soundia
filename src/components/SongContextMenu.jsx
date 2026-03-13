@@ -96,8 +96,9 @@ export default function SongContextMenu({ song, position, onClose, extraItems = 
   const isMobile = window.innerWidth < 640;
 
   const desktopStyle = {
-    top: Math.min(position.y, window.innerHeight - 400),
-    left: Math.min(position.x, window.innerWidth - 220),
+    top: Math.min(position.y, window.innerHeight - 480),
+    left: Math.min(position.x, window.innerWidth - 260),
+    right: position.x > window.innerWidth - 260 ? 20 : undefined,
   };
 
   return (

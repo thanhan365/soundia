@@ -49,7 +49,7 @@ export function PlayerProvider({ children }) {
   const { favorites, toggleFavorite, isFavorite } = useFavorites({ user, showToast, allSongs, setAllSongs, currentSong, setCurrentSong });
 
   const queue = useQueue({ currentSong, allSongs });
-  const { manualQueue, setManualQueue, autoQueue, setAutoQueue, autoQueueLoadedRef, fetchAutoQueue, addToQueue, getQueue } = queue;
+  const { manualQueue, setManualQueue, autoQueue, setAutoQueue, autoQueueLoadedRef, fetchAutoQueue, addToQueue, getQueue, setPlayContext, reorderAutoQueue, removeFromAutoQueue } = queue;
 
   const { playlists, createPlaylist, deletePlaylist, addSongToPlaylist, removeSongFromPlaylist, renamePlaylist, reorderPlaylistSongs, setPlaylistCover } = usePlaylistManager({ user, allSongs, setAllSongs });
 
@@ -399,7 +399,7 @@ export function PlayerProvider({ children }) {
         error, shuffle, toggleShuffle, repeatMode, toggleRepeat,
         favorites, toggleFavorite, isFavorite,
         recentHistory, queueOpen, setQueueOpen, lyricsOpen, setLyricsOpen,
-        manualQueue, addToQueue, getQueue, autoQueue, fetchAutoQueue,
+        manualQueue, addToQueue, getQueue, autoQueue, fetchAutoQueue, setPlayContext, reorderAutoQueue, removeFromAutoQueue,
         playlists, createPlaylist, deletePlaylist, addSongToPlaylist, removeSongFromPlaylist,
         renamePlaylist, reorderPlaylistSongs, setPlaylistCover,
         searchHistory, addSearchHistory, clearSearchHistory,

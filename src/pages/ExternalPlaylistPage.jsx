@@ -13,7 +13,7 @@ export default function ExternalPlaylistPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const autoplay = searchParams.get("autoplay") === "true";
-  const { playSong, currentSong, isPlaying, togglePlay, playlists, allSongs, addToQueue, isFavorite, toggleFavorite, addSongToPlaylist, createPlaylist } = usePlayer();
+  const { playSong, currentSong, isPlaying, togglePlay, playlists, allSongs, addToQueue, isFavorite, toggleFavorite, addSongToPlaylist, createPlaylist, setPlayContext } = usePlayer();
   const { showToast } = useToast();
   const { user } = useContext(AuthContext);
   const [songMenu, setSongMenu] = useState(null); // {id, x, y, song, sub}
@@ -148,13 +148,14 @@ export default function ExternalPlaylistPage() {
   const handlePlayPlaylist = () => {
     if (playlist?.tracks?.length > 0) {
       if (currentSong && playlist.tracks.some(t => t.id === currentSong.id)) togglePlay();
-      else playSong(playlist.tracks[0]);
+      else { setPlayContext(playlist.tracks); playSong(playlist.tracks[0]); }
     }
   };
 
   const handleShufflePlay = () => {
     if (!playlist?.tracks?.length) return;
     const shuffled = [...playlist.tracks].sort(() => Math.random() - 0.5);
+    setPlayContext(playlist.tracks);
     playSong(shuffled[0]);
     shuffled.slice(1).forEach(s => addToQueue({ ...s, audio: s.audio || 'YT_STREAM' }));
     showToast("Phát ngẫu nhiên", "success");
@@ -273,14 +274,14 @@ export default function ExternalPlaylistPage() {
             const isActivePlaying = isActive && isPlaying;
             const liked = isFavorite(song.id);
             return (
-              <div key={song.id} onClick={() => { if (isActive) togglePlay(); else playSong(song); }}
-                className={`group grid grid-cols-[40px_1fr_40px] md:grid-cols-[50px_minmax(150px,2fr)_minmax(120px,1fr)_100px] gap-3 md:gap-4 px-2 md:px-6 py-2.5 md:py-3 items-center rounded-xl md:rounded-2xl cursor-pointer transition-all duration-200 ${isActive ? "bg-cyan-500/10 border border-cyan-500/20" : "hover:bg-white/[0.04] border border-transparent"}`}>
+              <div key={song.id} onClick={() => { if (isActive) togglePlay(); else { setPlayContext(playlist.tracks); playSong(song); } }}
+                className={`group grid grid-cols-[40px_1fr_40px] md:grid-cols-[50px_minmax(150px,2fr)_minmax(120px,1fr)_100px] gap-3 md:gap-4 px-2 md:px-6 py-2.5 md:py-3 items-center rounded-xl md:rounded-2xl cursor-pointer transition-all duration-200 ${isActive ? "bg-neon/10 border border-neon/20" : "hover:bg-white/[0.04] border border-transparent"}`}>
                 <div className="flex justify-center text-sm font-medium text-gray-500">
                   {isActivePlaying ? (
-                    <div className="flex items-end justify-center w-4 h-4 gap-[2px]">
-                      <div className="w-[3px] bg-cyan-400 animate-[music-bar_1s_ease-in-out_infinite] h-full" />
-                      <div className="w-[3px] bg-cyan-400 animate-[music-bar_0.8s_ease-in-out_infinite_0.2s] h-3/4" />
-                      <div className="w-[3px] bg-cyan-400 animate-[music-bar_1.2s_ease-in-out_infinite_0.4s] h-[80%]" />
+                    <div className="flex items-center gap-[2px]">
+                      <span className="w-[2px] bg-neon rounded-full animate-bounce" style={{ height: "8px", animationDelay: "0ms" }} />
+                      <span className="w-[2px] bg-neon rounded-full animate-bounce" style={{ height: "12px", animationDelay: "150ms" }} />
+                      <span className="w-[2px] bg-neon rounded-full animate-bounce" style={{ height: "6px", animationDelay: "300ms" }} />
                     </div>
                   ) : (<span className="group-hover:hidden">{i + 1}</span>)}
                   <FaPlay className={`w-3 h-3 text-white hidden group-hover:inline-block ${isActivePlaying ? '!hidden' : ''}`} />
@@ -290,7 +291,7 @@ export default function ExternalPlaylistPage() {
                     <img src={song.cover} alt={song.title} className="w-full h-full object-cover rounded-md md:rounded-lg shadow-sm" />
                   </div>
                   <div className="flex flex-col min-w-0">
-                    <p className={`text-[13px] md:text-sm font-semibold truncate ${isActive ? "text-cyan-400" : "text-white group-hover:text-cyan-200"}`}>{song.title}</p>
+                    <p className={`text-[13px] md:text-sm font-semibold truncate ${isActive ? "text-neon" : "text-white group-hover:text-neon/80"}`}>{song.title}</p>
                     <p className="text-[11px] md:text-xs text-gray-400 truncate md:hidden mt-0.5">{song.artist}</p>
                   </div>
                 </div>

@@ -180,7 +180,7 @@ function AppContent() {
 
       <main className={`flex-1 min-w-0 w-full max-w-[100vw] flex flex-col h-full transition-all duration-300 lg:pl-[68px] ${queueOpen ? "lg:mr-80" : ""}`}>
         {/* Header */}
-        <header style={{ background: 'rgba(10,15,30,0.7)', backdropFilter: 'blur(12px)', borderBottom: '1px solid rgba(0,255,200,0.08)' }} className="flex-shrink-0 sticky top-0 z-50 px-3 sm:px-4 lg:px-6 xl:px-8 py-2 sm:py-3 flex items-center gap-2 sm:gap-4 shadow-md">
+        <header style={{ background: 'rgba(10,15,30,0.85)', backdropFilter: 'blur(12px)', borderBottom: '1px solid rgba(0,255,200,0.08)' }} className="flex-shrink-0 sticky top-0 z-50 px-3 sm:px-4 lg:px-6 xl:px-8 py-2 sm:py-3 flex items-center gap-2 sm:gap-4 shadow-md">
           <button
             onClick={() => navigate(-1)}
             className="text-gray-400 hover:text-neon transition-colors text-lg sm:text-xl"

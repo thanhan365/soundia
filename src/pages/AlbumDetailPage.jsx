@@ -10,7 +10,7 @@ import api from "../utils/api";
 export default function AlbumDetailPage() {
   const { key } = useParams();
   const navigate = useNavigate();
-  const { playSong, currentSong, isPlaying, togglePlay, addToQueue, isFavorite, toggleFavorite } = usePlayer();
+  const { playSong, currentSong, isPlaying, togglePlay, addToQueue, isFavorite, toggleFavorite, setPlayContext } = usePlayer();
   const { showToast } = useToast();
 
   const [album, setAlbum] = useState(null);
@@ -38,6 +38,7 @@ export default function AlbumDetailPage() {
     if (isAlbumPlaying) {
       togglePlay();
     } else {
+      setPlayContext(album.tracks);
       playSong(album.tracks[0]);
       album.tracks.slice(1).forEach(s => addToQueue(s));
     }
@@ -46,6 +47,7 @@ export default function AlbumDetailPage() {
   const handleShufflePlay = () => {
     if (!album?.tracks?.length) return;
     const shuffled = [...album.tracks].sort(() => Math.random() - 0.5);
+    setPlayContext(album.tracks);
     playSong(shuffled[0]);
     shuffled.slice(1).forEach(s => addToQueue(s));
     showToast("Phát ngẫu nhiên", "success");
@@ -150,11 +152,15 @@ export default function AlbumDetailPage() {
             const liked = isFavorite(song.id);
             return (
               <div key={song.id || i}
-                onClick={() => { if (isActive) togglePlay(); else playSong(song); }}
+                onClick={() => { if (isActive) togglePlay(); else { setPlayContext(album.tracks); playSong(song); } }}
                 className={`group grid grid-cols-[40px_1fr_40px] md:grid-cols-[50px_minmax(150px,2fr)_minmax(120px,1fr)_100px] gap-3 md:gap-4 px-2 md:px-6 py-2.5 md:py-3 items-center rounded-xl md:rounded-2xl cursor-pointer transition-all duration-200 ${isActive ? "bg-neon/10 border border-neon/20" : "hover:bg-white/[0.04] border border-transparent"}`}>
                 <div className="flex justify-center text-sm font-medium text-gray-500">
                   {isActivePlaying ? (
-                    <div className="playing-bars"><span /><span /><span /></div>
+                    <div className="flex items-center gap-[2px]">
+                      <span className="w-[2px] bg-neon rounded-full animate-bounce" style={{ height: "8px", animationDelay: "0ms" }} />
+                      <span className="w-[2px] bg-neon rounded-full animate-bounce" style={{ height: "12px", animationDelay: "150ms" }} />
+                      <span className="w-[2px] bg-neon rounded-full animate-bounce" style={{ height: "6px", animationDelay: "300ms" }} />
+                    </div>
                   ) : (<span className="group-hover:hidden">{i + 1}</span>)}
                   <FaPlay className={`w-3 h-3 text-white hidden group-hover:inline-block ${isActivePlaying ? '!hidden' : ''}`} />
                 </div>
