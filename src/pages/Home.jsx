@@ -8,6 +8,7 @@ import BannerSlider from "../components/BannerSlider";
 import TrendingSection from "../components/home/TrendingSection";
 import TopTrendingSection from "../components/home/TopTrendingSection";
 import MoodGenreSection from "../components/home/MoodGenreSection";
+import ChartColumnsSection from "../components/home/ChartColumnsSection";
 
 import ArtistSection from "../components/home/ArtistSection";
 import SuggestedPlaylistSection from "../components/home/SuggestedPlaylistSection";
@@ -78,6 +79,8 @@ export default function Home() {
         {/* Top Trending from iTunes/NCT */}
         <TopTrendingSection />
 
+        {/* Bảng Xếp Hạng: Việt / Trung / Quốc Tế */}
+        <ChartColumnsSection />
 
         {/* Playlist Gợi Ý */}
         <SuggestedPlaylistSection />

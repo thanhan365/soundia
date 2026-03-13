@@ -35,6 +35,7 @@ const AdminPage = React.lazy(() => import("./pages/AdminPage"));
 const SetupAdmin = React.lazy(() => import("./pages/SetupAdmin"));
 const AlbumDetailPage = React.lazy(() => import("./pages/AlbumDetailPage"));
 const MVDetailPage = React.lazy(() => import("./pages/MVDetailPage"));
+const TrendingDetailPage = React.lazy(() => import("./pages/TrendingDetailPage"));
 const NotFound = React.lazy(() => import("./pages/NotFound"));
 
 // Loading fallback
@@ -235,6 +236,7 @@ function AppContent() {
               <Route path="/suggested-playlist" element={<SuggestedPlaylistDetail />} />
               <Route path="/album/:key" element={<AlbumDetailPage />} />
               <Route path="/mv/:key" element={<MVDetailPage />} />
+              <Route path="/trending/:type" element={<TrendingDetailPage />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </Suspense>

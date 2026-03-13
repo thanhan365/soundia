@@ -229,6 +229,167 @@ namespace Soundia.Api.Controllers
             }
         }
 
+        // Cache cho từng chart category
+        private static readonly Dictionary<string, (List<object> data, DateTime expiry)> _chartCategoryCache = new();
+
+        /// <summary>
+        /// GET /api/songs/itunes-top-charts
+        /// Proxy for Apple Music RSS Charts (top 50 most-played songs)
+        /// </summary>
+        private static (List<object> data, DateTime expiry)? _itunesChartsCache = null;
+
+        [HttpGet("itunes-top-charts")]
+        public async Task<ActionResult> ItunesTopCharts()
+        {
+            // Cache 30 min
+            if (_itunesChartsCache != null && DateTime.UtcNow < _itunesChartsCache.Value.expiry)
+                return Ok(new { success = true, data = _itunesChartsCache.Value.data });
+
+            try
+            {
+                using var client = new System.Net.Http.HttpClient();
+                client.DefaultRequestHeaders.Add("User-Agent", "Mozilla/5.0");
+                var json = await client.GetStringAsync("https://rss.applemarketingtools.com/api/v2/us/music/most-played/50/songs.json");
+                using var doc = System.Text.Json.JsonDocument.Parse(json);
+                var results = doc.RootElement.GetProperty("feed").GetProperty("results");
+                var songs = new List<object>();
+                foreach (var s in results.EnumerateArray())
+                {
+                    var artwork = s.TryGetProperty("artworkUrl100", out var art) ? art.GetString() ?? "" : "";
+                    songs.Add(new
+                    {
+                        id = s.TryGetProperty("id", out var idEl) ? idEl.GetString() ?? "" : "",
+                        title = s.TryGetProperty("name", out var nameEl) ? nameEl.GetString() ?? "" : "",
+                        artist = s.TryGetProperty("artistName", out var artEl) ? artEl.GetString() ?? "" : "",
+                        cover = artwork.Replace("100x100bb", "600x600bb"),
+                        audio = "YT_STREAM",
+                    });
+                }
+                _itunesChartsCache = (songs, DateTime.UtcNow.AddMinutes(30));
+                return Ok(new { success = true, data = songs });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "iTunes charts fetch failed", error = ex.Message });
+            }
+        }
+
+        /// <summary>
+        /// GET /api/songs/nct-chart/{category}
+        /// category = "viet" | "chinese"
+        /// NCT chart prefixes: viet=1, chinese=14
+        /// </summary>
+        [HttpGet("nct-chart/{category}")]
+        public async Task<ActionResult> NctChartCategory(string category, [FromQuery] int limit = 50)
+        {
+            // Map category → NCT chart category ID
+            // Full chart key format: 1-{categoryId}-d{dayOfYear}-{year}
+            // Discovered from nhaccuatui.com homepage API:
+            //   1-1 = Nhạc Việt, 1-5 = Thịnh Hành, 1-14 = Nhạc Hoa
+            var categoryMap = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase) {
+                { "viet", "1" },
+                { "chinese", "14" },
+                { "trending", "5" },
+            };
+
+            if (!categoryMap.TryGetValue(category, out var catId))
+                return BadRequest(new { message = "Invalid category. Use: viet, chinese, trending" });
+
+            // Check cache (30 phút)
+            var cacheKey = $"nct_chart_{category}_{limit}";
+            if (_chartCategoryCache.TryGetValue(cacheKey, out var cached) && DateTime.UtcNow < cached.expiry)
+                return Ok(new { success = true, data = cached.data, total = cached.data.Count });
+
+            try
+            {
+                using var client = new System.Net.Http.HttpClient();
+                client.DefaultRequestHeaders.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36");
+
+                var now = DateTime.UtcNow.AddHours(7);
+                string json = "";
+                bool found = false;
+
+                for (int offset = 0; offset <= 7 && !found; offset++)
+                {
+                    var day = now.AddDays(-offset);
+                    var chartKey = $"1-{catId}-d{day.DayOfYear}-{day.Year}";
+                    var chartUrl = $"https://graph.nhaccuatui.com/api/v1/playlist/charts/{chartKey}?key={chartKey}&isShowLoading=false";
+                    try
+                    {
+                        json = await client.GetStringAsync(chartUrl);
+                        using var checkDoc = System.Text.Json.JsonDocument.Parse(json);
+                        var checkItems = checkDoc.RootElement.GetProperty("data").GetProperty("items");
+                        if (checkItems.GetArrayLength() > 0)
+                        {
+                            found = true;
+                            Console.WriteLine($"[NctChart-{category}] Using chart key: {chartKey} ({checkItems.GetArrayLength()} items)");
+                        }
+                    }
+                    catch { }
+                }
+
+                if (!found)
+                    return Ok(new { success = true, data = new List<object>(), total = 0 });
+
+                using var doc = System.Text.Json.JsonDocument.Parse(json);
+                var items = doc.RootElement.GetProperty("data").GetProperty("items");
+
+                var songs = new List<object>();
+                int count = 0;
+                foreach (var item in items.EnumerateArray())
+                {
+                    if (count >= limit) break;
+
+                    var name = item.GetProperty("name").GetString() ?? "";
+                    var artistName = "Unknown";
+                    if (item.TryGetProperty("artistName", out var aName))
+                        artistName = aName.GetString() ?? "Unknown";
+                    else if (item.TryGetProperty("artist", out var artistArr) && artistArr.GetArrayLength() > 0)
+                        artistName = artistArr[0].GetProperty("name").GetString() ?? "Unknown";
+
+                    var image = item.GetProperty("image").GetString() ?? "";
+                    var key = item.GetProperty("key").GetString() ?? "";
+                    var duration = item.TryGetProperty("duration", out var dur) ? dur.GetInt32() : 0;
+
+                    string streamUrl = "";
+                    if (item.TryGetProperty("streamURL", out var streamUrls) && streamUrls.ValueKind == System.Text.Json.JsonValueKind.Array)
+                    {
+                        foreach (var su in streamUrls.EnumerateArray())
+                        {
+                            var onlyVIP = su.TryGetProperty("onlyVIP", out var vip) && vip.GetBoolean();
+                            if (onlyVIP) continue;
+                            var stream = su.TryGetProperty("stream", out var s) ? s.GetString() : "";
+                            var type = su.TryGetProperty("type", out var t) ? t.GetString() : "";
+                            if (!string.IsNullOrEmpty(stream))
+                            {
+                                streamUrl = stream;
+                                if (type == "320") break;
+                            }
+                        }
+                    }
+
+                    songs.Add(new {
+                        id = $"nct_{category}_{key}",
+                        title = name,
+                        artist = artistName,
+                        cover = image,
+                        key,
+                        audio = string.IsNullOrEmpty(streamUrl) ? "YT_STREAM" : $"/api/stream/proxy-audio?url={System.Net.WebUtility.UrlEncode(streamUrl)}",
+                        source = "nct",
+                        duration
+                    });
+                    count++;
+                }
+
+                _chartCategoryCache[cacheKey] = (songs, DateTime.UtcNow.AddMinutes(30));
+                return Ok(new { success = true, data = songs, total = songs.Count });
+            }
+            catch (System.Exception ex)
+            {
+                return StatusCode(500, new { message = $"Error fetching NCT {category} chart", details = ex.Message });
+            }
+        }
+
         [HttpGet("nct-artists")]
         public async Task<ActionResult> NctArtists()
         {
