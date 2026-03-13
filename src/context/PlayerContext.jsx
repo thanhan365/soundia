@@ -161,10 +161,13 @@ export function PlayerProvider({ children }) {
   };
 
   // ── playSong (needs access to all hooks) ───────────────────────────────────
+  const playSessionRef = useRef(0); // race-condition guard for rapid song switching
+
   const playSong = async (song, forceReload = false) => {
     const _t0 = performance.now();
     const audio = audioRef.current;
     crossfadeTriggeredRef.current = false; // Reset crossfade trigger for new song
+    const sessionId = ++playSessionRef.current; // unique ID for this play call
 
     if (!forceReload && currentSong?.id === song.id) {
       if (isYTMode) {
@@ -206,7 +209,6 @@ export function PlayerProvider({ children }) {
       setCurrentSong(song);
       addToRecent(song);
       recordListening(song);
-      setIsPlaying(true);
       setCurrentTime(0);
       setDuration(0);
       audio.pause();
@@ -217,15 +219,20 @@ export function PlayerProvider({ children }) {
       audio.src = audioUrl;
       audio.preload = 'auto';
       setIsLoadingStream(false);
+      setIsPlaying(true);
       console.log(`⏱️ [playSong] Direct URL → play in ${(performance.now() - _t0).toFixed(0)}ms`);
       audio.play().catch(() => {});
     } else {
       // Needs stream resolution — show loading, set song info immediately
       setIsLoadingStream(true);
+      // Stop old audio immediately to prevent stale progress reads
+      audio.pause();
+      audio.removeAttribute('src');
+      audio.load();
       setCurrentSong(song);
       addToRecent(song);
       recordListening(song);
-      setIsPlaying(true);
+      setIsPlaying(false); // Don't show as playing until audio actually starts
       setCurrentTime(0);
       setDuration(expectedDur > 0 ? expectedDur : 0);
 
@@ -259,6 +266,12 @@ export function PlayerProvider({ children }) {
       } catch {}
       console.log(`⏱️ [playSong] Resolve done in ${(performance.now() - _t0).toFixed(0)}ms (NCT=${nctStream ? 'HIT' : 'MISS'})`);
 
+      // Race condition guard: if user clicked another song while we were resolving, abort
+      if (sessionId !== playSessionRef.current) {
+        console.log(`⏱️ [playSong] Aborted — superseded by newer play request`);
+        return;
+      }
+
       if (nctStream) {
         // ✅ NCT tìm được → phát HTML5 Audio (ổn định hơn)
         if (isYTMode) { ytPlayerRef.current?.pause(); setIsYTMode(false); isYTModeRef.current = false; }
@@ -270,11 +283,14 @@ export function PlayerProvider({ children }) {
         audio.src = audioUrl;
         audio.preload = 'auto';
         setIsLoadingStream(false);
+        setIsPlaying(true);
         console.log(`⏱️ [playSong] NCT → audio.play() at ${(performance.now() - _t0).toFixed(0)}ms`);
         audio.play().catch(() => {});
       } else {
         // ❌ NCT không có → dùng YouTube (đã chạy ngầm, chỉ cần await)
         const ytResult = await ytPromise;
+        // Race condition guard again after YouTube await
+        if (sessionId !== playSessionRef.current) return;
         setIsYTMode(true);
         isYTModeRef.current = true;
         ytPlayStartedRef.current = false;

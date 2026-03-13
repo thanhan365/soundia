@@ -52,22 +52,28 @@ export function useSearchManager({ allSongs }) {
                 isExternal: true,
             }));
 
-            const mergedTracks = [...localDbTracks, ...(nctResults.tracks || [])];
-
             const generateKey = (track) => {
                 const title = normalizeVietnamese(track.title).replace(/[^a-z0-9]/g, "");
                 const artist = normalizeVietnamese(track.artist).replace(/[^a-z0-9]/g, "");
                 return `${title}_${artist}`;
             };
 
-            const existingKeys = new Set(mergedTracks.map(t => generateKey(t)));
-            (itunesResults.tracks || []).forEach(itunesTrack => {
-                const key = generateKey(itunesTrack);
-                if (!existingKeys.has(key)) { mergedTracks.push(itunesTrack); existingKeys.add(key); }
-            });
+            // Build seen set from local results first to avoid duplicates
+            const seenKeys = new Set(local.map(t => generateKey(t)));
+            const externalTracks = [];
+
+            // Add localDB, NCT, iTunes — skip if already seen
+            const allExternal = [...localDbTracks, ...(nctResults.tracks || []), ...(itunesResults.tracks || [])];
+            for (const track of allExternal) {
+                const key = generateKey(track);
+                if (!seenKeys.has(key)) {
+                    externalTracks.push(track);
+                    seenKeys.add(key);
+                }
+            }
 
             const mergedArtists = itunesResults.artists || [];
-            setFilteredSongs([...local, ...mergedTracks]);
+            setFilteredSongs([...local, ...externalTracks]);
             setSearchArtistsResult(mergedArtists);
             setSearchPlaylistsResult([]);
         };

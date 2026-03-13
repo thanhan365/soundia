@@ -12,7 +12,8 @@ function formatTime(seconds) {
 export default function ProgressBar() {
   const {
     seekTo, duration: ctxDuration, currentSong,
-    ytPlayerRef, audioRef, isPlaying, isYTModeRef, sharedProgressRef
+    ytPlayerRef, audioRef, isPlaying, isYTModeRef, sharedProgressRef,
+    isLoadingStream
   } = usePlayer();
 
   // Init from shared ref (so LyricsView ProgressBar starts at correct position)
@@ -31,6 +32,8 @@ export default function ProgressBar() {
   const lastMsRef = useRef(performance.now());
   // Store current song ID at mount to avoid false reset
   const mountedSongIdRef = useRef(currentSong?.id);
+  // Track when song changed to ignore stale audio data
+  const songChangeTsRef = useRef(0);
 
   // ── Duration: sync from context (updated by YouTube's onTimeUpdate callback)
   useEffect(() => {
@@ -44,6 +47,7 @@ export default function ProgressBar() {
     // Skip if this is the same song that was playing when we mounted
     if (mountedSongIdRef.current === currentSong?.id) return;
     mountedSongIdRef.current = currentSong?.id;
+    songChangeTsRef.current = performance.now();
     setTime(0);
     setDur(0);
     syntheticRef.current = 0;
@@ -60,6 +64,10 @@ export default function ProgressBar() {
         const delta = (now - lastMsRef.current) / 1000;
         lastMsRef.current = now;
 
+        // Grace period after song change: ignore stale audio data for 800ms
+        const timeSinceSongChange = now - songChangeTsRef.current;
+        const isStaleWindow = timeSinceSongChange < 800;
+
         let t = -1, d = 0;
 
         // Try YouTube player
@@ -70,14 +78,13 @@ export default function ProgressBar() {
               const ytT = typeof yt.getCurrentTime === 'function' ? yt.getCurrentTime() : -1;
               const ytD = typeof yt.getDuration === 'function' ? yt.getDuration() : 0;
               // Chỉ lấy time khi YouTube đã report duration > 0
-              // (tránh lấy getCurrentTime()=0 khi player chưa thực sự ready)
               if (ytD > 0) { t = ytT; d = ytD; }
             }
           } catch { }
         }
 
-        // Try HTML5 Audio
-        if (t < 0 && !isYTModeRef?.current) {
+        // Try HTML5 Audio (skip during stale window to avoid reading old song's position)
+        if (t < 0 && !isYTModeRef?.current && !isStaleWindow) {
           try {
             const audio = audioRef?.current;
             if (audio) {
@@ -102,7 +109,12 @@ export default function ProgressBar() {
           }
         }
 
-        if (t >= 0) {
+        if (isLoadingStream || isStaleWindow) {
+          // Stream is loading or just switched song — keep progress at 0
+          setTime(0);
+          syntheticRef.current = 0;
+          lastRealRef.current = 0;
+        } else if (t >= 0) {
           // Got real time from player
           if (lastRealRef.current > 3 && t < lastRealRef.current - 3) {
             syntheticRef.current = t; // Repeat detected
@@ -116,7 +128,7 @@ export default function ProgressBar() {
           setTime(syntheticRef.current);
         }
 
-        if (d > 0) setDur(d);
+        if (d > 0 && !isStaleWindow) setDur(d);
         // Write to shared ref so other ProgressBar instances can read
         if (sharedProgressRef) {
           sharedProgressRef.current.time = syntheticRef.current;
@@ -131,7 +143,7 @@ export default function ProgressBar() {
 
     rafRef.current = requestAnimationFrame(poll);
     return () => { if (rafRef.current) cancelAnimationFrame(rafRef.current); };
-  }, [isPlaying, ytPlayerRef, audioRef, isYTModeRef]); // re-create when these change
+  }, [isPlaying, isLoadingStream, ytPlayerRef, audioRef, isYTModeRef]); // re-create when these change
 
   // ── Seek handlers ─────────────────────────────────────────────────────────
   const handleSeekStart = (e) => {
