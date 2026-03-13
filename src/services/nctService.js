@@ -36,6 +36,31 @@ export const searchNctSongs = async (keyword, limit = 20) => {
 };
 
 /**
+ * Search NCT playlists
+ */
+export const searchNctPlaylists = async (keyword, limit = 6) => {
+  if (!keyword) return [];
+  try {
+    const res = await api.get(`/nct-search-playlists?keyword=${encodeURIComponent(keyword)}&limit=${limit}`);
+    if (res.data?.success && res.data.data) {
+      return res.data.data.map(pl => ({
+        id: pl.key,
+        key: pl.key,
+        title: pl.name,
+        cover: pl.image,
+        totalSongs: pl.totalSongs,
+        description: pl.description,
+        source: "nct",
+      }));
+    }
+    return [];
+  } catch (err) {
+    console.error("[NCT] Playlist search error:", err);
+    return [];
+  }
+};
+
+/**
  * Get stream URL for a single NCT song by key
  */
 export const getNctStreamUrl = async (nctKey) => {

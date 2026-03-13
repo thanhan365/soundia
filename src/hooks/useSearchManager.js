@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { searchItunes } from "../services/iTunesService";
-import { searchNctSongs } from "../services/nctService";
+import { searchNctSongs, searchNctPlaylists } from "../services/nctService";
 import { normalizeVietnamese } from "../utils/textUtils";
 
 /**
@@ -30,19 +30,25 @@ export function useSearchManager({ allSongs }) {
             const rawQ = searchQuery.trim();
             const q = rawQ.toLowerCase();
             const currentSongs = allSongsRef.current;
-            if (!q) { setFilteredSongs(currentSongs); return; }
+            if (!q) {
+                setFilteredSongs(currentSongs);
+                setSearchArtistsResult([]);
+                setSearchPlaylistsResult([]);
+                return;
+            }
 
             const local = currentSongs.filter(
                 (s) => s.title.toLowerCase().includes(q) || s.artist.toLowerCase().includes(q)
             );
 
             const apiUrl = import.meta.env.VITE_API_URL || '/api';
-            const [nctResults, itunesResults, localDbResults] = await Promise.all([
+            const [nctResults, itunesResults, localDbResults, nctPlaylists] = await Promise.all([
                 searchNctSongs(rawQ, 15),
                 searchItunes(rawQ),
                 fetch(`${apiUrl}/songs/search-local?q=${encodeURIComponent(rawQ)}&limit=10`)
                     .then(r => r.ok ? r.json() : { data: [] })
-                    .catch(() => ({ data: [] }))
+                    .catch(() => ({ data: [] })),
+                searchNctPlaylists(rawQ, 6),
             ]);
 
             // Local DB songs (admin-imported) go first
@@ -72,10 +78,39 @@ export function useSearchManager({ allSongs }) {
                 }
             }
 
-            const mergedArtists = itunesResults.artists || [];
+            // ── Artists: extract from NCT results (priority) + iTunes ──
+            const artistMap = new Map();
+            // NCT artists first — extract unique artists from NCT song results
+            for (const track of (nctResults.tracks || [])) {
+                const name = track.artist;
+                if (!name || artistMap.has(name.toLowerCase())) continue;
+                artistMap.set(name.toLowerCase(), {
+                    id: encodeURIComponent(name),
+                    name: name,
+                    picture: track.cover || "",
+                    source: "nct",
+                });
+            }
+            // Then iTunes artists
+            for (const a of (itunesResults.artists || [])) {
+                if (!a.name || artistMap.has(a.name.toLowerCase())) continue;
+                artistMap.set(a.name.toLowerCase(), a);
+            }
+            const mergedArtists = Array.from(artistMap.values());
+
+            // ── Playlists: NCT (priority) + iTunes albums ──
+            const plSeenTitles = new Set();
+            const mergedPlaylists = [];
+            for (const pl of [...nctPlaylists, ...(itunesResults.playlists || [])]) {
+                const key = (pl.title || "").toLowerCase();
+                if (key && !plSeenTitles.has(key)) {
+                    plSeenTitles.add(key);
+                    mergedPlaylists.push(pl);
+                }
+            }
             setFilteredSongs([...local, ...externalTracks]);
             setSearchArtistsResult(mergedArtists);
-            setSearchPlaylistsResult([]);
+            setSearchPlaylistsResult(mergedPlaylists);
         };
         const t = setTimeout(handle, 500);
         return () => clearTimeout(t);

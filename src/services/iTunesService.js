@@ -54,7 +54,23 @@ export const searchItunes = async (query) => {
     });
     const artists = Array.from(artistMap.values());
 
-    return { tracks, artists, playlists: [] };
+    // Extract unique albums as "playlists"
+    const albumMap = new Map();
+    data.results.forEach(item => {
+      if (item.collectionId && item.collectionName && !albumMap.has(item.collectionId)) {
+        albumMap.set(item.collectionId, {
+          id: `itunes_album_${item.collectionId}`,
+          title: item.collectionName,
+          cover: getHighResArtwork(item.artworkUrl100),
+          artist: item.artistName || "",
+          totalSongs: item.trackCount || 0,
+          source: "itunes",
+        });
+      }
+    });
+    const playlists = Array.from(albumMap.values());
+
+    return { tracks, artists, playlists };
   } catch (error) {
     console.error("iTunes search error:", error);
     return { tracks: [], artists: [], playlists: [] };

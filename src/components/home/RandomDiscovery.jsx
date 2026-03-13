@@ -19,7 +19,7 @@ export default function RandomDiscovery({ onDiscover }) {
               Khám phá ẩn số
             </h2>
             <p className="text-gray-300 text-xs sm:text-sm md:text-base truncate sm:whitespace-normal">
-              Chưa biết nghe gì? Để thuật toán chọn bài ngẫu nhiên!
+              Chưa biết nghe gì? Để Soundia giúp bạn!
             </p>
           </div>
         </div>
@@ -28,7 +28,7 @@ export default function RandomDiscovery({ onDiscover }) {
         <div className="flex-shrink-0">
           <button
             onClick={onDiscover}
-            className="px-5 sm:px-6 md:px-8 py-2.5 sm:py-3 bg-white text-[#050511] text-xs sm:text-sm md:text-base font-bold rounded-full hover:bg-gray-200 transition-all duration-300 hover:scale-105 hover:shadow-[0_0_25px_rgba(255,255,255,0.3)] tracking-wider whitespace-nowrap"
+            className="px-5 sm:px-6 md:px-8 py-2.5 sm:py-3 bg-neon text-dark text-xs sm:text-sm md:text-base font-bold rounded-full hover:brightness-110 transition-all duration-300 hover:scale-105 hover:shadow-[0_0_25px_rgba(0,255,200,0.3)] tracking-wider whitespace-nowrap"
           >
             CHƠI NHẠC NGAY
           </button>
