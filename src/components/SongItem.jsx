@@ -2,6 +2,7 @@ import { useState, useRef, useCallback, memo } from "react";
 import { usePlayer } from "../context/PlayerContext";
 import { useToast } from "../context/ToastContext";
 import { useClickOutside } from "../hooks/useClickOutside";
+import { resolveNctStream } from "../services/nctService";
 import { HiPlay, HiPause } from "react-icons/hi2";
 import { HiHeart, HiDotsHorizontal } from "react-icons/hi";
 import { HiQueueList } from "react-icons/hi2";
@@ -23,15 +24,26 @@ const SongItem = memo(function SongItem({ song, index }) {
   const liked = isFavorite(song.id);
   const [menuPos, setMenuPos] = useState(null);
   const menuRef = useRef(null);
+  const prefetchTimer = useRef(null);
 
   // Close menu khi click outside
   useClickOutside(menuRef, () => setMenuPos(null));
 
+  // Pre-fetch NCT stream on hover (300ms delay) — caches result for instant playback on click
+  const handleMouseEnter = useCallback(() => {
+    if (isActive) return; // Already playing this song
+    prefetchTimer.current = setTimeout(() => {
+      if (song.title) resolveNctStream(song.title, song.artist).catch(() => {});
+    }, 300);
+  }, [song.title, song.artist, isActive]);
+
+  const handleMouseLeave = useCallback(() => {
+    if (prefetchTimer.current) { clearTimeout(prefetchTimer.current); prefetchTimer.current = null; }
+  }, []);
+
   const handleFav = useCallback((e) => {
     e.stopPropagation();
     toggleFavorite(song);
-    // showToast được gọi trong toggleFavorite hoặc giữ ở đây tùy ý, 
-    // nhưng toggleFavorite giờ cần cả object song
     showToast(liked ? "Đã bỏ yêu thích" : "Đã thêm vào yêu thích", liked ? "info" : "success");
   }, [song, liked, toggleFavorite, showToast]);
 
@@ -50,6 +62,8 @@ const SongItem = memo(function SongItem({ song, index }) {
     <>
       <div
         onClick={() => playSong(song)}
+        onMouseEnter={handleMouseEnter}
+        onMouseLeave={handleMouseLeave}
         className={`
           w-full flex items-center gap-3 lg:gap-4 px-3 py-2 sm:px-4 sm:py-2.5 rounded-lg
           transition-colors duration-300 group cursor-pointer text-left relative

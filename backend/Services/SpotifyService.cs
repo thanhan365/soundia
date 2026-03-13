@@ -34,14 +34,14 @@ namespace Soundia.Api.Services
             _clientSecret = config["Spotify:ClientSecret"] ?? "";
             _tokenExpiry = DateTime.MinValue;
 
-            Console.WriteLine($"[SpotifyService] Initialized. ClientId length={_clientId.Length}, ClientSecret length={_clientSecret.Length}");
+
         }
 
         private async Task EnsureAccessTokenAsync()
         {
             if (!string.IsNullOrEmpty(_accessToken) && DateTime.UtcNow < _tokenExpiry)
             {
-                Console.WriteLine("[SpotifyService] Using cached access token.");
+
                 return;
             }
 
@@ -51,7 +51,7 @@ namespace Soundia.Api.Services
                 throw new InvalidOperationException("Spotify credentials are not configured.");
             }
 
-            Console.WriteLine("[SpotifyService] Requesting new access token...");
+
 
             var authString = Convert.ToBase64String(Encoding.UTF8.GetBytes($"{_clientId}:{_clientSecret}"));
             var request = new HttpRequestMessage(HttpMethod.Post, _tokenEndpoint);
@@ -64,8 +64,7 @@ namespace Soundia.Api.Services
             var response = await _httpClient.SendAsync(request);
             var contentString = await response.Content.ReadAsStringAsync();
 
-            Console.WriteLine($"[SpotifyService] Token response status: {(int)response.StatusCode}");
-            Console.WriteLine($"[SpotifyService] Token response body: {contentString}");
+
 
             if (!response.IsSuccessStatusCode)
             {
@@ -80,7 +79,7 @@ namespace Soundia.Api.Services
 
             // Subtract 5 minutes from expiry for safety margin
             _tokenExpiry = DateTime.UtcNow.AddSeconds(expiresInSeconds - 300);
-            Console.WriteLine($"[SpotifyService] Got access token, expires in {expiresInSeconds}s");
+
         }
 
         /// <summary>
@@ -92,25 +91,25 @@ namespace Soundia.Api.Services
             for (int attempt = 1; attempt <= maxRetries; attempt++)
             {
                 await EnsureAccessTokenAsync();
-                Console.WriteLine($"[SpotifyService] {label} (attempt {attempt}/{maxRetries}) URL: {url}");
+
 
                 var request = new HttpRequestMessage(HttpMethod.Get, url);
                 request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _accessToken);
                 var response = await _httpClient.SendAsync(request);
                 var body = await response.Content.ReadAsStringAsync();
 
-                Console.WriteLine($"[SpotifyService] {label} response status: {(int)response.StatusCode}");
+
 
                 if (response.IsSuccessStatusCode)
                 {
                     return body;
                 }
 
-                Console.WriteLine($"[SpotifyService] {label} error body: {body}");
+
 
                 if ((int)response.StatusCode == 403 && attempt < maxRetries)
                 {
-                    Console.WriteLine($"[SpotifyService] Got 403, resetting token and retrying in {attempt * 500}ms...");
+
                     _accessToken = null;
                     _tokenExpiry = DateTime.MinValue;
                     await Task.Delay(attempt * 500);
@@ -119,7 +118,7 @@ namespace Soundia.Api.Services
 
                 if ((int)response.StatusCode == 401 && attempt < maxRetries)
                 {
-                    Console.WriteLine($"[SpotifyService] Got 401, token expired. Refreshing...");
+
                     _accessToken = null;
                     _tokenExpiry = DateTime.MinValue;
                     continue;

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { searchItunes } from "../services/iTunesService";
 import { searchNctSongs } from "../services/nctService";
 import { normalizeVietnamese } from "../utils/textUtils";
@@ -15,19 +15,24 @@ export function useSearchManager({ allSongs }) {
         JSON.parse(localStorage.getItem("soundia_search_history")) || []
     );
 
+    // Keep a ref to allSongs so search effect doesn't re-trigger when allSongs changes
+    const allSongsRef = useRef(allSongs);
+    useEffect(() => { allSongsRef.current = allSongs; }, [allSongs]);
+
     // Sync filteredSongs when allSongs changes and no search query
     useEffect(() => {
         if (!searchQuery.trim()) setFilteredSongs(allSongs);
     }, [allSongs, searchQuery]);
 
-    // Debounced search effect
+    // Debounced search effect — only re-runs when searchQuery changes
     useEffect(() => {
         const handle = async () => {
             const rawQ = searchQuery.trim();
             const q = rawQ.toLowerCase();
-            if (!q) { setFilteredSongs(allSongs); return; }
+            const currentSongs = allSongsRef.current;
+            if (!q) { setFilteredSongs(currentSongs); return; }
 
-            const local = allSongs.filter(
+            const local = currentSongs.filter(
                 (s) => s.title.toLowerCase().includes(q) || s.artist.toLowerCase().includes(q)
             );
 
@@ -68,7 +73,7 @@ export function useSearchManager({ allSongs }) {
         };
         const t = setTimeout(handle, 500);
         return () => clearTimeout(t);
-    }, [searchQuery, allSongs]); // eslint-disable-line
+    }, [searchQuery]); // Only re-run when searchQuery changes, not allSongs
 
     // Persist search history
     useEffect(() => {

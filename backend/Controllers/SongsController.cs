@@ -1092,6 +1092,9 @@ namespace Soundia.Api.Controllers
         [HttpGet("nct-resolve")]
         public async Task<ActionResult> NctResolve([FromQuery] string title, [FromQuery] string artist)
         {
+            Console.WriteLine($"[NCT-Resolve] \"{title}\" by {artist}");
+
+
             if (string.IsNullOrWhiteSpace(title))
                 return BadRequest(new { message = "title is required" });
             
@@ -1111,9 +1114,13 @@ namespace Soundia.Api.Controllers
             catch { }
 
             var url = await _nctApi.ResolveStreamByTitleAsync(title, artist ?? "");
-            if (url == null) return NotFound(new { message = "Not found on NCT" });
-            // Proxy through backend to bypass CORS
+            if (url == null)
+            {
+                Console.WriteLine($"[NCT-Resolve] No match");
+                return NotFound(new { message = "Not found on NCT" });
+            }
             var proxyUrl = $"/api/stream/proxy-audio?url={System.Net.WebUtility.UrlEncode(url)}";
+            Console.WriteLine($"[NCT-Resolve] OK → nctKey={nctKey}");
             return Ok(new { success = true, streamUrl = proxyUrl, nctKey = nctKey });
         }
 
@@ -1301,6 +1308,17 @@ namespace Soundia.Api.Controllers
                 .FirstOrDefaultAsync(s => s.Title == song.Title && s.Artist == song.Artist);
 
             if (existingSong != null) return Ok(existingSong);
+
+            // Don't save NCT stream URLs or proxy URLs to DB — they expire!
+            // Save as YT_STREAM so they get re-resolved each time
+            if (!string.IsNullOrEmpty(song.AudioUrl) && 
+                (song.AudioUrl.Contains("stream.nct.vn") || 
+                 song.AudioUrl.Contains("proxy-audio") || 
+                 song.AudioUrl.Contains("a01.nct.vn")))
+            {
+                Console.WriteLine($"[External] Replacing expiring NCT URL with YT_STREAM for: {song.Title}");
+                song.AudioUrl = "YT_STREAM";
+            }
 
             song.Id = 0;
             _context.Songs.Add(song);

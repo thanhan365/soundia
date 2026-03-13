@@ -23,6 +23,7 @@ namespace Soundia.Api.Services
         public NctApiService()
         {
             _http = new HttpClient();
+            _http.Timeout = TimeSpan.FromSeconds(5); // Prevent hanging on slow NCT servers
             _http.DefaultRequestHeaders.Add("User-Agent", UA);
         }
 
@@ -57,31 +58,34 @@ namespace Soundia.Api.Services
         }
 
         // ─── Get Stream URL (scrape SSR page) ─────────────────────────────
-        public async Task<string> GetStreamUrlAsync(string songKey)
+        // Overload: use provided linkShare directly (skips detail API call → faster)
+        public async Task<string> GetStreamUrlAsync(string songKey, string linkShare = null)
         {
             var cacheKey = $"stream_{songKey}";
             if (TryGetCache<string>(cacheKey, out var cached)) return cached;
 
             try
             {
-                // First get song detail for linkShare
-                var detailUrl = $"{GRAPH_API}/song/detail/{songKey}";
-                var detailJson = await _http.GetStringAsync(detailUrl);
-                using var detailDoc = JsonDocument.Parse(detailJson);
-                var detailData = detailDoc.RootElement.GetProperty("data");
-                var linkShare = detailData.TryGetProperty("linkShare", out var ls) ? ls.GetString() : null;
-
-                // Build linkShare if not available (pattern: /bai-hat/{slug}.{key}.html)
+                // If no linkShare provided, fetch from detail API
                 if (string.IsNullOrEmpty(linkShare))
                 {
-                    var name = detailData.TryGetProperty("name", out var nm) ? nm.GetString() : "";
-                    var artistName = detailData.TryGetProperty("artistName", out var an) ? an.GetString() : "";
-                    if (!string.IsNullOrEmpty(name))
+                    var detailUrl = $"{GRAPH_API}/song/detail/{songKey}";
+                    var detailJson = await _http.GetStringAsync(detailUrl);
+                    using var detailDoc = JsonDocument.Parse(detailJson);
+                    var detailData = detailDoc.RootElement.GetProperty("data");
+                    linkShare = detailData.TryGetProperty("linkShare", out var ls) ? ls.GetString() : null;
+
+                    if (string.IsNullOrEmpty(linkShare))
                     {
-                        var slug = Regex.Replace($"{name} {artistName}".ToLowerInvariant(), @"[^a-z0-9\s]", "")
-                            .Trim().Replace(" ", "-");
-                        slug = Regex.Replace(slug, @"-+", "-");
-                        linkShare = $"{WEB_BASE}/bai-hat/{slug}.{songKey}.html";
+                        var name = detailData.TryGetProperty("name", out var nm) ? nm.GetString() : "";
+                        var artistName = detailData.TryGetProperty("artistName", out var an) ? an.GetString() : "";
+                        if (!string.IsNullOrEmpty(name))
+                        {
+                            var slug = Regex.Replace($"{name} {artistName}".ToLowerInvariant(), @"[^a-z0-9\s]", "")
+                                .Trim().Replace(" ", "-");
+                            slug = Regex.Replace(slug, @"-+", "-");
+                            linkShare = $"{WEB_BASE}/bai-hat/{slug}.{songKey}.html";
+                        }
                     }
                 }
 
@@ -93,7 +97,6 @@ namespace Soundia.Api.Services
                 if (!nuxtMatch.Success) return null;
 
                 var nuxtArr = JsonSerializer.Deserialize<JsonElement[]>(nuxtMatch.Groups[1].Value);
-                // Find stream URL patterns: stream.nct.vn or a01.nct.vn with .mp3
                 string streamUrl = null;
                 string hqUrl = null;
                 foreach (var item in nuxtArr)
@@ -128,9 +131,10 @@ namespace Soundia.Api.Services
 
             try
             {
-                // Search NCT with the song title + primary artist
-                var primaryArtist = SplitArtists(artist).FirstOrDefault() ?? "";
-                var searchKeyword = $"{title} {primaryArtist}".Trim();
+                // Search NCT with the song title + first 2 artists (more context for better results)
+                var artistParts = SplitArtists(artist);
+                var searchArtists = string.Join(" ", artistParts.Take(2));
+                var searchKeyword = $"{title} {searchArtists}".Trim();
                 var songs = await SearchSongsAsync(searchKeyword, 1, 10);
                 if (songs.Count == 0) return null;
 
@@ -145,12 +149,10 @@ namespace Soundia.Api.Services
                 {
                     var normName = NormalizeForMatch(s.Name ?? "");
                     var nctNameLower = (s.Name ?? "").ToLowerInvariant();
-                    // Also normalize without parenthetical suffixes: "Bài Hát (Remix)" → "baihat"
                     var normNameBase = NormalizeForMatch(Regex.Replace(s.Name ?? "", @"\s*[\(\[\{].*?[\)\]\}]", ""));
                     var inputTitleLower = (title ?? "").ToLowerInvariant();
 
-                    // ── Version mismatch filter ────────────────────────────
-                    // If input doesn't say "remix" but NCT result is a remix → skip (and vice versa)
+                    // Version mismatch filter
                     var versionTags = new[] { "remix", "cover", "acoustic", "live", "instrumental", "lofi", "karaoke" };
                     bool versionMismatch = false;
                     foreach (var tag in versionTags)
@@ -161,38 +163,40 @@ namespace Soundia.Api.Services
                     }
                     if (versionMismatch) continue;
 
-                    // ── Title matching ──────────────────────────────────────
+                    // Title matching
                     int titleScore = 0;
                     if (normName == normTitle || normNameBase == normTitle)
-                        titleScore = 10; // Exact match
+                        titleScore = 10;
                     else if (normTitle.Length >= 4 && normName.StartsWith(normTitle) && normName.Length <= normTitle.Length + 8)
-                        titleScore = 7; // NCT title is input title + short suffix
+                        titleScore = 7;
                     else
-                        continue; // No match → skip entirely
+                        continue;
 
-                    // ── Artist matching ─────────────────────────────────────
+                    // Artist matching — strict for short names
                     int artistScore = 0;
                     if (inputArtists.Count > 0)
                     {
                         var nctArtists = SplitArtists(s.ArtistName).Select(NormalizeForMatch).Where(a => a.Length > 0).ToList();
+                        int matchCount = 0;
                         foreach (var inputArt in inputArtists)
                         {
                             if (inputArt.Length < 2) continue;
                             foreach (var nctArt in nctArtists)
                             {
-                                if (nctArt == inputArt || nctArt.Contains(inputArt) || inputArt.Contains(nctArt))
-                                {
-                                    artistScore = 3;
-                                    break;
-                                }
+                                bool isMatch;
+                                if (inputArt.Length <= 4 || nctArt.Length <= 4)
+                                    isMatch = (nctArt == inputArt);
+                                else
+                                    isMatch = (nctArt == inputArt || nctArt.Contains(inputArt) || inputArt.Contains(nctArt));
+
+                                if (isMatch) { matchCount++; break; }
                             }
-                            if (artistScore > 0) break;
                         }
 
-                        // If we have artist info but NONE matched → SKIP entirely
-                        // Playing wrong artist's version is worse than YouTube fallback
-                        if (artistScore == 0)
-                            continue;
+                        if (matchCount >= 2) artistScore = 5;
+                        else if (matchCount == 1) artistScore = 3;
+
+                        if (artistScore == 0) continue;
                     }
 
                     int score = titleScore + artistScore;
@@ -203,15 +207,14 @@ namespace Soundia.Api.Services
                     }
                 }
 
-                // Require minimum score: exact title(10) + no artist info, OR title(7+) + artist(3)
                 if (bestMatch == null || bestScore < 7) return null;
 
-                // Get stream URL for the matched song
-                var streamUrl = await GetStreamUrlAsync(bestMatch.Key);
+                Console.WriteLine($"[NCT-Match] \"{bestMatch.Name}\" by {bestMatch.ArtistName} (score={bestScore})");
+
+                // Pass linkShare directly to skip detail API call (faster!)
+                var streamUrl = await GetStreamUrlAsync(bestMatch.Key, bestMatch.LinkShare);
                 if (streamUrl != null)
-                {
                     SetCache(cacheKey, streamUrl, TimeSpan.FromMinutes(30));
-                }
                 return streamUrl;
             }
             catch { return null; }

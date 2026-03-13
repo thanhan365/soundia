@@ -36,11 +36,11 @@ namespace Soundia.Api.Controllers
             // Check cache
             if (_videoIdCache.TryGetValue(cacheKey, out var cached) && cached.Expiry > DateTime.UtcNow)
             {
-                Console.WriteLine($"[VideoId] Cache HIT: {cacheKey} -> {cached.VideoId} ({cached.MatchedDuration}s)");
+                Console.WriteLine($"[VideoId] Cache HIT → {cached.VideoId}");
                 return Ok(new { videoId = cached.VideoId, matchedDuration = cached.MatchedDuration, source = "cache" });
             }
 
-            Console.WriteLine($"[VideoId] Searching YouTube: {query} (expectedDuration={expectedDuration}s, title={songTitle}, artist={songArtist})");
+            Console.WriteLine($"[VideoId] Search: \"{songTitle}\" by {songArtist} (dur={expectedDuration}s)");
 
             using var http = new HttpClient();
             http.Timeout = TimeSpan.FromSeconds(10);
@@ -56,38 +56,94 @@ namespace Soundia.Api.Controllers
                 // Extract candidates with videoId, duration, AND title
                 var candidates = new List<(string VideoId, int DurationSeconds, string Title)>();
 
-                // Regex to extract videoRenderer blocks with videoId + title + duration
-                var rendererBlocks = Regex.Matches(html,
-                    @"""videoRenderer"":\{""videoId"":""([a-zA-Z0-9_-]{11})""(.*?)(?=""videoRenderer""|$)",
-                    RegexOptions.Singleline);
-
-                foreach (Match block in rendererBlocks)
+                // ═══ Parse ytInitialData JSON from HTML (much more reliable than regex) ═══
+                var jsonMatch = Regex.Match(html, @"var ytInitialData = (.*?);</script>", RegexOptions.Singleline);
+                if (jsonMatch.Success)
                 {
-                    if (candidates.Count >= 7) break;
-                    var videoId = block.Groups[1].Value;
-                    var blockContent = block.Groups[2].Value;
+                    try
+                    {
+                        using var doc = JsonDocument.Parse(jsonMatch.Groups[1].Value);
+                        // Navigate: contents > twoColumnSearchResultsRenderer > primaryContents > sectionListRenderer > contents[0] > itemSectionRenderer > contents
+                        var sections = doc.RootElement
+                            .GetProperty("contents")
+                            .GetProperty("twoColumnSearchResultsRenderer")
+                            .GetProperty("primaryContents")
+                            .GetProperty("sectionListRenderer")
+                            .GetProperty("contents");
 
-                    // Extract title from {"text":"..."} in "title":{"runs":[{"text":"..."}]}
-                    var titleMatch = Regex.Match(blockContent,
-                        @"""title"":\{""runs"":\[\{""text"":""(.*?)""",
+                        foreach (var section in sections.EnumerateArray())
+                        {
+                            if (!section.TryGetProperty("itemSectionRenderer", out var itemSection)) continue;
+                            if (!itemSection.TryGetProperty("contents", out var items)) continue;
+
+                            foreach (var item in items.EnumerateArray())
+                            {
+                                if (candidates.Count >= 7) break;
+                                if (!item.TryGetProperty("videoRenderer", out var vr)) continue;
+
+                                var videoId = vr.GetProperty("videoId").GetString() ?? "";
+                                if (string.IsNullOrEmpty(videoId)) continue;
+
+                                // Title
+                                var videoTitle = "";
+                                if (vr.TryGetProperty("title", out var titleProp) &&
+                                    titleProp.TryGetProperty("runs", out var runs) &&
+                                    runs.GetArrayLength() > 0)
+                                {
+                                    videoTitle = runs[0].GetProperty("text").GetString() ?? "";
+                                }
+
+                                // Duration from accessibility label (e.g. "3 minutes, 17 seconds")
+                                var durationSec = 0;
+                                if (vr.TryGetProperty("lengthText", out var lengthText) &&
+                                    lengthText.TryGetProperty("accessibility", out var acc) &&
+                                    acc.TryGetProperty("accessibilityData", out var accData) &&
+                                    accData.TryGetProperty("label", out var label))
+                                {
+                                    durationSec = ParseYouTubeDurationLabel(label.GetString() ?? "");
+                                }
+
+                                // Skip live streams (no duration) and very short videos (< 30s)
+                                if (durationSec < 30) continue;
+
+                                candidates.Add((videoId, durationSec, videoTitle));
+                            }
+                        }
+                    }
+                    catch (Exception jsonEx)
+                    {
+                        Console.WriteLine($"[VideoId] JSON parse failed: {jsonEx.Message}");
+                    }
+                }
+
+                // Fallback: regex-based parsing if JSON failed
+
+                if (candidates.Count == 0)
+                {
+                    var rendererBlocks = Regex.Matches(html,
+                        @"""videoRenderer"":\{""videoId"":""([a-zA-Z0-9_-]{11})""(.*?)(?=""videoRenderer""|$)",
                         RegexOptions.Singleline);
-                    var videoTitle = titleMatch.Success ? titleMatch.Groups[1].Value : "";
 
-                    // Extract duration from accessibility label
-                    var durMatch = Regex.Match(blockContent,
-                        @"""lengthText"":\{""accessibility"":\{""accessibilityData"":\{""label"":""(.*?)""",
-                        RegexOptions.Singleline);
-                    var durationSec = durMatch.Success ? ParseYouTubeDurationLabel(durMatch.Groups[1].Value) : 0;
+                    foreach (Match block in rendererBlocks)
+                    {
+                        if (candidates.Count >= 7) break;
+                        var videoId = block.Groups[1].Value;
+                        var blockContent = block.Groups[2].Value;
 
-                    // Skip live streams (no duration) and very short videos (< 30s)
-                    if (durationSec < 30) continue;
+                        var titleMatch = Regex.Match(blockContent, @"""title"":\{""runs"":\[\{""text"":""(.*?)""", RegexOptions.Singleline);
+                        var videoTitle = titleMatch.Success ? titleMatch.Groups[1].Value : "";
 
-                    candidates.Add((videoId, durationSec, videoTitle));
+                        var durMatch = Regex.Match(blockContent, @"""lengthText"":\{""accessibility"":\{""accessibilityData"":\{""label"":""(.*?)""", RegexOptions.Singleline);
+                        var durationSec = durMatch.Success ? ParseYouTubeDurationLabel(durMatch.Groups[1].Value) : 0;
+
+                        if (durationSec < 30) continue;
+                        candidates.Add((videoId, durationSec, videoTitle));
+                    }
                 }
 
                 if (candidates.Count == 0)
                 {
-                    // Fallback: simple regex
+                    // Last fallback: simple regex for any videoId
                     var fallback = Regex.Match(html, @"""videoRenderer"":\{""videoId"":""([a-zA-Z0-9_-]{11})""");
                     if (fallback.Success)
                     {
@@ -103,9 +159,10 @@ namespace Soundia.Api.Controllers
                 // Log all candidates
                 Console.WriteLine($"[VideoId] Found {candidates.Count} candidates:");
                 foreach (var c in candidates)
-                    Console.WriteLine($"  - {c.VideoId} | {c.DurationSeconds}s | {c.Title}");
+                    Console.WriteLine($"  {c.VideoId} | {c.DurationSeconds}s | {c.Title}");
 
                 // Score candidates: combine title relevance + duration closeness
+                // Build keyword list: split multi-artist by delimiters for individual matching
                 var titleKeywords = new List<string>();
                 if (!string.IsNullOrWhiteSpace(songTitle))
                 {
@@ -114,35 +171,54 @@ namespace Soundia.Api.Controllers
                     titleKeywords.Add(cleanTitle.ToLowerInvariant());
                 }
                 if (!string.IsNullOrWhiteSpace(songArtist))
-                    titleKeywords.Add(songArtist.ToLowerInvariant());
+                {
+                    // Split artist string by common delimiters: , & feat. x and
+                    var artistParts = Regex.Split(songArtist, @"\s*[,&]\s*|\s+(?:feat\.?|ft\.?|x|and)\s+", RegexOptions.IgnoreCase)
+                        .Select(a => a.Trim().ToLowerInvariant())
+                        .Where(a => a.Length > 1)
+                        .ToList();
+                    titleKeywords.AddRange(artistParts);
+
+                }
+
+                // Negative keywords: penalize misleading video types
+                var negativeKeywords = new[] { "reaction", "cover", "remix", "karaoke", "inst.", "instrumental", "piano ver", "acoustic ver", "1 hour", "10 hour", "slowed", "reverb" };
 
                 string bestVideoId;
                 int bestMatchedDuration = 0;
                 if (expectedDuration.HasValue && expectedDuration.Value > 0)
                 {
-                    // Score = duration penalty - title bonus
+                    // Score = duration penalty - title bonus + negative penalty
                     // Lower score = better match
                     var scored = candidates.Select(c =>
                     {
                         var durPenalty = Math.Abs(c.DurationSeconds - expectedDuration.Value);
                         var titleLower = c.Title.ToLowerInvariant();
 
-                        // Title bonus: reduce penalty if title contains song keywords
+                        // Title bonus: each matching keyword contributes
                         int titleBonus = 0;
                         foreach (var kw in titleKeywords)
                         {
                             if (!string.IsNullOrEmpty(kw) && titleLower.Contains(kw))
-                                titleBonus += 100; // Strong bonus for title/artist match
+                                titleBonus += 80; // Bonus for each keyword match
                         }
 
-                        var score = durPenalty - titleBonus;
-                        return (c.VideoId, c.DurationSeconds, c.Title, Score: score, DurPenalty: durPenalty, TitleBonus: titleBonus);
+                        // Negative penalty: punish misleading video types
+                        int negativePenalty = 0;
+                        foreach (var neg in negativeKeywords)
+                        {
+                            if (titleLower.Contains(neg))
+                                negativePenalty += 200; // Strong penalty
+                        }
+
+                        var score = durPenalty - titleBonus + negativePenalty;
+                        return (c.VideoId, c.DurationSeconds, c.Title, Score: score, DurPenalty: durPenalty, TitleBonus: titleBonus, NegPenalty: negativePenalty);
                     }).OrderBy(x => x.Score).ToList();
 
                     var best = scored.First();
                     bestVideoId = best.VideoId;
                     bestMatchedDuration = best.DurationSeconds;
-                    Console.WriteLine($"[VideoId] Best match: {best.VideoId} ({best.DurationSeconds}s) \"{best.Title}\" — score={best.Score} (durPenalty={best.DurPenalty}, titleBonus={best.TitleBonus})");
+                    Console.WriteLine($"[VideoId] Best: {best.VideoId} ({best.DurationSeconds}s) \"{best.Title}\"");
                 }
                 else
                 {
@@ -152,10 +228,11 @@ namespace Soundia.Api.Controllers
 
                     bestVideoId = titleMatched.VideoId ?? candidates[0].VideoId;
                     bestMatchedDuration = titleMatched.VideoId != null ? titleMatched.DurationSeconds : candidates[0].DurationSeconds;
-                    Console.WriteLine($"[VideoId] Selected: {bestVideoId} ({bestMatchedDuration}s) (title match: {titleMatched.VideoId != null})");
+
                 }
 
                 _videoIdCache[cacheKey] = (bestVideoId, bestMatchedDuration, DateTime.UtcNow.AddMinutes(60));
+                Console.WriteLine($"[VideoId] → {bestVideoId} | https://youtube.com/watch?v={bestVideoId}");
                 return Ok(new { videoId = bestVideoId, matchedDuration = bestMatchedDuration, source = "youtube-search" });
             }
             catch (Exception ex)
@@ -191,8 +268,11 @@ namespace Soundia.Api.Controllers
         [HttpGet]
         public async Task<IActionResult> GetStream([FromQuery] string query)
         {
+            Console.WriteLine($"[Stream] query={query}");
+
             if (string.IsNullOrWhiteSpace(query))
             {
+
                 return BadRequest(new { Message = "Query parameter is required." });
             }
 
@@ -200,16 +280,20 @@ namespace Soundia.Api.Controllers
             var cacheKey = query.ToLowerInvariant().Trim();
             if (_streamCache.TryGetValue(cacheKey, out var cached) && cached.Expiry > DateTime.UtcNow)
             {
+                Console.WriteLine($"[Stream] Cache HIT");
                 return Ok(new { StreamUrl = cached.Url, Title = query, Source = "cache" });
             }
+
 
             // Method 1: Use yt-dlp (most reliable YouTube extractor on earth)
             try
             {
+
                 var result = await RunYtDlp(query);
                 if (result != null)
                 {
                     _streamCache[cacheKey] = (result.Value.Url, DateTime.UtcNow.AddMinutes(30));
+                    Console.WriteLine($"[Stream] yt-dlp OK: {result.Value.Title}");
                     return Ok(new
                     {
                         StreamUrl = result.Value.Url,
@@ -217,14 +301,15 @@ namespace Soundia.Api.Controllers
                         Source = "yt-dlp"
                     });
                 }
+
             }
             catch (Exception ex)
             {
-                // yt-dlp failed, continue to fallback
-                Console.WriteLine($"yt-dlp failed: {ex.Message}");
+                Console.WriteLine($"[Stream] yt-dlp failed: {ex.Message}");
             }
 
             // Method 2: Fallback to Piped API instances
+
             var pipedInstances = new[]
             {
                 "https://pipedapi.kavin.rocks",
@@ -237,6 +322,7 @@ namespace Soundia.Api.Controllers
             {
                 try
                 {
+
                     using var httpClient = new HttpClient();
                     httpClient.Timeout = TimeSpan.FromSeconds(8);
 
@@ -250,6 +336,7 @@ namespace Soundia.Api.Controllers
                     var videoUrl = items[0].GetProperty("url").GetString();
                     var videoId = videoUrl?.Replace("/watch?v=", "");
                     var title = items[0].GetProperty("title").GetString() ?? query;
+
 
                     var streamsUrl = $"{instance}/streams/{videoId}";
                     var streamsResponse = await httpClient.GetStringAsync(streamsUrl);
@@ -273,22 +360,26 @@ namespace Soundia.Api.Controllers
                     if (bestUrl != null)
                     {
                         _streamCache[cacheKey] = (bestUrl, DateTime.UtcNow.AddMinutes(30));
+                        Console.WriteLine($"[Stream] Piped OK from {instance}");
                         return Ok(new { StreamUrl = bestUrl, Title = title, Source = instance });
                     }
                 }
-                catch { /* Try next instance */ }
+                catch { }
             }
 
+            Console.WriteLine($"[Stream] FAILED: {query}");
             return StatusCode(503, new { Message = "Không thể lấy nguồn phát. Vui lòng thử lại." });
         }
 
         private static async Task<(string Url, string Title)?> RunYtDlp(string query)
         {
             // yt-dlp command: search YouTube and get direct audio URL
+            var args = $"--no-download --print \"%(url)s|||%(title)s\" -f bestaudio --no-playlist \"ytsearch1:{query}\"";
+
             var psi = new ProcessStartInfo
             {
                 FileName = "yt-dlp",
-                Arguments = $"--no-download --print \"%(url)s|||%(title)s\" -f bestaudio --no-playlist \"ytsearch1:{query}\"",
+                Arguments = args,
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,
                 UseShellExecute = false,
@@ -305,20 +396,25 @@ namespace Soundia.Api.Controllers
                 var output = await process.StandardOutput.ReadToEndAsync(cts.Token);
                 await process.WaitForExitAsync(cts.Token);
 
+
                 if (process.ExitCode == 0 && !string.IsNullOrWhiteSpace(output))
                 {
                     var parts = output.Trim().Split("|||", 2);
                     var url = parts[0].Trim();
                     var title = parts.Length > 1 ? parts[1].Trim() : query;
 
+
                     if (url.StartsWith("http"))
                     {
                         return (url, title);
                     }
+
                 }
+
             }
             catch (OperationCanceledException)
             {
+
                 process.Kill(entireProcessTree: true);
             }
 
@@ -328,8 +424,10 @@ namespace Soundia.Api.Controllers
         [HttpGet("proxy-audio")]
         public async Task ProxyAudio([FromQuery] string url)
         {
+
             if (string.IsNullOrWhiteSpace(url))
             {
+
                 Response.StatusCode = 400;
                 await Response.WriteAsync("URL is required");
                 return;
