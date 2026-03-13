@@ -4,6 +4,7 @@ import { usePlayer } from "../../context/PlayerContext";
 import api from "../../utils/api";
 import { HiChevronRight, HiDotsHorizontal } from "react-icons/hi";
 import SongContextMenu from "../SongContextMenu";
+import { handleImgError } from "../../utils/imgFallback";
 
 const CHARTS = [
   { key: "viet",    label: "Top 50 Nhạc Việt",    gradient: "from-emerald-500 to-cyan-500",    emoji: "🇻🇳" },
@@ -84,6 +85,8 @@ function ChartColumn({ chart, songs, loading, onPlaySong, currentSong, isPlaying
                   src={song.cover}
                   alt={song.title}
                   className="w-9 h-9 rounded-md object-cover flex-shrink-0 shadow-sm"
+                  onError={handleImgError}
+                  loading="lazy"
                 />
 
                 {/* Info */}

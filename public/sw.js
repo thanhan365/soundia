@@ -1,7 +1,9 @@
-const CACHE_NAME = 'soundia-v1';
+const CACHE_NAME = 'soundia-v2';
 const STATIC_ASSETS = [
     '/',
     '/index.html',
+    '/soundia-logo.jpg',
+    '/fallback-cover.svg',
 ];
 
 // Install — cache static assets

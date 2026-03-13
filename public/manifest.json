@@ -1,21 +1,24 @@
 {
     "name": "Soundia",
     "short_name": "Soundia",
-    "description": "Trình phát nhạc hiện đại - Nghe nhạc miễn phí",
+    "description": "Soundia — Web Music Player",
     "start_url": "/",
     "display": "standalone",
     "background_color": "#170f23",
-    "theme_color": "#8b5cf6",
+    "theme_color": "#2EC4B6",
+    "orientation": "any",
     "icons": [
         {
             "src": "/icon-192.png",
             "sizes": "192x192",
-            "type": "image/png"
+            "type": "image/png",
+            "purpose": "any"
         },
         {
             "src": "/icon-512.png",
             "sizes": "512x512",
-            "type": "image/png"
+            "type": "image/png",
+            "purpose": "any"
         }
     ]
 }

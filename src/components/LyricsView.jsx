@@ -45,47 +45,81 @@ export default function LyricsView() {
     return parsed;
   }, []);
 
-  // ── Fetch lyrics khi mở hoặc đổi bài ──────────────────────────────────
+  // ── Lyrics cache + pre-fetch ──────────────────────────────────────────
+  const lyricsCacheRef = useRef(new Map()); // songId → { synced, plain, error }
+
+  const fetchLyricsForSong = useCallback(async (song) => {
+    if (!song?.title || !song?.artist) return null;
+    const cacheKey = song.id || `${song.title}|${song.artist}`;
+    if (lyricsCacheRef.current.has(cacheKey)) return lyricsCacheRef.current.get(cacheKey);
+
+    try {
+      const trackName = encodeURIComponent(song.title);
+      const artistName = encodeURIComponent(song.artist);
+      const songNctKey = song.nctKey || song.key || '';
+      const nctKeyParam = songNctKey ? `&nctKey=${encodeURIComponent(songNctKey)}` : '';
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5066/api';
+      const res = await fetch(`${apiUrl}/lyrics?track=${trackName}&artist=${artistName}${nctKeyParam}`);
+
+      if (res.ok) {
+        const data = await res.json();
+        const result = {
+          synced: data.syncedLyrics ? parseSyncedLyrics(data.syncedLyrics) : [],
+          plain: data.plainLyrics || "",
+          error: (!data.syncedLyrics && !data.plainLyrics) ? "Không có lời cho bài hát này." : null,
+        };
+        lyricsCacheRef.current.set(cacheKey, result);
+        return result;
+      }
+      const errResult = { synced: [], plain: "", error: "Không tìm thấy lời bài hát." };
+      lyricsCacheRef.current.set(cacheKey, errResult);
+      return errResult;
+    } catch {
+      return { synced: [], plain: "", error: "Lỗi kết nối server." };
+    }
+  }, [parseSyncedLyrics]);
+
+  // Pre-fetch lyrics ngay khi bài hát thay đổi (không cần mở lyrics view)
+  useEffect(() => {
+    if (currentSong) fetchLyricsForSong(currentSong);
+  }, [currentSong?.id]); // eslint-disable-line
+
+  // Khi mở lyrics view hoặc đổi bài → load từ cache hoặc fetch
   useEffect(() => {
     if (!lyricsOpen || !currentSong) return;
 
     let isMounted = true;
-    const fetchLyrics = async () => {
-      setLyricsData({ state: "loading", synced: [], plain: "", error: null });
-      setCurrentLyricIndex(-1);
+    setCurrentLyricIndex(-1);
 
-      try {
-        const trackName = encodeURIComponent(currentSong.title);
-        const artistName = encodeURIComponent(currentSong.artist);
-        // Truyền nctKey để backend ưu tiên NCT lyrics (khớp timing hơn)
-        const songNctKey = currentSong.nctKey || currentSong.key || '';
-        const nctKeyParam = songNctKey ? `&nctKey=${encodeURIComponent(songNctKey)}` : '';
-        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5066/api';
-        const res = await fetch(`${apiUrl}/lyrics?track=${trackName}&artist=${artistName}${nctKeyParam}`);
+    const load = async () => {
+      const cacheKey = currentSong.id || `${currentSong.title}|${currentSong.artist}`;
+      const cached = lyricsCacheRef.current.get(cacheKey);
 
-        if (!isMounted) return;
-
-        if (res.ok) {
-          const data = await res.json();
-          if (data.syncedLyrics) {
-            setLyricsData({ state: "success", synced: parseSyncedLyrics(data.syncedLyrics), plain: "", error: null });
-          } else if (data.plainLyrics) {
-            // Không có synced → hiện plain text (không fake timestamps)
-            setLyricsData({ state: "success", synced: [], plain: data.plainLyrics, error: null });
-          } else {
-            setLyricsData({ state: "error", synced: [], plain: "", error: "Không có lời cho bài hát này." });
-          }
+      if (cached) {
+        // Cache hit → hiện ngay, 0ms
+        if (cached.error) {
+          setLyricsData({ state: "error", synced: [], plain: "", error: cached.error });
         } else {
-          setLyricsData({ state: "error", synced: [], plain: "", error: "Không tìm thấy lời bài hát." });
+          setLyricsData({ state: "success", synced: cached.synced, plain: cached.plain, error: null });
         }
-      } catch (err) {
-        if (isMounted) setLyricsData({ state: "error", synced: [], plain: "", error: "Lỗi kết nối server." });
+        return;
+      }
+
+      // Cache miss → fetch (hiện loading)
+      setLyricsData({ state: "loading", synced: [], plain: "", error: null });
+      const result = await fetchLyricsForSong(currentSong);
+      if (!isMounted || !result) return;
+
+      if (result.error) {
+        setLyricsData({ state: "error", synced: [], plain: "", error: result.error });
+      } else {
+        setLyricsData({ state: "success", synced: result.synced, plain: result.plain, error: null });
       }
     };
 
-    fetchLyrics();
+    load();
     return () => { isMounted = false; };
-  }, [currentSong?.id, lyricsOpen, parseSyncedLyrics]);
+  }, [currentSong?.id, lyricsOpen, fetchLyricsForSong]);
 
   // ── requestAnimationFrame loop: poll time trực tiếp từ audio/YT ref ────
   // KHÔNG dùng currentTime từ context → KHÔNG gây re-render

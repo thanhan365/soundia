@@ -4,6 +4,7 @@ import { useToast } from "../context/ToastContext";
 import { useClickOutside } from "../hooks/useClickOutside";
 import { HiPlay, HiHeart, HiDotsHorizontal, HiTrash, HiSwitchVertical } from "react-icons/hi";
 import SongContextMenu from "./SongContextMenu";
+import { handleImgError } from "../utils/imgFallback";
 
 export default function PlaylistSongRow({ song, index, isPlaying, isCurrent, onPlay, onRemove, onDragStart, onDragOver, onDrop, onDragEnd, isDragging }) {
   const { toggleFavorite, isFavorite, addToQueue } = usePlayer();
@@ -63,6 +64,8 @@ export default function PlaylistSongRow({ song, index, isPlaying, isCurrent, onP
           src={song.cover}
           alt={song.title}
           className="w-full h-full rounded-lg object-cover"
+          onError={handleImgError}
+          loading="lazy"
         />
         <div className={`absolute inset-0 transition-all duration-300 flex items-center justify-center rounded-lg ${isCurrent && isPlaying ? "bg-black/40" : "bg-black/0 group-hover/cover:bg-black/30"}`}>
           <div onClick={(e) => { e.stopPropagation(); onPlay(song); }} className="cursor-pointer w-full h-full flex items-center justify-center">
