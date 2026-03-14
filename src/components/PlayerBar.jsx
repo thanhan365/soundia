@@ -8,6 +8,7 @@ import { HiPlay, HiPause, HiBackward, HiForward } from "react-icons/hi2";
 import { HiMusicNote, HiHeart, HiDotsHorizontal, HiPlus, HiLink, HiShare, HiClock } from "react-icons/hi";
 import { IoShuffle, IoRepeat } from "react-icons/io5";
 import { HiQueueList } from "react-icons/hi2";
+import { handleImgError } from "../utils/imgFallback";
 
 export default function PlayerBar() {
   const {
@@ -123,7 +124,7 @@ export default function PlayerBar() {
             {currentSong ? (
               <>
                 <div className={`w-10 h-10 rounded-lg overflow-hidden flex-shrink-0 ${isPlaying ? "ring-1 ring-neon/30" : ""}`}>
-                  <img src={currentSong.cover} alt="" className="w-full h-full object-cover" />
+                  <img src={currentSong.cover} alt="" className="w-full h-full object-cover" onError={handleImgError} loading="lazy" />
                 </div>
                 <div className="min-w-0 flex-1">
                   <p className="text-[13px] font-semibold text-white truncate">{currentSong.title}</p>
@@ -191,7 +192,7 @@ export default function PlayerBar() {
                   data-player-play-btn
                   onClick={togglePlay}
                   disabled={!currentSong || isLoadingStream}
-                  className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${currentSong ? "bg-white text-dark active:scale-90" : "bg-white/10 text-gray-600"} ${isLoadingStream ? "opacity-70 cursor-wait" : ""}`}
+                  className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${currentSong ? "bg-[#1E8C7E] text-dark active:scale-90" : "bg-white/10 text-gray-600"} ${isLoadingStream ? "opacity-70 cursor-wait" : ""}`}
                 >
                   {isLoadingStream ? (
                     <div className="w-4 h-4 rounded-full border-2 border-dark border-t-transparent animate-spin" />
@@ -227,7 +228,7 @@ export default function PlayerBar() {
               {currentSong ? (
                 <>
                   <div className={`w-10 h-10 sm:w-11 sm:h-11 rounded-full overflow-hidden flex-shrink-0 border-2 border-neon/20 ${isPlaying ? "animate-spin-slow" : ""}`}>
-                    <img src={currentSong.cover} alt="" className="w-full h-full object-cover" />
+                    <img src={currentSong.cover} alt="" className="w-full h-full object-cover" onError={handleImgError} loading="lazy" />
                   </div>
                   <div className="min-w-0">
                     <div className="flex items-center gap-1.5">
@@ -297,7 +298,7 @@ export default function PlayerBar() {
                   data-player-play-btn
                   onClick={togglePlay}
                   disabled={!currentSong || isLoadingStream}
-                  className={`w-10 h-10 rounded-full flex items-center justify-center transition-all ${currentSong ? "bg-white text-dark hover:scale-110" : "bg-white/10 text-gray-600 cursor-not-allowed"} ${isLoadingStream ? "opacity-70 cursor-wait hover:scale-100" : ""}`}
+                  className={`w-10 h-10 rounded-full flex items-center justify-center transition-all ${currentSong ? "bg-[#1E8C7E] text-dark hover:scale-110" : "bg-white/10 text-gray-600 cursor-not-allowed"} ${isLoadingStream ? "opacity-70 cursor-wait hover:scale-100" : ""}`}
                 >
                   {isLoadingStream ? (
                     <div className="w-5 h-5 rounded-full border-[2px] border-dark border-t-transparent animate-spin" />
@@ -324,11 +325,15 @@ export default function PlayerBar() {
                 </svg>
               </button>
               {/* Sleep Timer */}
-              <div className="relative hidden sm:block" ref={sleepMenuRef}>
+              <div className="relative hidden sm:flex items-center gap-1" ref={sleepMenuRef}>
                 <button onClick={() => setSleepMenuOpen(!sleepMenuOpen)} className={`p-1 rounded-lg transition-all relative ${sleepTimer ? 'text-neon bg-neon/10' : 'text-gray-600 hover:text-gray-300'}`} title="Hẹn giờ">
                   <HiClock className="text-base" />
-                  {sleepTimer && <span className="absolute top-0 right-0 w-1.5 h-1.5 bg-neon rounded-full" />}
                 </button>
+                {sleepTimer && (
+                  <span className="text-[10px] text-neon font-semibold whitespace-nowrap">
+                    {sleepTimer === 'end' ? 'Hết bài' : `${sleepTimer}p`}
+                  </span>
+                )}
                 {sleepMenuOpen && (
                   <div className="absolute bottom-full right-0 mb-2 bg-[#1a1a2e] border border-white/10 rounded-xl shadow-2xl py-2 w-48 z-50">
                     <p className="px-3 py-1.5 text-[10px] font-semibold text-gray-500 uppercase tracking-wider">⏱️ Hẹn giờ tắt nhạc</p>

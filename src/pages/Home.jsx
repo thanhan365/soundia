@@ -3,11 +3,13 @@ import { usePlayer } from "../context/PlayerContext";
 
 // Import Original Sections
 import BannerSlider from "../components/BannerSlider";
+import { SectionErrorBoundary } from "../components/SectionErrorBoundary";
 
 // Import New Sections
 import TrendingSection from "../components/home/TrendingSection";
 import TopTrendingSection from "../components/home/TopTrendingSection";
 import MoodGenreSection from "../components/home/MoodGenreSection";
+import ChartColumnsSection from "../components/home/ChartColumnsSection";
 
 import ArtistSection from "../components/home/ArtistSection";
 import SuggestedPlaylistSection from "../components/home/SuggestedPlaylistSection";
@@ -63,35 +65,47 @@ export default function Home() {
         </div>
       )}
 
-      {/* Banner / Hero Section using old slider mechanics */}
-      <BannerSlider />
+      {/* Banner */}
+      <SectionErrorBoundary name="BannerSlider">
+        <BannerSlider />
+      </SectionErrorBoundary>
 
       {/* Main Content Area */}
       <div className="px-2 sm:px-4 md:px-6 lg:px-8 space-y-4 md:space-y-8 mt-3 sm:mt-4">
 
-        {/* Random Discovery Widget */}
-        <RandomDiscovery onDiscover={handleRandomDiscover} />
+        <SectionErrorBoundary name="RandomDiscovery">
+          <RandomDiscovery onDiscover={handleRandomDiscover} />
+        </SectionErrorBoundary>
 
-        {/* Moods & Genres Grid */}
-        <MoodGenreSection />
+        <SectionErrorBoundary name="MoodGenreSection">
+          <MoodGenreSection />
+        </SectionErrorBoundary>
 
-        {/* Top Trending from iTunes/NCT */}
-        <TopTrendingSection />
+        <SectionErrorBoundary name="TopTrendingSection">
+          <TopTrendingSection />
+        </SectionErrorBoundary>
 
+        <SectionErrorBoundary name="ChartColumnsSection">
+          <ChartColumnsSection />
+        </SectionErrorBoundary>
 
-        {/* Playlist Gợi Ý */}
-        <SuggestedPlaylistSection />
+        <SectionErrorBoundary name="SuggestedPlaylistSection">
+          <SuggestedPlaylistSection />
+        </SectionErrorBoundary>
 
-        {/* Artists */}
-        <ArtistSection />
+        <SectionErrorBoundary name="ArtistSection">
+          <ArtistSection />
+        </SectionErrorBoundary>
 
-        {/* Mới Phát Hành — iTunes API */}
-        {newReleaseSongs.length > 0 && (
-          <TrendingSection songs={newReleaseSongs} title="Đề Xuất Nghe Thử" />
-        )}
+        <SectionErrorBoundary name="TrendingSection">
+          {newReleaseSongs.length > 0 && (
+            <TrendingSection songs={newReleaseSongs} title="Đề Xuất Nghe Thử" />
+          )}
+        </SectionErrorBoundary>
 
-        {/* Recently Played History */}
-        {recentSongs.length > 0 && <RecentlyPlayed songs={recentSongs} />}
+        <SectionErrorBoundary name="RecentlyPlayed">
+          {recentSongs.length > 0 && <RecentlyPlayed songs={recentSongs} />}
+        </SectionErrorBoundary>
 
       </div>
     </div>

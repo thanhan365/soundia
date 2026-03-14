@@ -3,6 +3,7 @@ import { usePlayer } from "../context/PlayerContext";
 import { useToast } from "../context/ToastContext";
 import { useClickOutside } from "../hooks/useClickOutside";
 import { resolveNctStream } from "../services/nctService";
+import { handleImgError } from "../utils/imgFallback";
 import { HiPlay, HiPause } from "react-icons/hi2";
 import { HiHeart, HiDotsHorizontal } from "react-icons/hi";
 import { HiQueueList } from "react-icons/hi2";
@@ -90,6 +91,8 @@ const SongItem = memo(function SongItem({ song, index }) {
             src={song.cover}
             alt={song.title}
             className={`w-full h-full object-cover transition-all duration-300 ${isActive ? "shadow-neon-sm" : ""}`}
+            onError={handleImgError}
+            loading="lazy"
           />
           <div className={`absolute inset-0 transition-all duration-300 flex items-center justify-center rounded-lg ${isActive && isPlaying ? "bg-black/40" : "bg-black/0 group-hover/cover:bg-black/30"}`}>
             <div onClick={(e) => { e.stopPropagation(); playSong(song); }} className="cursor-pointer w-full h-full flex items-center justify-center">

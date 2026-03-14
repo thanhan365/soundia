@@ -35,6 +35,7 @@ const AdminPage = React.lazy(() => import("./pages/AdminPage"));
 const SetupAdmin = React.lazy(() => import("./pages/SetupAdmin"));
 const AlbumDetailPage = React.lazy(() => import("./pages/AlbumDetailPage"));
 const MVDetailPage = React.lazy(() => import("./pages/MVDetailPage"));
+const TrendingDetailPage = React.lazy(() => import("./pages/TrendingDetailPage"));
 const NotFound = React.lazy(() => import("./pages/NotFound"));
 
 // Loading fallback
@@ -140,10 +141,12 @@ function AppContent() {
           document.querySelector('[data-player-play-btn]')?.click();
           break;
         case 'ArrowRight':
-          if (e.shiftKey) document.querySelector('[data-player-next-btn]')?.click();
+          e.preventDefault();
+          document.querySelector('[data-player-next-btn]')?.click();
           break;
         case 'ArrowLeft':
-          if (e.shiftKey) document.querySelector('[data-player-prev-btn]')?.click();
+          e.preventDefault();
+          document.querySelector('[data-player-prev-btn]')?.click();
           break;
         case 'KeyN':
           if (!e.ctrlKey && !e.metaKey) document.querySelector('[data-player-next-btn]')?.click();
@@ -157,6 +160,12 @@ function AppContent() {
         case 'KeyL':
           if (!e.ctrlKey && !e.metaKey) document.querySelector('[data-player-lyrics-btn]')?.click();
           break;
+        case 'ArrowUp':
+          if (!e.shiftKey) { e.preventDefault(); document.querySelector('[data-player-vol-up]')?.click(); }
+          break;
+        case 'ArrowDown':
+          if (!e.shiftKey) { e.preventDefault(); document.querySelector('[data-player-vol-down]')?.click(); }
+          break;
         default:
           break;
       }
@@ -164,6 +173,13 @@ function AppContent() {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
+
+  // ── Scroll to top on route change ──
+  useEffect(() => {
+    const mainEl = document.querySelector('[data-main-scroll]');
+    if (mainEl) mainEl.scrollTo(0, 0);
+    else window.scrollTo(0, 0);
+  }, [location.pathname]);
 
   return (
     <div className="animated-bg h-[100dvh] w-full max-w-[100vw] overflow-hidden flex" style={dynamicStyle}>
@@ -197,22 +213,22 @@ function AppContent() {
           <div className="flex-1 min-w-0 max-w-md lg:max-w-lg xl:max-w-xl">
             <SearchBar />
           </div>
-          {/* SOUNDIA Branding */}
-          <div className="hidden sm:flex items-center flex-shrink-0 cursor-pointer group" onClick={() => navigate("/")}>
-            <span
-              className="text-3xl font-black tracking-[0.2em] text-neon group-hover:text-glow transition-all duration-300"
-              style={{ textShadow: '0 0 10px rgba(46,196,182,0.5), 0 0 30px rgba(46,196,182,0.2)' }}
-            >
-              SOUNDIA
-            </span>
-          </div>
-          <div className="ml-auto flex-shrink-0">
+          {/* SOUNDIA + User — grouped right */}
+          <div className="ml-auto flex items-center gap-3 flex-shrink-0">
+            <div className="hidden sm:flex items-center cursor-pointer group" onClick={() => navigate("/")}>
+              <span
+                className="text-3xl font-black tracking-[0.2em] text-neon group-hover:text-glow transition-all duration-300"
+                style={{ textShadow: '0 0 10px rgba(46,196,182,0.5), 0 0 30px rgba(46,196,182,0.2)' }}
+              >
+                SOUNDIA
+              </span>
+            </div>
             <HeaderUserMenu />
           </div>
         </header>
 
         {/* Pages */}
-        <div className="flex-1 px-3 sm:px-4 lg:px-6 xl:px-8 py-4 sm:py-6 overflow-y-auto overflow-x-hidden">
+        <div data-main-scroll className="flex-1 px-3 sm:px-4 lg:px-6 xl:px-8 py-4 sm:py-6 overflow-y-auto overflow-x-hidden">
           <Suspense fallback={<PageLoader />}>
             <Routes>
               <Route path="/" element={<Home />} />
@@ -235,6 +251,7 @@ function AppContent() {
               <Route path="/suggested-playlist" element={<SuggestedPlaylistDetail />} />
               <Route path="/album/:key" element={<AlbumDetailPage />} />
               <Route path="/mv/:key" element={<MVDetailPage />} />
+              <Route path="/trending/:type" element={<TrendingDetailPage />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </Suspense>

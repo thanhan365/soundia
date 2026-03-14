@@ -4,6 +4,7 @@ import { useToast } from "../context/ToastContext";
 import { useClickOutside } from "../hooks/useClickOutside";
 import { HiPlay, HiHeart, HiDotsHorizontal, HiTrash, HiSwitchVertical } from "react-icons/hi";
 import SongContextMenu from "./SongContextMenu";
+import { handleImgError } from "../utils/imgFallback";
 
 export default function PlaylistSongRow({ song, index, isPlaying, isCurrent, onPlay, onRemove, onDragStart, onDragOver, onDrop, onDragEnd, isDragging }) {
   const { toggleFavorite, isFavorite, addToQueue } = usePlayer();
@@ -63,6 +64,8 @@ export default function PlaylistSongRow({ song, index, isPlaying, isCurrent, onP
           src={song.cover}
           alt={song.title}
           className="w-full h-full rounded-lg object-cover"
+          onError={handleImgError}
+          loading="lazy"
         />
         <div className={`absolute inset-0 transition-all duration-300 flex items-center justify-center rounded-lg ${isCurrent && isPlaying ? "bg-black/40" : "bg-black/0 group-hover/cover:bg-black/30"}`}>
           <div onClick={(e) => { e.stopPropagation(); onPlay(song); }} className="cursor-pointer w-full h-full flex items-center justify-center">
@@ -101,7 +104,7 @@ export default function PlaylistSongRow({ song, index, isPlaying, isCurrent, onP
             toggleFavorite(song.id);
             showToast(liked ? "Đã bỏ yêu thích" : "Đã thêm yêu thích", liked ? "info" : "success");
           }}
-          className={`p-1 sm:p-1.5 rounded-full transition-all ${liked ? "text-red-500" : "text-gray-600 sm:opacity-0 sm:group-hover:opacity-100 hover:text-white"}`}
+          className={`p-1 sm:p-1.5 rounded-full transition-all ${liked ? "text-red-500 sm:opacity-100" : "text-gray-600 sm:opacity-0 sm:group-hover:opacity-100 hover:text-white"}`}
         >
           <HiHeart className="text-[12px] sm:text-sm lg:text-base" />
         </button>
