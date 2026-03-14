@@ -59,11 +59,12 @@ export default function BannerSlider() {
         // Fallback: try through backend proxy
         try {
           const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5066/api';
-          const res = await fetch(`${apiUrl}/nct/top-songs?limit=5`);
+          const res = await fetch(`${apiUrl}/songs/nct-top`);
           if (res.ok) {
-            const data = await res.json();
+            const result = await res.json();
+            const data = result.data || result; // Handle both direct array and nested {data: [...]}
             if (Array.isArray(data) && data.length > 0) {
-              setSongs(data.map(item => ({
+              setSongs(data.slice(0, 5).map(item => ({
                 id: item.id || `nct-${item.key}`,
                 title: item.title || item.name,
                 artist: item.artist || item.artistName,
