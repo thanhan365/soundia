@@ -1,5 +1,5 @@
 
-import { createContext, useContext, useState, useEffect, useCallback, useRef } from "react";
+import { createContext, useContext, useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { AuthContext } from "./AuthContext";
 import { useToast } from "./ToastContext";
 import api from "../utils/api";
@@ -401,9 +401,7 @@ export function PlayerProvider({ children }) {
     playSong(list[(idx - 1 + list.length) % list.length]);
   };
 
-  return (
-    <PlayerContext.Provider
-      value={{
+  const contextValue = useMemo(() => ({
         songList: filteredSongs, allSongs, currentSong, isPlaying,
         duration, volume, searchQuery, setSearchQuery,
         error, shuffle, toggleShuffle, repeatMode, toggleRepeat,
@@ -420,8 +418,17 @@ export function PlayerProvider({ children }) {
         handleYTReady, handleYTStateChange, handleYTTimeUpdate, handleYTError,
         playSong, togglePlay, playNext, playPrev, seekTo, changeVolume,
         searchArtistsResult, searchPlaylistsResult,
-      }}
-    >
+  }), [
+    filteredSongs, allSongs, currentSong, isPlaying,
+    duration, volume, searchQuery, error, shuffle, repeatMode,
+    favorites, recentHistory, queueOpen, lyricsOpen,
+    manualQueue, autoQueue, playlists,
+    searchHistory, isLoadingStream, isYTMode,
+    sleepTimer, crossfade, searchArtistsResult, searchPlaylistsResult,
+  ]); // eslint-disable-line
+
+  return (
+    <PlayerContext.Provider value={contextValue}>
       {children}
     </PlayerContext.Provider>
   );
