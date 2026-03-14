@@ -49,19 +49,23 @@ jobs:
 
       - name: Update web.config for OutOfProcess
         run: |
-          cat > ./publish/web.config << 'WEBCONFIG'
-          <?xml version="1.0" encoding="utf-8"?>
+          python3 -c "
+          xml = '''<?xml version=\"1.0\" encoding=\"utf-8\"?>
           <configuration>
-            <location path="." inheritInChildApplications="false">
+            <location path=\".\" inheritInChildApplications=\"false\">
               <system.webServer>
                 <handlers>
-                  <add name="aspNetCore" path="*" verb="*" modules="AspNetCoreModuleV2" resourceType="Unspecified" />
+                  <add name=\"aspNetCore\" path=\"*\" verb=\"*\" modules=\"AspNetCoreModuleV2\" resourceType=\"Unspecified\" />
                 </handlers>
-                <aspNetCore processPath="dotnet" arguments=".\Soundia.Api.dll" stdoutLogEnabled="true" stdoutLogFile=".\logs\stdout" hostingModel="OutOfProcess" />
+                <aspNetCore processPath=\"dotnet\" arguments=\".\\\\Soundia.Api.dll\" stdoutLogEnabled=\"true\" stdoutLogFile=\".\\\\logs\\\\stdout\" hostingModel=\"OutOfProcess\" />
               </system.webServer>
             </location>
-          </configuration>
-          WEBCONFIG
+          </configuration>'''
+          import textwrap
+          with open('./publish/web.config', 'w', encoding='utf-8') as f:
+            f.write(textwrap.dedent(xml).strip())
+          print('web.config written successfully')
+          "
 
       - name: Deploy to MonsterASP via FTP
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
