@@ -1,7 +1,4 @@
-# Deploy Backend to SmarterASP.net via FTP
-# Tự động build + deploy khi push vào nhánh main
-
-name: Deploy Backend
+name: Deploy Backend to MonsterASP
 
 on:
   push:
@@ -12,22 +9,56 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '10.0.x'
+          dotnet-quality: 'preview'
 
       - name: Publish
         run: dotnet publish backend/Soundia.Api.csproj -c Release -o ./publish
 
-      - name: Deploy via FTP
+      - name: Update appsettings.json
+        run: |
+          cat > ./publish/appsettings.json << 'EOF'
+          {
+            "ConnectionStrings": {
+              "DefaultConnection": "${{ secrets.DB_CONNECTION_STRING }}"
+            },
+            "Jwt": {
+              "Key": "${{ secrets.JWT_KEY }}",
+              "Issuer": "SoundiaApp",
+              "Audience": "SoundiaUsers"
+            },
+            "Nct": {
+              "ApiUrl": "https://beta.nhaccuatui.com/api",
+              "ApiKey": "${{ secrets.NCT_API_KEY }}",
+              "SecretKey": "${{ secrets.NCT_SECRET_KEY }}"
+            },
+            "Spotify": {
+              "ClientId": "${{ secrets.SPOTIFY_CLIENT_ID }}",
+              "ClientSecret": "${{ secrets.SPOTIFY_CLIENT_SECRET }}"
+            },
+            "Logging": {
+              "LogLevel": {
+                "Default": "Warning",
+                "Microsoft.AspNetCore": "Warning"
+              }
+            },
+            "AllowedHosts": "*"
+          }
+          EOF
+
+      - name: Deploy to MonsterASP via FTP
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
         with:
           server: ${{ secrets.FTP_SERVER }}
           username: ${{ secrets.FTP_USERNAME }}
           password: ${{ secrets.FTP_PASSWORD }}
           local-dir: ./publish/
-          server-dir: /
+          server-dir: /wwwroot/

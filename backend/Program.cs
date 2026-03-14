@@ -11,9 +11,12 @@ Console.InputEncoding = Encoding.UTF8;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Support Render's PORT environment variable
-var port = Environment.GetEnvironmentVariable("PORT") ?? "5066";
-builder.WebHost.UseUrls($"http://+:{port}");
+// Support Render's PORT environment variable (skip on IIS/MonsterASP)
+var port = Environment.GetEnvironmentVariable("PORT");
+if (!string.IsNullOrEmpty(port))
+{
+    builder.WebHost.UseUrls($"http://+:{port}");
+}
 
 // Add services to the container.
 
@@ -49,7 +52,9 @@ builder.Services.AddCors(options =>
                 "http://localhost:3000",
                 "http://127.0.0.1:5173", "http://127.0.0.1:5174", "http://127.0.0.1:5175", "http://127.0.0.1:5176",
                 "https://soundia-player.netlify.app",
-                "https://explanation-growing-typing-resolutions.trycloudflare.com"
+                "https://soundia.vercel.app",
+                "https://soundia-thanhan365.vercel.app",
+                "https://soundia-git-main-thanhan365.vercel.app"
             )
             .AllowAnyMethod()
             .AllowAnyHeader()
