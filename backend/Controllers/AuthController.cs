@@ -27,10 +27,10 @@ namespace Soundia.Api.Controllers
         public async Task<ActionResult<AuthResponse>> Register(RegisterRequest request)
         {
             if (await _context.Users.AnyAsync(u => u.Username == request.Username.ToLower()))
-                return BadRequest("Username is already taken.");
+                return BadRequest("Tên đăng nhập đã được sử dụng.");
 
             if (await _context.Users.AnyAsync(u => u.Email == request.Email.ToLower()))
-                return BadRequest("Email is already taken.");
+                return BadRequest("Email đã được sử dụng.");
 
             var refreshToken = GenerateRefreshToken();
             var user = new User
