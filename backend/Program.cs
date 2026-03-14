@@ -113,7 +113,9 @@ app.UseAuthentication();
 app.UseAuthorization();
 app.UseStaticFiles(); // Serve uploaded files from wwwroot/
 
-// 6. Auto-Migrate Database
+// 6. Auto-Migrate Database - DISABLED to diagnose 500
+// Migration was causing startup crash on MonsterASP
+/*
 using (var scope = app.Services.CreateScope())
 {
     var services = scope.ServiceProvider;
@@ -130,6 +132,7 @@ using (var scope = app.Services.CreateScope())
         logger.LogError(ex, "An error occurred during migration. The app will continue without migration.");
     }
 }
+*/
 
 app.MapControllers();
 
