@@ -108,7 +108,7 @@ export default function ArtistSection() {
         )}
       </div>
 
-      <div className="flex gap-5 md:gap-8 overflow-x-auto pb-4 scrollbar-hide md:grid md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7 2xl:grid-cols-8 md:overflow-visible md:pb-0">
+      <div className="flex gap-5 md:gap-8 overflow-x-auto pb-4 scrollbar-hide md:grid md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-8 md:overflow-visible md:pb-0">
         {displayArtists.map((artist) => (
           <ArtistCard key={artist.id} artist={artist} onClick={handleArtistClick} />
         ))}
