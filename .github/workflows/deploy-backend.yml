@@ -29,14 +29,11 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Install Zing script dependencies
-        run: |
-          cd backend/scripts
-          npm install zingmp3-api-full 2>/dev/null || true
-
-      - name: Copy scripts to publish
+      - name: Copy scripts and install deps
         run: |
           cp -r backend/scripts ./publish/scripts
+          cd ./publish/scripts
+          npm install --omit=dev --no-optional 2>/dev/null || true
 
       - name: Update appsettings.json
         env:
@@ -90,3 +87,11 @@ jobs:
           local-dir: ./publish/
           server-dir: /wwwroot/
           dangerous-clean-slate: true
+          exclude: |
+            **/node_modules/.package-lock.json
+            **/node_modules/**/README.md
+            **/node_modules/**/CHANGELOG.md
+            **/node_modules/**/LICENSE
+            **/node_modules/**/*.ts
+            **/node_modules/**/.eslintrc*
+
