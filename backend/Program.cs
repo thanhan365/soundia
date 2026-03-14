@@ -133,6 +133,34 @@ using (var scope = app.Services.CreateScope())
 
 app.MapControllers();
 
+// TEMP: Health check that doesn't depend on DB
+app.MapGet("/health", async (Microsoft.Extensions.Configuration.IConfiguration config) =>
+{
+    var info = new Dictionary<string, string>
+    {
+        ["status"] = "alive",
+        ["time"] = DateTime.UtcNow.ToString("o"),
+        ["env"] = app.Environment.EnvironmentName,
+        ["hasDbConn"] = (!string.IsNullOrEmpty(config.GetConnectionString("DefaultConnection"))).ToString(),
+        ["hasJwt"] = (!string.IsNullOrEmpty(config["Jwt:Key"])).ToString()
+    };
+    
+    // Try DB connection
+    try
+    {
+        using var scope = app.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<Soundia.Api.Data.SoundiaDbContext>();
+        var canConnect = await db.Database.CanConnectAsync();
+        info["dbConnect"] = canConnect.ToString();
+    }
+    catch (Exception ex)
+    {
+        info["dbConnect"] = "FAIL: " + ex.Message;
+    }
+    
+    return Results.Ok(info);
+});
+
 app.Run();
   
   
