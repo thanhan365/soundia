@@ -73,6 +73,22 @@ jobs:
           print('web.config written successfully')
           "
 
+      - name: Create app_offline.htm to stop IIS app
+        run: echo "Deploying..." > ./app_offline.htm
+
+      - name: Upload app_offline.htm to stop app
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ${{ secrets.FTP_SERVER }}
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          local-dir: ./
+          server-dir: /wwwroot/
+          include: app_offline.htm
+
+      - name: Wait for app to shut down
+        run: sleep 5
+
       - name: Deploy to MonsterASP via FTP
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
         with:
@@ -82,3 +98,16 @@ jobs:
           local-dir: ./publish/
           server-dir: /wwwroot/
 
+      - name: Remove app_offline.htm to restart app
+        run: |
+          python3 -c "
+          import ftplib, os
+          ftp = ftplib.FTP('${{ secrets.FTP_SERVER }}')
+          ftp.login('${{ secrets.FTP_USERNAME }}', '${{ secrets.FTP_PASSWORD }}')
+          ftp.cwd('/wwwroot')
+          try:
+            ftp.delete('app_offline.htm')
+            print('app_offline.htm removed — app restarting')
+          except: pass
+          ftp.quit()
+          "
