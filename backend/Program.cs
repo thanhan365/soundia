@@ -91,9 +91,6 @@ builder.Services.AddHttpClient<Soundia.Api.Services.ISpotifyService, Soundia.Api
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
-// TEMP: Show detailed errors in production to diagnose 500
-app.UseDeveloperExceptionPage();
-
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
@@ -113,9 +110,7 @@ app.UseAuthentication();
 app.UseAuthorization();
 app.UseStaticFiles(); // Serve uploaded files from wwwroot/
 
-// 6. Auto-Migrate Database - DISABLED to diagnose 500
-// Migration was causing startup crash on MonsterASP
-/*
+// 6. Auto-Migrate Database
 using (var scope = app.Services.CreateScope())
 {
     var services = scope.ServiceProvider;
@@ -132,38 +127,7 @@ using (var scope = app.Services.CreateScope())
         logger.LogError(ex, "An error occurred during migration. The app will continue without migration.");
     }
 }
-*/
 
 app.MapControllers();
 
-// TEMP: Health check that doesn't depend on DB
-app.MapGet("/health", async (Microsoft.Extensions.Configuration.IConfiguration config) =>
-{
-    var info = new Dictionary<string, string>
-    {
-        ["status"] = "alive",
-        ["time"] = DateTime.UtcNow.ToString("o"),
-        ["env"] = app.Environment.EnvironmentName,
-        ["hasDbConn"] = (!string.IsNullOrEmpty(config.GetConnectionString("DefaultConnection"))).ToString(),
-        ["hasJwt"] = (!string.IsNullOrEmpty(config["Jwt:Key"])).ToString()
-    };
-    
-    // Try DB connection
-    try
-    {
-        using var scope = app.Services.CreateScope();
-        var db = scope.ServiceProvider.GetRequiredService<Soundia.Api.Data.SoundiaDbContext>();
-        var canConnect = await db.Database.CanConnectAsync();
-        info["dbConnect"] = canConnect.ToString();
-    }
-    catch (Exception ex)
-    {
-        info["dbConnect"] = "FAIL: " + ex.Message;
-    }
-    
-    return Results.Ok(info);
-});
-
-app.Run();
-  
-  
+app.Run();
