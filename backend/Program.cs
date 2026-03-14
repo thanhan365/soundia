@@ -91,6 +91,9 @@ builder.Services.AddHttpClient<Soundia.Api.Services.ISpotifyService, Soundia.Api
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
+// TEMP: Show detailed errors in production to diagnose 500
+app.UseDeveloperExceptionPage();
+
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
