@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - 'backend/**'
+      - '.github/workflows/deploy-backend.yml'
 
 jobs:
   deploy:
@@ -24,35 +25,27 @@ jobs:
         run: dotnet publish backend/Soundia.Api.csproj -c Release -o ./publish
 
       - name: Update appsettings.json
+        env:
+          DB_CONN: ${{ secrets.DB_CONNECTION_STRING }}
+          JWT_KEY: ${{ secrets.JWT_KEY }}
+          NCT_KEY: ${{ secrets.NCT_API_KEY }}
+          NCT_SECRET: ${{ secrets.NCT_SECRET_KEY }}
+          SPOTIFY_ID: ${{ secrets.SPOTIFY_CLIENT_ID }}
+          SPOTIFY_SECRET: ${{ secrets.SPOTIFY_CLIENT_SECRET }}
         run: |
-          cat > ./publish/appsettings.json << 'EOF'
-          {
-            "ConnectionStrings": {
-              "DefaultConnection": "${{ secrets.DB_CONNECTION_STRING }}"
-            },
-            "Jwt": {
-              "Key": "${{ secrets.JWT_KEY }}",
-              "Issuer": "SoundiaApp",
-              "Audience": "SoundiaUsers"
-            },
-            "Nct": {
-              "ApiUrl": "https://beta.nhaccuatui.com/api",
-              "ApiKey": "${{ secrets.NCT_API_KEY }}",
-              "SecretKey": "${{ secrets.NCT_SECRET_KEY }}"
-            },
-            "Spotify": {
-              "ClientId": "${{ secrets.SPOTIFY_CLIENT_ID }}",
-              "ClientSecret": "${{ secrets.SPOTIFY_CLIENT_SECRET }}"
-            },
-            "Logging": {
-              "LogLevel": {
-                "Default": "Warning",
-                "Microsoft.AspNetCore": "Warning"
-              }
-            },
-            "AllowedHosts": "*"
+          python3 -c "
+          import json, os
+          config = {
+            'ConnectionStrings': {'DefaultConnection': os.environ['DB_CONN']},
+            'Jwt': {'Key': os.environ['JWT_KEY'], 'Issuer': 'SoundiaApp', 'Audience': 'SoundiaUsers'},
+            'Nct': {'ApiUrl': 'https://beta.nhaccuatui.com/api', 'ApiKey': os.environ['NCT_KEY'], 'SecretKey': os.environ['NCT_SECRET']},
+            'Spotify': {'ClientId': os.environ['SPOTIFY_ID'], 'ClientSecret': os.environ['SPOTIFY_SECRET']},
+            'Logging': {'LogLevel': {'Default': 'Warning', 'Microsoft.AspNetCore': 'Warning'}},
+            'AllowedHosts': '*'
           }
-          EOF
+          with open('./publish/appsettings.json', 'w') as f:
+            json.dump(config, f, indent=2)
+          "
 
       - name: Deploy to MonsterASP via FTP
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
