@@ -89,9 +89,7 @@ export default function AllPlaylists() {
                 let external = [];
                 if (suggestedRes.status === 'fulfilled' && suggestedRes.value.ok) {
                     const data = await suggestedRes.value.json();
-                    if (data.success && data.data) {
-                        external = data.data.filter(p => p.songCount > 0 && p.cover);
-                    }
+                    if (data.success && data.data) external = data.data;
                 }
 
                 let dbPlaylists = [];

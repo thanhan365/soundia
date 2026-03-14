@@ -103,7 +103,7 @@ function ArtistSongRow({ song, index, isPlaying, isCurrent, onPlay }) {
             toggleFavorite(song.id);
             showToast(liked ? "Đã bỏ yêu thích" : "Đã thêm yêu thích", liked ? "info" : "success");
           }}
-          className={`p-1 sm:p-1.5 rounded-full transition-all ${liked ? "text-red-500 sm:opacity-100" : "text-gray-600 sm:opacity-0 sm:group-hover:opacity-100 hover:text-white"}`}
+          className={`p-1 sm:p-1.5 rounded-full transition-all ${liked ? "text-red-500" : "text-gray-600 sm:opacity-0 sm:group-hover:opacity-100 hover:text-white"}`}
         >
           <HiHeart className="text-[12px] sm:text-sm lg:text-base" />
         </button>

@@ -30,7 +30,6 @@ export default function ProgressBar() {
   const syntheticRef = useRef(initTime);
   const lastRealRef = useRef(initTime);
   const lastMsRef = useRef(performance.now());
-  const lastDisplayedTimeRef = useRef(initTime);
   // Store current song ID at mount to avoid false reset
   const mountedSongIdRef = useRef(currentSong?.id);
   // Track when song changed to ignore stale audio data
@@ -112,12 +111,9 @@ export default function ProgressBar() {
 
         if (isLoadingStream || isStaleWindow) {
           // Stream is loading or just switched song — keep progress at 0
+          setTime(0);
           syntheticRef.current = 0;
           lastRealRef.current = 0;
-          if (lastDisplayedTimeRef.current !== 0) {
-            lastDisplayedTimeRef.current = 0;
-            setTime(0);
-          }
         } else if (t >= 0) {
           // Got real time from player
           if (lastRealRef.current > 3 && t < lastRealRef.current - 3) {
@@ -125,18 +121,11 @@ export default function ProgressBar() {
           }
           lastRealRef.current = t;
           syntheticRef.current = t;
-          // Only re-render if time changed significantly (>0.15s) to avoid flicker
-          if (Math.abs(t - lastDisplayedTimeRef.current) > 0.15) {
-            lastDisplayedTimeRef.current = t;
-            setTime(t);
-          }
+          setTime(t);
         } else if (isPlaying) {
           // Synthetic advance: player not ready yet but song is playing
           syntheticRef.current += delta;
-          if (Math.abs(syntheticRef.current - lastDisplayedTimeRef.current) > 0.15) {
-            lastDisplayedTimeRef.current = syntheticRef.current;
-            setTime(syntheticRef.current);
-          }
+          setTime(syntheticRef.current);
         }
 
         if (d > 0 && !isStaleWindow) setDur(d);

@@ -16,7 +16,6 @@ export default function VolumeControl() {
   return (
     <div className="flex items-center gap-2">
       <button
-        data-player-mute-btn
         onClick={toggleMute}
         className="text-gray-400 hover:text-neon transition-colors duration-200"
       >
@@ -35,9 +34,6 @@ export default function VolumeControl() {
         showGlow={false}
         className="w-24 h-1"
       />
-      {/* Hidden buttons for keyboard shortcuts */}
-      <button data-player-vol-up onClick={() => changeVolume(Math.min(1, volume + 0.05))} className="hidden" />
-      <button data-player-vol-down onClick={() => changeVolume(Math.max(0, volume - 0.05))} className="hidden" />
     </div>
   );
 }

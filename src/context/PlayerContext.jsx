@@ -59,7 +59,6 @@ export function PlayerProvider({ children }) {
   // ── UI State ───────────────────────────────────────────────────────────────
   const [queueOpen, setQueueOpen] = useState(false);
   const [lyricsOpen, setLyricsOpen] = useState(false);
-  const playHistoryRef = useRef([]); // Stack of previously played songs for playPrev
 
   // ── Sleep Timer ────────────────────────────────────────────────────────────
   const [sleepTimer, setSleepTimerState] = useState(null); // null | 'end' | minutes remaining display
@@ -324,8 +323,6 @@ export function PlayerProvider({ children }) {
       showToast('⏱️ Hết bài — đã tạm dừng nhạc', 'info');
       return;
     }
-    // Push current song to history before advancing
-    if (currentSong) playHistoryRef.current.push(currentSong);
     if (manualQueue.length > 0) {
       const next = manualQueue[0];
       setManualQueue((q) => q.slice(1));
@@ -389,13 +386,6 @@ export function PlayerProvider({ children }) {
 
   const playPrev = () => {
     if (!currentSong) return;
-    // Pop from history stack
-    if (playHistoryRef.current.length > 0) {
-      const prev = playHistoryRef.current.pop();
-      playSong(prev);
-      return;
-    }
-    // Fallback: loop in list
     const list = filteredSongs.length > 0 ? filteredSongs : allSongs;
     const idx = list.findIndex((s) => s.id === currentSong.id);
     playSong(list[(idx - 1 + list.length) % list.length]);
