@@ -43,5 +43,11 @@ Release/
 # Environment variables (KHÔNG commit lên git!)
 .env
 backend/.env
+backend/appsettings.json
+
+# Build output (chứa config production)
+backend/publish/
+backend/deploy/
+
 # Local Netlify folder
 .netlify
