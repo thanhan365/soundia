@@ -66,11 +66,11 @@ namespace Soundia.Api.Controllers
                 .FirstOrDefaultAsync(u => u.Username == input || u.Email == input);
 
             if (user == null)
-                return Unauthorized("Invalid username or password.");
+                return Unauthorized("Tên đăng nhập hoặc mật khẩu không đúng.");
 
             var isPasswordValid = BCrypt.Net.BCrypt.Verify(request.Password, user.PasswordHash);
             if (!isPasswordValid)
-                return Unauthorized("Invalid username or password.");
+                return Unauthorized("Tên đăng nhập hoặc mật khẩu không đúng.");
 
             // Update refresh token
             user.RefreshToken = GenerateRefreshToken();
