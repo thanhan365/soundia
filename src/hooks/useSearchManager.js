@@ -42,13 +42,16 @@ export function useSearchManager({ allSongs }) {
             );
 
             const apiUrl = import.meta.env.VITE_API_URL || '/api';
-            const [nctResults, itunesResults, localDbResults, nctPlaylists] = await Promise.all([
+            const [nctResults, itunesResults, localDbResults, nctPlaylists, zingResults] = await Promise.all([
                 searchNctSongs(rawQ, 15),
                 searchItunes(rawQ),
                 fetch(`${apiUrl}/songs/search-local?q=${encodeURIComponent(rawQ)}&limit=10`)
                     .then(r => r.ok ? r.json() : { data: [] })
                     .catch(() => ({ data: [] })),
                 searchNctPlaylists(rawQ, 6),
+                fetch(`${apiUrl}/songs/zing-search?q=${encodeURIComponent(rawQ)}&limit=10`)
+                    .then(r => r.ok ? r.json() : { songs: [] })
+                    .catch(() => ({ songs: [] })),
             ]);
 
             // Local DB songs (admin-imported) go first
@@ -68,8 +71,14 @@ export function useSearchManager({ allSongs }) {
             const seenKeys = new Set(local.map(t => generateKey(t)));
             const externalTracks = [];
 
-            // Add localDB, NCT, iTunes — skip if already seen
-            const allExternal = [...localDbTracks, ...(nctResults.tracks || []), ...(itunesResults.tracks || [])];
+            // Zing tracks (from backend zing-search endpoint)
+            const zingTracks = (zingResults.songs || []).map(s => ({
+                ...s,
+                isExternal: true,
+            }));
+
+            // Add localDB, NCT, iTunes, Zing — skip if already seen
+            const allExternal = [...localDbTracks, ...(nctResults.tracks || []), ...(itunesResults.tracks || []), ...zingTracks];
             for (const track of allExternal) {
                 const key = generateKey(track);
                 if (!seenKeys.has(key)) {

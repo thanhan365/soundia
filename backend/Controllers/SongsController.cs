@@ -1085,6 +1085,46 @@ namespace Soundia.Api.Controllers
             }
         }
 
+        // ── Zing MP3 Search (via Node.js helper) ─────────────────────────────
+        [HttpGet("zing-search")]
+        public async Task<ActionResult> ZingSearch([FromQuery] string q, [FromQuery] int limit = 10)
+        {
+            if (string.IsNullOrWhiteSpace(q)) return BadRequest(new { error = "Query is required" });
+            try
+            {
+                await EnsureNpmDeps();
+                var scriptDir = Path.Combine(Directory.GetCurrentDirectory(), "scripts");
+                var scriptPath = Path.Combine(scriptDir, "zing-search.cjs");
+                if (!System.IO.File.Exists(scriptPath))
+                    return StatusCode(500, new { error = "zing-search.cjs not found" });
+
+                var psi = new System.Diagnostics.ProcessStartInfo
+                {
+                    FileName = "node",
+                    Arguments = $"\"{scriptPath}\" \"{q.Replace("\"", "\\\"")}\" {limit}",
+                    WorkingDirectory = scriptDir,
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                    UseShellExecute = false,
+                    CreateNoWindow = true,
+                };
+                using var proc = System.Diagnostics.Process.Start(psi)!;
+                var output = await proc.StandardOutput.ReadToEndAsync();
+                await proc.WaitForExitAsync();
+
+                if (string.IsNullOrWhiteSpace(output))
+                    return Ok(new { songs = Array.Empty<object>() });
+
+                var json = System.Text.Json.JsonDocument.Parse(output);
+                return Ok(json.RootElement);
+            }
+            catch (System.Exception ex)
+            {
+                Console.WriteLine($"[ZingSearch] ERROR: {ex.Message}");
+                return Ok(new { songs = Array.Empty<object>(), error = ex.Message });
+            }
+        }
+
         // ── Zing MP3 Single Song Info (via Node.js helper) ──────────────────
         [HttpGet("zing-song/{id}")]
         public async Task<ActionResult> ZingSong(string id)
