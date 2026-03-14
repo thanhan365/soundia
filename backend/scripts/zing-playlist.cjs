@@ -2,7 +2,7 @@
 // Uses the zingmp3-api-full npm package
 // Called from C# backend: node zing-playlist.js <playlistId>
 
-const { ZingMp3 } = require('zingmp3-api-full');
+const { ZingMp3 } = require('zingmp3-api-full-v2');
 
 const playlistId = process.argv[2];
 if (!playlistId) {
