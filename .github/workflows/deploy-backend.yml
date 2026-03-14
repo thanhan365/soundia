@@ -47,6 +47,22 @@ jobs:
             json.dump(config, f, indent=2)
           "
 
+      - name: Update web.config for OutOfProcess
+        run: |
+          cat > ./publish/web.config << 'WEBCONFIG'
+          <?xml version="1.0" encoding="utf-8"?>
+          <configuration>
+            <location path="." inheritInChildApplications="false">
+              <system.webServer>
+                <handlers>
+                  <add name="aspNetCore" path="*" verb="*" modules="AspNetCoreModuleV2" resourceType="Unspecified" />
+                </handlers>
+                <aspNetCore processPath="dotnet" arguments=".\Soundia.Api.dll" stdoutLogEnabled="true" stdoutLogFile=".\logs\stdout" hostingModel="OutOfProcess" />
+              </system.webServer>
+            </location>
+          </configuration>
+          WEBCONFIG
+
       - name: Deploy to MonsterASP via FTP
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
         with:
@@ -55,3 +71,4 @@ jobs:
           password: ${{ secrets.FTP_PASSWORD }}
           local-dir: ./publish/
           server-dir: /wwwroot/
+          dangerous-clean-slate: true
