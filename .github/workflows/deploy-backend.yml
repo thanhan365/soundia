@@ -24,16 +24,11 @@ jobs:
       - name: Publish
         run: dotnet publish backend/Soundia.Api.csproj -c Release -o ./publish
 
-      - name: Setup Node.js for Zing scripts
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-
-      - name: Copy scripts and install deps
+      - name: Copy Zing scripts to publish
         run: |
-          cp -r backend/scripts ./publish/scripts
-          cd ./publish/scripts
-          npm install --omit=dev --no-optional 2>/dev/null || true
+          mkdir -p ./publish/scripts
+          cp backend/scripts/*.cjs ./publish/scripts/
+          cp backend/scripts/package.json ./publish/scripts/
 
       - name: Update appsettings.json
         env:
@@ -87,11 +82,4 @@ jobs:
           local-dir: ./publish/
           server-dir: /wwwroot/
           dangerous-clean-slate: true
-          exclude: |
-            **/node_modules/.package-lock.json
-            **/node_modules/**/README.md
-            **/node_modules/**/CHANGELOG.md
-            **/node_modules/**/LICENSE
-            **/node_modules/**/*.ts
-            **/node_modules/**/.eslintrc*
 

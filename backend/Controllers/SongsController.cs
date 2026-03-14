@@ -955,6 +955,29 @@ namespace Soundia.Api.Controllers
 
         // ── Zing MP3 Playlist Import (via Node.js helper) ─────────────────────
         private static readonly Dictionary<string, (object data, DateTime expiry)> _zingPlaylistCache = new();
+        private static bool _npmInstalled = false;
+
+        private static async Task EnsureNpmDeps(string scriptsDir)
+        {
+            if (_npmInstalled) return;
+            var nodeModulesPath = Path.Combine(scriptsDir, "node_modules");
+            if (Directory.Exists(nodeModulesPath)) { _npmInstalled = true; return; }
+
+            Console.WriteLine($"[Zing] Installing npm deps in {scriptsDir}");
+            var psi = new System.Diagnostics.ProcessStartInfo
+            {
+                FileName = "npm",
+                Arguments = "install --omit=dev --no-optional",
+                WorkingDirectory = scriptsDir,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                UseShellExecute = false
+            };
+            using var proc = System.Diagnostics.Process.Start(psi)!;
+            await proc.WaitForExitAsync();
+            _npmInstalled = proc.ExitCode == 0;
+            Console.WriteLine($"[Zing] npm install exit code: {proc.ExitCode}");
+        }
 
         [HttpGet("zing-playlist/{id}")]
         public async Task<ActionResult> ZingPlaylist(string id)
@@ -969,6 +992,9 @@ namespace Soundia.Api.Controllers
                 var scriptPath = Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "scripts", "zing-playlist.cjs");
                 if (!System.IO.File.Exists(scriptPath))
                     scriptPath = Path.Combine(Directory.GetCurrentDirectory(), "scripts", "zing-playlist.cjs");
+
+                // Auto-install npm deps if missing
+                await EnsureNpmDeps(Path.GetDirectoryName(scriptPath)!);
 
                 Console.WriteLine($"[ZingPlaylist] Running: node {scriptPath} {id}");
 
