@@ -53,6 +53,7 @@ export default function ProgressBar() {
     setDur(0);
     syntheticRef.current = 0;
     lastRealRef.current = 0;
+    lastDisplayedTimeRef.current = 0;
   }, [currentSong?.id]);
 
   // ── rAF polling loop ──────────────────────────────────────────────────────
@@ -65,9 +66,10 @@ export default function ProgressBar() {
         const delta = (now - lastMsRef.current) / 1000;
         lastMsRef.current = now;
 
-        // Grace period after song change: ignore stale audio data for 800ms
+        // Grace period after song change: ignore stale audio data for 2.5s
+        // (covers NCT resolution ~2s + audio buffering)
         const timeSinceSongChange = now - songChangeTsRef.current;
-        const isStaleWindow = timeSinceSongChange < 800;
+        const isStaleWindow = timeSinceSongChange < 2500;
 
         let t = -1, d = 0;
 
