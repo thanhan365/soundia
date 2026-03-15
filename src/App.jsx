@@ -160,12 +160,7 @@ function AppContent() {
         case 'KeyL':
           if (!e.ctrlKey && !e.metaKey) document.querySelector('[data-player-lyrics-btn]')?.click();
           break;
-        case 'ArrowUp':
-          if (!e.shiftKey) { e.preventDefault(); document.querySelector('[data-player-vol-up]')?.click(); }
-          break;
-        case 'ArrowDown':
-          if (!e.shiftKey) { e.preventDefault(); document.querySelector('[data-player-vol-down]')?.click(); }
-          break;
+        // ArrowUp/ArrowDown: keep default behavior (scroll page)
         default:
           break;
       }
