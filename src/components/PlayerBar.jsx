@@ -4,6 +4,7 @@ import { useToast } from "../context/ToastContext";
 import { useClickOutside } from "../hooks/useClickOutside";
 import ProgressBar from "./ProgressBar";
 import VolumeControl from "./VolumeControl";
+import SongContextMenu from "./SongContextMenu";
 import { HiPlay, HiPause, HiBackward, HiForward } from "react-icons/hi2";
 import { HiMusicNote, HiHeart, HiDotsHorizontal, HiPlus, HiLink, HiShare, HiClock } from "react-icons/hi";
 import { IoShuffle, IoRepeat } from "react-icons/io5";
@@ -22,6 +23,7 @@ export default function PlayerBar() {
   } = usePlayer();
   const { showToast } = useToast();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [contextMenuPos, setContextMenuPos] = useState(null);
   const [sleepMenuOpen, setSleepMenuOpen] = useState(false);
   const [customMinutes, setCustomMinutes] = useState('');
   const menuRef = useRef(null);
@@ -57,38 +59,13 @@ export default function PlayerBar() {
     showToast(liked ? "Đã bỏ yêu thích" : "Đã thêm vào yêu thích", liked ? "info" : "success");
   }, [currentSong, liked, toggleFavorite, showToast]);
 
-  const handleAddToQueue = useCallback(() => {
+  const handleOpenContextMenu = useCallback((e) => {
     if (!currentSong) return;
-    addToQueue(currentSong);
-    showToast(`Đã thêm vào danh sách chờ`, "success");
-    setMenuOpen(false);
-  }, [currentSong, addToQueue, showToast]);
-
-  const handleAddToPlaylist = useCallback(async (pl) => {
-    if (!currentSong) return;
-    try {
-      await addSongToPlaylist(pl.id, currentSong);
-      showToast(`Đã thêm vào "${pl.name}"`, "success");
-    } catch (e) {
-      showToast("Lỗi khi thêm vào playlist", "error");
-    }
-    setMenuOpen(false);
-  }, [currentSong, addSongToPlaylist, showToast]);
-
-  const handleCopyLink = useCallback(() => {
-    navigator.clipboard.writeText(`https://soundia.app/song/${currentSong?.id}`);
-    showToast("Đã sao chép liên kết", "success");
-    setMenuOpen(false);
-  }, [currentSong, showToast]);
-
-  const handleShare = useCallback(() => {
-    if (navigator.share) {
-      navigator.share({ title: currentSong.title, text: `${currentSong.title} - ${currentSong.artist}` });
-    } else {
-      handleCopyLink();
-    }
-    setMenuOpen(false);
-  }, [currentSong, handleCopyLink]);
+    e.stopPropagation();
+    // Trên mobile dùng bottom sheet, trên desktop dùng vị trí click
+    const rect = e.currentTarget.getBoundingClientRect();
+    setContextMenuPos({ x: rect.left, y: rect.top });
+  }, [currentSong]);
 
   // Update Dynamic Document Title
   useEffect(() => {
@@ -133,32 +110,9 @@ export default function PlayerBar() {
                 <button onClick={handleLike} className={`p-1.5 flex-shrink-0 rounded-full ${liked ? "text-red-500" : "text-gray-600"}`}>
                   <HiHeart className="text-[16px]" />
                 </button>
-                <div className="relative flex-shrink-0" ref={menuRef}>
-                  <button onClick={() => setMenuOpen(!menuOpen)} className={`p-1.5 rounded-full ${menuOpen ? "text-neon" : "text-gray-600"}`}>
-                    <HiDotsHorizontal className="text-[16px]" />
-                  </button>
-                  {menuOpen && (
-                    <div className="absolute bottom-full right-0 mb-2 bg-[#1a1a2e] border border-white/10 rounded-xl shadow-2xl py-2 w-56 sm:w-52 z-50 max-w-[90vw]">
-                      <button onClick={handleAddToQueue} className="w-full flex items-center gap-3 px-4 py-2.5 text-[13px] text-gray-300 hover:bg-white/5 text-left">
-                        <HiQueueList className="text-sm text-gray-500 flex-shrink-0" /><span>Thêm vào danh sách chờ</span>
-                      </button>
-                      {playlists.length > 0 && (
-                        <>
-                          <div className="mx-3 my-1 h-px bg-white/5" />
-                          {playlists.map((pl) => (
-                            <button key={pl.id} onClick={() => handleAddToPlaylist(pl)} className="w-full flex items-center gap-3 px-4 py-2.5 text-[13px] text-gray-300 hover:bg-white/5 text-left">
-                              <HiPlus className="text-sm text-neon/60 flex-shrink-0" /><span className="truncate">Thêm vào "{pl.name}"</span>
-                            </button>
-                          ))}
-                        </>
-                      )}
-                      <div className="mx-3 my-1 h-px bg-white/5" />
-                      <button onClick={handleShare} className="w-full flex items-center gap-3 px-4 py-2.5 text-[13px] text-gray-300 hover:bg-white/5 text-left">
-                        <HiShare className="text-sm text-gray-500 flex-shrink-0" /><span>Chia sẻ</span>
-                      </button>
-                    </div>
-                  )}
-                </div>
+                <button onClick={handleOpenContextMenu} className={`p-1.5 rounded-full flex-shrink-0 ${contextMenuPos ? "text-neon" : "text-gray-600"}`}>
+                  <HiDotsHorizontal className="text-[16px]" />
+                </button>
               </>
             ) : (
               <div className="flex items-center gap-2">
@@ -244,35 +198,9 @@ export default function PlayerBar() {
                   <button onClick={handleLike} className={`flex-shrink-0 p-1 rounded-full transition-all ${liked ? "text-red-500" : "text-gray-600 hover:text-gray-300"}`}>
                     <HiHeart className={`text-sm sm:text-base ${liked ? "drop-shadow-[0_0_4px_rgba(239,68,68,0.4)]" : ""}`} />
                   </button>
-                  <div className="relative flex-shrink-0" ref={menuRef}>
-                    <button onClick={() => setMenuOpen(!menuOpen)} className={`p-1 rounded-full transition-all ${menuOpen ? "text-neon bg-white/10" : "text-gray-600 hover:text-gray-300"}`}>
-                      <HiDotsHorizontal className="text-sm sm:text-base" />
-                    </button>
-                    {menuOpen && (
-                      <div className="absolute bottom-full left-0 mb-2 bg-[#1a1a2e] border border-white/10 rounded-xl shadow-2xl py-2 w-52 z-50">
-                        <button onClick={handleAddToQueue} className="w-full flex items-center gap-3 px-4 py-2.5 text-[13px] text-gray-300 hover:text-white hover:bg-white/5 text-left">
-                          <HiQueueList className="text-sm text-gray-500 flex-shrink-0" /><span>Thêm vào danh sách chờ</span>
-                        </button>
-                        {playlists.length > 0 && (
-                          <>
-                            <div className="mx-3 my-1 h-px bg-white/5" />
-                            {playlists.map((pl) => (
-                              <button key={pl.id} onClick={() => handleAddToPlaylist(pl)} className="w-full flex items-center gap-3 px-4 py-2.5 text-[13px] text-gray-300 hover:text-white hover:bg-white/5 text-left">
-                                <HiPlus className="text-sm text-neon/60 flex-shrink-0" /><span className="truncate">Thêm vào "{pl.name}"</span>
-                              </button>
-                            ))}
-                          </>
-                        )}
-                        <div className="mx-3 my-1 h-px bg-white/5" />
-                        <button onClick={handleCopyLink} className="w-full flex items-center gap-3 px-4 py-2.5 text-[13px] text-gray-300 hover:text-white hover:bg-white/5 text-left">
-                          <HiLink className="text-sm text-gray-500 flex-shrink-0" /><span>Sao chép liên kết</span>
-                        </button>
-                        <button onClick={handleShare} className="w-full flex items-center gap-3 px-4 py-2.5 text-[13px] text-gray-300 hover:text-white hover:bg-white/5 text-left">
-                          <HiShare className="text-sm text-gray-500 flex-shrink-0" /><span>Chia sẻ</span>
-                        </button>
-                      </div>
-                    )}
-                  </div>
+                  <button onClick={handleOpenContextMenu} className={`p-1 rounded-full transition-all flex-shrink-0 ${contextMenuPos ? "text-neon bg-white/10" : "text-gray-600 hover:text-gray-300"}`}>
+                    <HiDotsHorizontal className="text-sm sm:text-base" />
+                  </button>
                 </>
               ) : (
                 <div className="flex items-center gap-3">
@@ -392,6 +320,15 @@ export default function PlayerBar() {
           {/* Progress bar for tablet (sm-lg) */}
           <div className="px-4 pb-1 lg:hidden"><ProgressBar /></div>
         </div>
+
+        {/* Context Menu — shared component đầy đủ tính năng */}
+        {contextMenuPos && currentSong && (
+          <SongContextMenu
+            song={currentSong}
+            position={contextMenuPos}
+            onClose={() => setContextMenuPos(null)}
+          />
+        )}
 
       </div>
     </div>
