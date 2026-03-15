@@ -48,6 +48,7 @@ backend/appsettings.json
 # Build output (chứa config production)
 backend/publish/
 backend/deploy/
+deploy-output/
 
 # Local Netlify folder
 .netlify
