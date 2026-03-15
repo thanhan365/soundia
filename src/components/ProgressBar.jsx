@@ -16,6 +16,12 @@ export default function ProgressBar() {
     isLoadingStream
   } = usePlayer();
 
+  // ── Refs for values that change during playback (avoid re-renders) ────────
+  const isPlayingRef = useRef(isPlaying);
+  const isLoadingStreamRef = useRef(isLoadingStream);
+  useEffect(() => { isPlayingRef.current = isPlaying; }, [isPlaying]);
+  useEffect(() => { isLoadingStreamRef.current = isLoadingStream; }, [isLoadingStream]);
+
   // Init from shared ref (so LyricsView ProgressBar starts at correct position)
   const initTime = sharedProgressRef?.current?.time || 0;
   const initDur = sharedProgressRef?.current?.dur || 0;
@@ -31,21 +37,16 @@ export default function ProgressBar() {
   const lastRealRef = useRef(initTime);
   const lastMsRef = useRef(performance.now());
   const lastDisplayedTimeRef = useRef(initTime);
-  // Store current song ID at mount to avoid false reset
   const mountedSongIdRef = useRef(currentSong?.id);
-  // Track when song changed to ignore stale audio data
   const songChangeTsRef = useRef(0);
 
-  // ── Duration: sync from context (updated by YouTube's onTimeUpdate callback)
+  // ── Duration: sync from context ───────────────────────────────────────────
   useEffect(() => {
-    if (ctxDuration > 0) {
-      setDur(ctxDuration);
-    }
+    if (ctxDuration > 0) setDur(ctxDuration);
   }, [ctxDuration]);
 
-  // ── Reset when song actually changes (not on mount) ───────────────────────
+  // ── Reset when song changes ───────────────────────────────────────────────
   useEffect(() => {
-    // Skip if this is the same song that was playing when we mounted
     if (mountedSongIdRef.current === currentSong?.id) return;
     mountedSongIdRef.current = currentSong?.id;
     songChangeTsRef.current = performance.now();
@@ -56,7 +57,7 @@ export default function ProgressBar() {
     lastDisplayedTimeRef.current = 0;
   }, [currentSong?.id]);
 
-  // ── rAF polling loop ──────────────────────────────────────────────────────
+  // ── rAF polling loop (only re-creates on song change) ─────────────────────
   useEffect(() => {
     lastMsRef.current = performance.now();
 
@@ -66,8 +67,6 @@ export default function ProgressBar() {
         const delta = (now - lastMsRef.current) / 1000;
         lastMsRef.current = now;
 
-        // Grace period after song change: ignore stale audio data for 2.5s
-        // (covers NCT resolution ~2s + audio buffering)
         const timeSinceSongChange = now - songChangeTsRef.current;
         const isStaleWindow = timeSinceSongChange < 2500;
 
@@ -80,13 +79,12 @@ export default function ProgressBar() {
             if (yt) {
               const ytT = typeof yt.getCurrentTime === 'function' ? yt.getCurrentTime() : -1;
               const ytD = typeof yt.getDuration === 'function' ? yt.getDuration() : 0;
-              // Chỉ lấy time khi YouTube đã report duration > 0
               if (ytD > 0) { t = ytT; d = ytD; }
             }
           } catch { }
         }
 
-        // Try HTML5 Audio (skip during stale window to avoid reading old song's position)
+        // Try HTML5 Audio
         if (t < 0 && !isYTModeRef?.current && !isStaleWindow) {
           try {
             const audio = audioRef?.current;
@@ -99,7 +97,7 @@ export default function ProgressBar() {
           } catch { }
         }
 
-        // Fallback: use song.duration from metadata when player can't determine duration
+        // Fallback: song metadata duration
         if (d <= 0 && currentSong?.duration) {
           const sd = currentSong.duration;
           if (typeof sd === 'number' && sd > 0) d = sd;
@@ -112,8 +110,7 @@ export default function ProgressBar() {
           }
         }
 
-        if (isLoadingStream || isStaleWindow) {
-          // Stream is loading or just switched song — keep progress at 0
+        if (isLoadingStreamRef.current || isStaleWindow) {
           syntheticRef.current = 0;
           lastRealRef.current = 0;
           if (lastDisplayedTimeRef.current !== 0) {
@@ -121,19 +118,16 @@ export default function ProgressBar() {
             setTime(0);
           }
         } else if (t >= 0) {
-          // Got real time from player
           if (lastRealRef.current > 3 && t < lastRealRef.current - 3) {
-            syntheticRef.current = t; // Repeat detected
+            syntheticRef.current = t;
           }
           lastRealRef.current = t;
           syntheticRef.current = t;
-          // Only re-render if time changed significantly (>0.15s) to avoid flicker
           if (Math.abs(t - lastDisplayedTimeRef.current) > 0.15) {
             lastDisplayedTimeRef.current = t;
             setTime(t);
           }
-        } else if (isPlaying) {
-          // Synthetic advance: player not ready yet but song is playing
+        } else if (isPlayingRef.current) {
           syntheticRef.current += delta;
           if (Math.abs(syntheticRef.current - lastDisplayedTimeRef.current) > 0.15) {
             lastDisplayedTimeRef.current = syntheticRef.current;
@@ -142,7 +136,6 @@ export default function ProgressBar() {
         }
 
         if (d > 0 && !isStaleWindow) setDur(d);
-        // Write to shared ref so other ProgressBar instances can read
         if (sharedProgressRef) {
           sharedProgressRef.current.time = syntheticRef.current;
           if (d > 0) sharedProgressRef.current.dur = d;
@@ -156,7 +149,7 @@ export default function ProgressBar() {
 
     rafRef.current = requestAnimationFrame(poll);
     return () => { if (rafRef.current) cancelAnimationFrame(rafRef.current); };
-  }, [isPlaying, isLoadingStream, ytPlayerRef, audioRef, isYTModeRef]); // re-create when these change
+  }, [currentSong?.id]); // Only re-create on song change
 
   // ── Seek handlers ─────────────────────────────────────────────────────────
   const handleSeekStart = (e) => {
@@ -181,7 +174,6 @@ export default function ProgressBar() {
 
   const displayTime = isDragging ? dragValue : time;
 
-  // Fallback chain: polled duration → context duration → song metadata duration
   let displayDur = dur > 0 ? dur : (ctxDuration > 0 ? ctxDuration : 0);
   if (displayDur <= 0 && currentSong?.duration) {
     const sd = currentSong.duration;
