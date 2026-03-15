@@ -63,7 +63,7 @@ export default function SongList() {
 
           <div className="flex flex-col gap-1">
             {songList.slice(0, displayCount).map((song, index) => (
-              <SongItem key={`${song.id}-${Math.random()}`} song={song} index={index} />
+              <SongItem key={`${song.id}-${index}`} song={song} index={index} />
             ))}
           </div>
           
