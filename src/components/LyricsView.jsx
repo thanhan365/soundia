@@ -216,9 +216,9 @@ export default function LyricsView() {
             <div className={`w-40 h-40 sm:w-56 sm:h-56 md:w-80 md:h-80 rounded-2xl md:rounded-3xl overflow-hidden shadow-2xl transition-transform duration-500 ${isPlaying ? "scale-100" : "scale-95 opacity-80"}`}>
               <img src={currentSong.cover} alt={currentSong.title} className="w-full h-full object-cover" />
             </div>
-            <div className="text-center mt-6 hidden md:block w-80">
-              <h2 className="text-2xl md:text-3xl font-bold text-white mb-2 truncate px-4">{currentSong.title}</h2>
-              <p className="text-lg text-gray-400 truncate px-4">{currentSong.artist}</p>
+            <div className="text-center mt-3 md:mt-6 w-40 sm:w-56 md:w-80">
+              <h2 className="text-base sm:text-xl md:text-3xl font-bold text-white mb-1 md:mb-2 truncate px-2 md:px-4">{currentSong.title}</h2>
+              <p className="text-sm md:text-lg text-gray-400 truncate px-2 md:px-4">{currentSong.artist}</p>
             </div>
           </div>
         ) : (
