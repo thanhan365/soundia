@@ -23,7 +23,26 @@ export function usePlayback({ showToast }) {
         return saved ? parseInt(saved, 10) : 0; // 0=off, 3/5/8 seconds
     });
 
-    const audioRef = useRef(new Audio());
+    const audioRef = useRef(null);
+
+    // Khởi tạo audio element gắn vào DOM — mobile browser giữ audio chạy nền khi tắt màn hình
+    if (!audioRef.current) {
+        const audio = document.createElement('audio');
+        audio.id = 'soundia-main-audio';
+        audio.preload = 'auto';
+        audio.setAttribute('playsinline', '');
+        audio.setAttribute('webkit-playsinline', '');
+        // Ẩn khỏi giao diện nhưng vẫn trong DOM
+        audio.style.position = 'fixed';
+        audio.style.top = '-9999px';
+        audio.style.left = '-9999px';
+        audio.style.width = '0';
+        audio.style.height = '0';
+        audio.style.opacity = '0';
+        audio.style.pointerEvents = 'none';
+        document.body.appendChild(audio);
+        audioRef.current = audio;
+    }
     const ytPlayerRef = useRef(null);
     const isYTModeRef = useRef(isYTMode);
     const repeatModeRef = useRef(repeatMode);
@@ -148,6 +167,20 @@ export function usePlayback({ showToast }) {
         audio.addEventListener("play", onPlay);
         audio.addEventListener("pause", onPause);
         audio.addEventListener("timeupdate", onTimeUpdate);
+
+        // ── Mobile background resume: khi mở màn hình lại, resume audio nếu bị browser tạm dừng ──
+        const onVisibilityChange = () => {
+            if (document.visibilityState === 'visible') {
+                // Nếu app nghĩ đang phát nhưng audio thực sự bị pause → resume
+                const wasPlayingYT = isYTModeRef.current;
+                if (!wasPlayingYT && audio.paused && audio.src && audio.currentTime > 0) {
+                    // HTML5 Audio bị browser tạm dừng khi background → resume
+                    audio.play().catch(() => {});
+                }
+            }
+        };
+        document.addEventListener("visibilitychange", onVisibilityChange);
+
         return () => {
             audio.removeEventListener("loadedmetadata", onMeta);
             audio.removeEventListener("ended", onEnd);
@@ -155,6 +188,7 @@ export function usePlayback({ showToast }) {
             audio.removeEventListener("play", onPlay);
             audio.removeEventListener("pause", onPause);
             audio.removeEventListener("timeupdate", onTimeUpdate);
+            document.removeEventListener("visibilitychange", onVisibilityChange);
         };
     }, []); // eslint-disable-line
 
