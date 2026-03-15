@@ -26,6 +26,7 @@ export function useSearchManager({ allSongs }) {
 
     // Debounced search effect — only re-runs when searchQuery changes
     useEffect(() => {
+        let cancelled = false; // Abort guard for stale queries
         const handle = async () => {
             const rawQ = searchQuery.trim();
             const q = rawQ.toLowerCase();
@@ -41,6 +42,9 @@ export function useSearchManager({ allSongs }) {
                 (s) => s.title.toLowerCase().includes(q) || s.artist.toLowerCase().includes(q)
             );
 
+            // Show local results IMMEDIATELY (no waiting for APIs)
+            setFilteredSongs(local);
+
             const apiUrl = import.meta.env.VITE_API_URL || '/api';
             const [nctResults, itunesResults, localDbResults, nctPlaylists, zingResults] = await Promise.all([
                 searchNctSongs(rawQ, 15),
@@ -53,6 +57,9 @@ export function useSearchManager({ allSongs }) {
                     .then(r => r.ok ? r.json() : { songs: [] })
                     .catch(() => ({ songs: [] })),
             ]);
+
+            // Abort if user typed something else while APIs were loading
+            if (cancelled) return;
 
             // Local DB songs (admin-imported) go first
             const localDbTracks = (localDbResults.data || []).map(s => ({
@@ -117,12 +124,16 @@ export function useSearchManager({ allSongs }) {
                     mergedPlaylists.push(pl);
                 }
             }
-            setFilteredSongs([...local, ...externalTracks]);
-            setSearchArtistsResult(mergedArtists);
-            setSearchPlaylistsResult(mergedPlaylists);
+
+            // Merge API results with local (only if query hasn't changed)
+            if (!cancelled) {
+                setFilteredSongs([...local, ...externalTracks]);
+                setSearchArtistsResult(mergedArtists);
+                setSearchPlaylistsResult(mergedPlaylists);
+            }
         };
         const t = setTimeout(handle, 500);
-        return () => clearTimeout(t);
+        return () => { clearTimeout(t); cancelled = true; };
     }, [searchQuery]); // Only re-run when searchQuery changes, not allSongs
 
     // Persist search history
