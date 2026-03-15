@@ -37,12 +37,19 @@ export default function ProgressBar() {
   const lastRealRef = useRef(initTime);
   const lastMsRef = useRef(performance.now());
   const lastDisplayedTimeRef = useRef(initTime);
+  const lastDurRef = useRef(initDur); // prevent re-renders from tiny duration changes
+  const durLockedRef = useRef(false);  // lock duration once it stabilizes
   const mountedSongIdRef = useRef(currentSong?.id);
   const songChangeTsRef = useRef(0);
 
-  // ── Duration: sync from context ───────────────────────────────────────────
+  // ── Duration: sync from context (only if rAF hasn't found a better one) ────
   useEffect(() => {
-    if (ctxDuration > 0) setDur(ctxDuration);
+    if (ctxDuration > 0 && !durLockedRef.current) {
+      if (Math.abs(ctxDuration - lastDurRef.current) > 1) {
+        lastDurRef.current = ctxDuration;
+        setDur(ctxDuration);
+      }
+    }
   }, [ctxDuration]);
 
   // ── Reset when song changes ───────────────────────────────────────────────
@@ -55,6 +62,8 @@ export default function ProgressBar() {
     syntheticRef.current = 0;
     lastRealRef.current = 0;
     lastDisplayedTimeRef.current = 0;
+    lastDurRef.current = 0;
+    durLockedRef.current = false;
   }, [currentSong?.id]);
 
   // ── rAF polling loop (only re-creates on song change) ─────────────────────
@@ -135,7 +144,12 @@ export default function ProgressBar() {
           }
         }
 
-        if (d > 0 && !isStaleWindow) setDur(d);
+        // Only update duration if it changed significantly (>1s) to prevent flicker
+        if (d > 0 && !isStaleWindow && Math.abs(d - lastDurRef.current) > 1) {
+          lastDurRef.current = d;
+          durLockedRef.current = true; // lock once real player reports duration
+          setDur(d);
+        }
         if (sharedProgressRef) {
           sharedProgressRef.current.time = syntheticRef.current;
           if (d > 0) sharedProgressRef.current.dur = d;
