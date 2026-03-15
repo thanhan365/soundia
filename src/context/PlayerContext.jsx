@@ -46,7 +46,8 @@ export function PlayerProvider({ children }) {
     togglePlay, seekTo, changeVolume, toggleShuffle, toggleRepeat,
   } = playback;
 
-  const { favorites, toggleFavorite, isFavorite } = useFavorites({ user, showToast, allSongs, setAllSongs, currentSong, setCurrentSong });
+  const setFilteredSongsRef = useRef(null);
+  const { favorites, toggleFavorite, isFavorite } = useFavorites({ user, showToast, allSongs, setAllSongs, currentSong, setCurrentSong, setFilteredSongsRef });
 
   // Stream resolution cache — avoid re-resolving the same song
   const streamCacheRef = useRef(new Map());
@@ -56,7 +57,8 @@ export function PlayerProvider({ children }) {
   const { playlists, createPlaylist, deletePlaylist, addSongToPlaylist, removeSongFromPlaylist, renamePlaylist, reorderPlaylistSongs, setPlaylistCover } = usePlaylistManager({ user, allSongs, setAllSongs });
 
   const search = useSearchManager({ allSongs });
-  const { searchQuery, setSearchQuery, filteredSongs, searchArtistsResult, searchPlaylistsResult, searchHistory, addSearchHistory, clearSearchHistory, isSearching } = search;
+  const { searchQuery, setSearchQuery, filteredSongs, setFilteredSongs, searchArtistsResult, searchPlaylistsResult, searchHistory, addSearchHistory, clearSearchHistory, isSearching } = search;
+  setFilteredSongsRef.current = setFilteredSongs;
 
   // ── UI State ───────────────────────────────────────────────────────────────
   const [queueOpen, setQueueOpen] = useState(false);

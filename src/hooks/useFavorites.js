@@ -4,7 +4,7 @@ import api from "../utils/api";
 /**
  * useFavorites — manage favorite songs (synced with backend)
  */
-export function useFavorites({ user, showToast, allSongs, setAllSongs, currentSong, setCurrentSong }) {
+export function useFavorites({ user, showToast, allSongs, setAllSongs, currentSong, setCurrentSong, setFilteredSongsRef }) {
     const [favorites, setFavorites] = useState([]);
 
     // Load favorites when user changes
@@ -22,6 +22,7 @@ export function useFavorites({ user, showToast, allSongs, setAllSongs, currentSo
     const toggleFavorite = async (song) => {
         if (!user) { showToast("Vui lòng đăng nhập để sử dụng tính năng này", "error"); return; }
         let songToSave = { ...song };
+        const oldId = song.id;
         try {
             // Detect external song: either has isExternal flag, or id is not a pure integer
             const isExternal = song.isExternal || (typeof song.id === 'string' && !/^\d+$/.test(song.id));
@@ -35,10 +36,19 @@ export function useFavorites({ user, showToast, allSongs, setAllSongs, currentSo
                     audioUrl: song.audio || song.audioUrl || "YT_STREAM"
                 });
                 songToSave = res.data;
+                const newId = songToSave.id;
                 // Update currentSong's ID via React setState so isFavorite() matches
-                if (currentSong && (currentSong.id === song.id ||
+                if (currentSong && (currentSong.id === oldId ||
                     (currentSong.title === song.title && currentSong.artist === song.artist))) {
-                    setCurrentSong(prev => prev ? { ...prev, id: songToSave.id } : prev);
+                    setCurrentSong(prev => prev ? { ...prev, id: newId } : prev);
+                }
+                // Update filteredSongs so search results reflect the new DB ID
+                if (setFilteredSongsRef?.current) {
+                    setFilteredSongsRef.current(prev => prev.map(s =>
+                        (s.id === oldId || (s.title === song.title && s.artist === song.artist))
+                            ? { ...s, id: newId }
+                            : s
+                    ));
                 }
             }
             const songId = songToSave.id;
