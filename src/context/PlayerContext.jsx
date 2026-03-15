@@ -11,6 +11,7 @@ import { useFavorites } from "../hooks/useFavorites";
 import { useQueue } from "../hooks/useQueue";
 import { usePlaylistManager } from "../hooks/usePlaylistManager";
 import { useSearchManager } from "../hooks/useSearchManager";
+import { useMediaSession } from "../hooks/useMediaSession";
 
 const PlayerContext = createContext();
 
@@ -452,6 +453,9 @@ export function PlayerProvider({ children }) {
     const idx = list.findIndex((s) => s.id === currentSong.id);
     playSong(list[(idx - 1 + list.length) % list.length]);
   };
+
+  // ── Media Session API — lock screen controls + background playback ─────────
+  useMediaSession({ currentSong, isPlaying, togglePlay, playNext, playPrev, seekTo, audioRef, isYTModeRef, ytPlayerRef });
 
   const contextValue = useMemo(() => ({
         songList: filteredSongs, allSongs, currentSong, isPlaying,
