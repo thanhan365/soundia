@@ -35,14 +35,14 @@ const SongItem = memo(function SongItem({ song, index }) {
   const handleMouseEnter = useCallback(() => {
     if (isActive) return;
     prefetchTimer.current = setTimeout(() => {
-      if (song.title) resolveNctStream(song.title, song.artist).catch(() => {});
+      const dur = typeof song.duration === 'number' ? song.duration :
+          (typeof song.duration === 'string' && song.duration.includes(':')
+            ? parseInt(song.duration.split(':')[0]) * 60 + parseInt(song.duration.split(':')[1])
+            : (song.durationSec || 0));
+      if (song.title) resolveNctStream(song.title, song.artist, dur).catch(() => {});
       if (!song.nctKey) {
         const BACKEND = import.meta.env.VITE_API_URL || 'http://localhost:5066/api';
         const ytQuery = `${song.artist} - ${song.title} official audio`;
-        const dur = typeof song.duration === 'number' ? song.duration :
-          (typeof song.duration === 'string' && song.duration.includes(':')
-            ? parseInt(song.duration.split(':')[0]) * 60 + parseInt(song.duration.split(':')[1])
-            : 0);
         fetch(`${BACKEND}/stream/video-id?query=${encodeURIComponent(ytQuery)}${dur > 0 ? `&expectedDuration=${dur}` : ''}&songTitle=${encodeURIComponent(song.title || '')}&songArtist=${encodeURIComponent(song.artist || '')}`)
           .catch(() => {});
       }

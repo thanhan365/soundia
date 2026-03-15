@@ -74,15 +74,16 @@ export const getNctStreamUrl = async (nctKey) => {
  * Resolve NCT stream URL by song title + artist (for any source)
  * Searches NCT for a matching song and returns its stream URL
  */
-export const resolveNctStream = async (title, artist) => {
-  const cacheKey = `${(title||'').toLowerCase()}|${(artist||'').toLowerCase()}`;
+export const resolveNctStream = async (title, artist, durationSec = 0) => {
+  const cacheKey = `${(title||'').toLowerCase()}|${(artist||'').toLowerCase()}|${durationSec}`;
   // Check cache first
   if (_streamCache.has(cacheKey)) return _streamCache.get(cacheKey);
   // Check negative cache (avoid re-trying failed lookups repeatedly)
   if (_streamCache.has(`_neg_${cacheKey}`)) return null;
 
   try {
-    const res = await api.get(`/nct-resolve?title=${encodeURIComponent(title)}&artist=${encodeURIComponent(artist || "")}`);
+    const durParam = durationSec > 0 ? `&duration=${durationSec}` : '';
+    const res = await api.get(`/nct-resolve?title=${encodeURIComponent(title)}&artist=${encodeURIComponent(artist || "")}${durParam}`);
     const url = res.data?.success ? res.data.streamUrl : null;
     const nctKey = res.data?.nctKey || null;
     if (url) {

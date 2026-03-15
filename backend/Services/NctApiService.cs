@@ -124,9 +124,9 @@ namespace Soundia.Api.Services
         }
 
         // ─── Resolve Stream URL by Title+Artist (for any source) ─────────
-        public async Task<string> ResolveStreamByTitleAsync(string title, string artist)
+        public async Task<string> ResolveStreamByTitleAsync(string title, string artist, int durationSec = 0)
         {
-            var cacheKey = $"resolve_{title}_{artist}".ToLowerInvariant();
+            var cacheKey = $"resolve_{title}_{artist}_{durationSec}".ToLowerInvariant();
             if (TryGetCache<string>(cacheKey, out var cached)) return cached;
 
             try
@@ -200,6 +200,17 @@ namespace Soundia.Api.Services
                     }
 
                     int score = titleScore + artistScore;
+
+                    // Duration-based scoring: prefer closest to expected duration
+                    if (durationSec > 0 && s.Duration > 0)
+                    {
+                        var diff = Math.Abs(s.Duration - durationSec);
+                        if (diff <= 2) score += 3;       // exact/nearly exact match
+                        else if (diff <= 5) score += 2;  // close match
+                        else if (diff <= 15) score += 1; // moderate match
+                        // diff > 15 → no bonus (likely wrong version)
+                    }
+
                     if (score > bestScore)
                     {
                         bestScore = score;

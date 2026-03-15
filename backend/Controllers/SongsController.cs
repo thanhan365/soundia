@@ -1317,10 +1317,9 @@ namespace Soundia.Api.Controllers
         }
 
         [HttpGet("nct-resolve")]
-        public async Task<ActionResult> NctResolve([FromQuery] string title, [FromQuery] string artist)
+        public async Task<ActionResult> NctResolve([FromQuery] string title, [FromQuery] string artist, [FromQuery] int duration = 0)
         {
-            Console.WriteLine($"[NCT-Resolve] \"{title}\" by {artist}");
-
+            Console.WriteLine($"[NCT-Resolve] \"{title}\" by {artist} (duration={duration}s)");
 
             if (string.IsNullOrWhiteSpace(title))
                 return BadRequest(new { message = "title is required" });
@@ -1332,15 +1331,24 @@ namespace Soundia.Api.Controllers
                 var primaryArtist = artist?.Split(new[] { ',', '/', '&' }, StringSplitOptions.RemoveEmptyEntries)
                     .FirstOrDefault()?.Trim() ?? "";
                 var keyword = $"{title} {primaryArtist}".Trim();
-                var searchRes = await _nctApi.SearchSongsAsync(keyword, 1, 5);
+                var searchRes = await _nctApi.SearchSongsAsync(keyword, 1, 10);
                 if (searchRes.Count > 0)
                 {
-                    nctKey = searchRes[0].Key;
+                    // Pick the search result with closest duration (if available)
+                    if (duration > 0)
+                    {
+                        var best = searchRes.OrderBy(s => s.Duration > 0 ? Math.Abs(s.Duration - duration) : 9999).First();
+                        nctKey = best.Key;
+                    }
+                    else
+                    {
+                        nctKey = searchRes[0].Key;
+                    }
                 }
             }
             catch { }
 
-            var url = await _nctApi.ResolveStreamByTitleAsync(title, artist ?? "");
+            var url = await _nctApi.ResolveStreamByTitleAsync(title, artist ?? "", duration);
             if (url == null)
             {
                 Console.WriteLine($"[NCT-Resolve] No match");

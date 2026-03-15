@@ -171,7 +171,7 @@ export default function SuggestedPlaylistDetail() {
     const prefetchSong = (song) => {
         if (prefetchTimerRef.current) clearTimeout(prefetchTimerRef.current);
         prefetchTimerRef.current = setTimeout(() => {
-            if (song.title) resolveNctStream(song.title, song.artist).catch(() => {});
+            if (song.title) resolveNctStream(song.title, song.artist, song.durationSec || 0).catch(() => {});
             // Only pre-fetch YouTube if no nctKey
             if (!song.nctKey) {
                 const BACKEND = import.meta.env.VITE_API_URL || 'http://localhost:5066/api';

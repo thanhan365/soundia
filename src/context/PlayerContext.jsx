@@ -287,7 +287,7 @@ export function PlayerProvider({ children }) {
       try {
         const [keyResult, titleResult] = await Promise.all([
           song.nctKey ? withTimeout(getNctStreamUrl(song.nctKey), 2000) : Promise.resolve(null),
-          song.title ? withTimeout(resolveNctStream(song.title, song.artist), 2000) : Promise.resolve(null),
+          song.title ? withTimeout(resolveNctStream(song.title, song.artist, Math.round(expectedDur)), 2000) : Promise.resolve(null),
         ]);
 
         nctStream = keyResult || titleResult?.url || null;
