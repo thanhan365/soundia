@@ -127,7 +127,7 @@ const SongItem = memo(function SongItem({ song, index }) {
       </div>
 
       {/* Actions */}
-      <div className="w-auto sm:w-[100px] flex items-center justify-end gap-1 flex-shrink-0 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity duration-200">
+      <div className={`w-auto sm:w-[100px] flex items-center justify-end gap-1 flex-shrink-0 transition-opacity duration-200 ${liked ? "opacity-100" : "opacity-100 sm:opacity-0 sm:group-hover:opacity-100"}`}>
         <button onClick={handleQueue} className="p-1 sm:p-1.5 text-gray-500 hover:text-neon active:text-neon transition-colors rounded-full" title="Thêm vào hàng đợi">
           <HiQueueList className="text-[11px] sm:text-sm lg:text-base" />
         </button>
