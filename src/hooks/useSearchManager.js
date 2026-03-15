@@ -11,6 +11,7 @@ export function useSearchManager({ allSongs }) {
     const [filteredSongs, setFilteredSongs] = useState(allSongs);
     const [searchArtistsResult, setSearchArtistsResult] = useState([]);
     const [searchPlaylistsResult, setSearchPlaylistsResult] = useState([]);
+    const [isSearching, setIsSearching] = useState(false);
     const [searchHistory, setSearchHistory] = useState(() =>
         JSON.parse(localStorage.getItem("soundia_search_history")) || []
     );
@@ -35,15 +36,15 @@ export function useSearchManager({ allSongs }) {
                 setFilteredSongs(currentSongs);
                 setSearchArtistsResult([]);
                 setSearchPlaylistsResult([]);
+                setIsSearching(false);
                 return;
             }
+
+            setIsSearching(true);
 
             const local = currentSongs.filter(
                 (s) => s.title.toLowerCase().includes(q) || s.artist.toLowerCase().includes(q)
             );
-
-            // Show local results IMMEDIATELY (no waiting for APIs)
-            setFilteredSongs(local);
 
             const apiUrl = import.meta.env.VITE_API_URL || '/api';
             const [nctResults, itunesResults, localDbResults, nctPlaylists, zingResults] = await Promise.all([
@@ -130,6 +131,7 @@ export function useSearchManager({ allSongs }) {
                 setFilteredSongs([...local, ...externalTracks]);
                 setSearchArtistsResult(mergedArtists);
                 setSearchPlaylistsResult(mergedPlaylists);
+                setIsSearching(false);
             }
         };
         const t = setTimeout(handle, 500);
@@ -153,5 +155,6 @@ export function useSearchManager({ allSongs }) {
         filteredSongs, setFilteredSongs,
         searchArtistsResult, searchPlaylistsResult,
         searchHistory, addSearchHistory, clearSearchHistory,
+        isSearching,
     };
 }

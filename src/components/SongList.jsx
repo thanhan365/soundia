@@ -5,23 +5,20 @@ import SkeletonLoader from "./SkeletonLoader";
 import { HiMusicNote } from "react-icons/hi";
 
 export default function SongList() {
-  const { songList, searchQuery } = usePlayer();
-  const [loading, setLoading] = useState(true);
+  const { songList, searchQuery, isSearching } = usePlayer();
   const [displayCount, setDisplayCount] = useState(20);
   const observerTarget = useRef(null);
 
+  // Reset display count when song list changes
   useEffect(() => {
-    setLoading(true);
     setDisplayCount(20);
-    const timer = setTimeout(() => setLoading(false), 400);
-    return () => clearTimeout(timer);
   }, [songList]);
 
   // Intersection Observer for infinite scrolling
   useEffect(() => {
     const observer = new IntersectionObserver(
       (entries) => {
-        if (entries[0].isIntersecting && !loading) {
+        if (entries[0].isIntersecting) {
           setDisplayCount((prevCount) => Math.min(prevCount + 20, songList.length));
         }
       },
@@ -37,7 +34,7 @@ export default function SongList() {
         observer.unobserve(observerTarget.current);
       }
     };
-  }, [loading, songList.length]);
+  }, [songList.length]);
 
   const heading = searchQuery ? "Kết quả tìm kiếm" : "Thịnh hành";
 
@@ -47,12 +44,12 @@ export default function SongList() {
         <div>
           <h2 className="text-base sm:text-lg lg:text-xl font-bold text-white">{heading}</h2>
           <p className="text-[10px] sm:text-xs text-gray-500 mt-0.5 sm:mt-1">
-            {songList.length} bài {searchQuery ? "tìm thấy" : ""}
+            {isSearching ? "Đang tìm kiếm..." : `${songList.length} bài ${searchQuery ? "tìm thấy" : ""}`}
           </p>
         </div>
       </div>
 
-      {loading ? (
+      {isSearching ? (
         <SkeletonLoader />
       ) : songList.length > 0 ? (
         <>

@@ -56,7 +56,7 @@ export function PlayerProvider({ children }) {
   const { playlists, createPlaylist, deletePlaylist, addSongToPlaylist, removeSongFromPlaylist, renamePlaylist, reorderPlaylistSongs, setPlaylistCover } = usePlaylistManager({ user, allSongs, setAllSongs });
 
   const search = useSearchManager({ allSongs });
-  const { searchQuery, setSearchQuery, filteredSongs, searchArtistsResult, searchPlaylistsResult, searchHistory, addSearchHistory, clearSearchHistory } = search;
+  const { searchQuery, setSearchQuery, filteredSongs, searchArtistsResult, searchPlaylistsResult, searchHistory, addSearchHistory, clearSearchHistory, isSearching } = search;
 
   // ── UI State ───────────────────────────────────────────────────────────────
   const [queueOpen, setQueueOpen] = useState(false);
@@ -447,13 +447,14 @@ export function PlayerProvider({ children }) {
         handleYTReady, handleYTStateChange, handleYTTimeUpdate, handleYTError,
         playSong, togglePlay, playNext, playPrev, seekTo, changeVolume,
         searchArtistsResult, searchPlaylistsResult,
+        isSearching,
   }), [
     filteredSongs, allSongs, currentSong, isPlaying,
     duration, volume, searchQuery, error, shuffle, repeatMode,
     favorites, recentHistory, queueOpen, lyricsOpen,
     manualQueue, autoQueue, playlists,
     searchHistory, isLoadingStream, isYTMode,
-    sleepTimer, crossfade, searchArtistsResult, searchPlaylistsResult,
+    sleepTimer, crossfade, searchArtistsResult, searchPlaylistsResult, isSearching,
   ]); // eslint-disable-line
 
   return (
