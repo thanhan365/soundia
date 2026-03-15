@@ -104,8 +104,16 @@ export function usePlayback({ showToast }) {
         const onErr = () => handleAudioError("Không thể phát bài này.");
         const onPlay = () => { if (!isYTModeRef.current) setIsPlaying(true); };
         const onPause = () => { if (!isYTModeRef.current) setIsPlaying(false); };
+        const lastReportedDur = { value: 0 }; // track to avoid redundant setDuration on mobile
         const onTimeUpdate = () => {
-            if (!isYTModeRef.current && audio.duration && !isNaN(audio.duration)) setDuration(audio.duration);
+            if (!isYTModeRef.current && audio.duration && !isNaN(audio.duration) && isFinite(audio.duration)) {
+                // Only update context duration when it changes significantly (>1s)
+                // Mobile browsers report tiny float variations that cause re-renders
+                if (Math.abs(audio.duration - lastReportedDur.value) > 1) {
+                    lastReportedDur.value = audio.duration;
+                    setDuration(audio.duration);
+                }
+            }
             // Crossfade: fade out trước khi bài kết thúc
             const cf = crossfadeRef.current;
             if (cf > 0 && !isYTModeRef.current && audio.duration > 0 && !isNaN(audio.duration)) {
