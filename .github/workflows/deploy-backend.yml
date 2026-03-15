@@ -30,6 +30,14 @@ jobs:
           cp backend/scripts/*.cjs ./publish/scripts/
           cp backend/scripts/package.json ./publish/scripts/
 
+      - name: Setup Node.js for Zing scripts
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Zing scripts dependencies
+        run: cd ./publish/scripts && npm install --omit=dev --no-optional
+
       - name: Update appsettings.json
         env:
           DB_CONN: ${{ secrets.DB_CONNECTION_STRING }}
