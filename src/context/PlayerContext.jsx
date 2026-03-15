@@ -48,6 +48,8 @@ export function PlayerProvider({ children }) {
 
   const { favorites, toggleFavorite, isFavorite } = useFavorites({ user, showToast, allSongs, setAllSongs, currentSong, setCurrentSong });
 
+  // Stream resolution cache — avoid re-resolving the same song
+  const streamCacheRef = useRef(new Map());
   const queue = useQueue({ currentSong, allSongs });
   const { manualQueue, setManualQueue, autoQueue, setAutoQueue, autoQueueLoadedRef, fetchAutoQueue, addToQueue, getQueue, setPlayContext, reorderAutoQueue, removeFromAutoQueue } = queue;
 
@@ -244,27 +246,53 @@ export function PlayerProvider({ children }) {
 
       const BACKEND = import.meta.env.VITE_API_URL || 'http://localhost:5066/api';
 
-      // ═══ NCT ưu tiên, YouTube chỉ chạy khi không có nctKey ═══
+      // ═══ STREAM CACHE — instant replay for songs already resolved ═══
+      const cacheKey = `${song.title}_${song.artist}`.toLowerCase();
+      const cached = streamCacheRef.current.get(cacheKey);
+      if (cached) {
+        console.log(`⏱️ [playSong] Cache HIT → ${cached.type} in ${(performance.now() - _t0).toFixed(0)}ms`);
+        if (cached.type === 'nct') {
+          if (isYTMode) { ytPlayerRef.current?.pause(); setIsYTMode(false); isYTModeRef.current = false; }
+          audio.pause(); audio.removeAttribute('src'); audio.load();
+          const backendBase = BACKEND.replace('/api', '');
+          audio.src = cached.url.startsWith('/api/') ? `${backendBase}${cached.url}` : cached.url;
+          audio.preload = 'auto';
+          setIsLoadingStream(false); setIsPlaying(true);
+          audio.play().catch(() => {});
+          return;
+        } else if (cached.type === 'yt' && cached.videoId) {
+          setIsYTMode(true); isYTModeRef.current = true; ytPlayStartedRef.current = false;
+          audio.pause(); audio.src = "";
+          if (cached.duration > 0) setDuration(cached.duration);
+          setIsLoadingStream(false);
+          ytPlayerRef.current?.loadAndPlay(ytQuery, expectedDur, cached.videoId);
+          return;
+        }
+      }
+
+      // ═══ NCT + YouTube chạy ĐỒNG THỜI (không đợi NCT xong mới chạy YT) ═══
       let nctStream = null;
 
-      // YouTube pre-fetch chỉ khi không có nctKey (NCT có thể không có bài này)
-      const ytPromise = !song.nctKey ? withTimeout(
+      // YouTube luôn pre-fetch song song với NCT
+      const ytPromise = withTimeout(
         fetch(`${BACKEND}/stream/video-id?query=${encodeURIComponent(ytQuery)}${expectedDur > 0 ? `&expectedDuration=${Math.round(expectedDur)}` : ''}&songTitle=${encodeURIComponent(song.title || '')}&songArtist=${encodeURIComponent(song.artist || '')}`)
           .then(r => r.ok ? r.json() : null)
           .catch(() => null),
         4000
-      ) : Promise.resolve(null);
+      );
 
-      // Chỉ await NCT (3s max) — không chờ YouTube
+      // NCT: 2s timeout (giảm từ 3s → nhanh hơn trên mobile)
       try {
         const [keyResult, titleResult] = await Promise.all([
-          song.nctKey ? withTimeout(getNctStreamUrl(song.nctKey), 3000) : Promise.resolve(null),
-          song.title ? withTimeout(resolveNctStream(song.title, song.artist), 3000) : Promise.resolve(null),
+          song.nctKey ? withTimeout(getNctStreamUrl(song.nctKey), 2000) : Promise.resolve(null),
+          song.title ? withTimeout(resolveNctStream(song.title, song.artist), 2000) : Promise.resolve(null),
         ]);
 
         nctStream = keyResult || titleResult?.url || null;
         if (!song.nctKey && titleResult?.nctKey) song.nctKey = titleResult.nctKey;
       } catch {}
+      // Cache result
+      if (nctStream) streamCacheRef.current.set(cacheKey, { type: 'nct', url: nctStream });
       console.log(`⏱️ [playSong] Resolve done in ${(performance.now() - _t0).toFixed(0)}ms (NCT=${nctStream ? 'HIT' : 'MISS'})`);
 
       // Race condition guard: if user clicked another song while we were resolving, abort
@@ -301,6 +329,7 @@ export function PlayerProvider({ children }) {
         if (ytDur > 0) setDuration(ytDur);
         console.log(`⏱️ [playSong] YouTube → loadAndPlay at ${(performance.now() - _t0).toFixed(0)}ms`);
         if (ytResult?.videoId) {
+          streamCacheRef.current.set(cacheKey, { type: 'yt', videoId: ytResult.videoId, duration: ytDur });
           ytPlayerRef.current?.loadAndPlay(ytQuery, expectedDur, ytResult.videoId);
         } else {
           ytPlayerRef.current?.loadAndPlay(ytQuery, expectedDur, null, song.title, song.artist);
