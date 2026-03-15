@@ -62,7 +62,7 @@ export default function MoodGenreSection() {
             </h3>
 
             {/* Hover Play Button */}
-            <button className="absolute bottom-2 right-2 md:bottom-3 md:right-3 bg-white text-black p-2 md:p-2.5 rounded-full opacity-0 translate-y-2 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-300 shadow-lg">
+            <button className="absolute bottom-2 right-2 md:bottom-3 md:right-3 bg-neon text-[#0a0f1e] p-2 md:p-2.5 rounded-full opacity-0 translate-y-2 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-300 shadow-lg shadow-neon/30 hover:shadow-neon/50 hover:scale-110">
               <FaPlay className="fill-current w-3 h-3 md:w-3.5 md:h-3.5 ml-0.5" />
             </button>
 
