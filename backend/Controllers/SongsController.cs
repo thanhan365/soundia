@@ -1092,8 +1092,8 @@ namespace Soundia.Api.Controllers
             if (string.IsNullOrWhiteSpace(q)) return BadRequest(new { error = "Query is required" });
             try
             {
-                await EnsureNpmDeps();
                 var scriptDir = Path.Combine(Directory.GetCurrentDirectory(), "scripts");
+                await EnsureNpmDeps(scriptDir);
                 var scriptPath = Path.Combine(scriptDir, "zing-search.cjs");
                 if (!System.IO.File.Exists(scriptPath))
                     return StatusCode(500, new { error = "zing-search.cjs not found" });

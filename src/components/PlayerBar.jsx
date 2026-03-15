@@ -112,7 +112,7 @@ export default function PlayerBar() {
         backdrop-blur-[12px] border-t border-[#00ffc8]/10
         transition-all duration-500
         safe-bottom
-        ${isPlaying ? "shadow-[0_-10px_40px_rgba(0,0,0,0.6)]" : "shadow-[0_-10px_40px_rgba(0,0,0,0.5)]"}
+        ${currentSong ? "shadow-[0_-10px_40px_rgba(0,0,0,0.6)]" : "shadow-[0_-10px_40px_rgba(0,0,0,0.5)]"}
       `}
     >
       <div className="mx-auto">
