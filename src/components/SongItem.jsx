@@ -78,7 +78,7 @@ const SongItem = memo(function SongItem({ song, index }) {
       onMouseLeave={handleMouseLeave}
       className={`
         w-full flex items-center gap-3 lg:gap-4 px-3 py-2 sm:px-4 sm:py-2.5 rounded-lg
-        transition-colors duration-300 group cursor-pointer text-left relative
+        sm:transition-colors sm:duration-300 group cursor-pointer text-left relative
         ${isActive
           ? "bg-neon/10 border border-neon/20 shadow-[0_4px_12px_rgba(0,255,255,0.05)]"
           : "bg-transparent border border-white/0 hover:bg-white/[0.04] hover:border-white/5"
@@ -90,11 +90,11 @@ const SongItem = memo(function SongItem({ song, index }) {
         <img
           src={song.cover}
           alt={song.title}
-          className={`w-full h-full object-cover transition-all duration-300 ${isActive ? "shadow-neon-sm" : ""}`}
+          className={`w-full h-full object-cover sm:transition-all sm:duration-300 ${isActive ? "shadow-neon-sm" : ""}`}
           onError={handleImgError}
           loading="lazy"
         />
-        <div className={`absolute inset-0 transition-all duration-300 flex items-center justify-center rounded-lg ${isActiveAndPlaying ? "bg-black/40" : "bg-black/0 group-hover/cover:bg-black/30"}`}>
+        <div className={`absolute inset-0 sm:transition-all sm:duration-300 flex items-center justify-center rounded-lg ${isActiveAndPlaying ? "bg-black/40" : "bg-black/0 group-hover/cover:bg-black/30"}`}>
           <div onClick={(e) => { e.stopPropagation(); playSong(song); }} className="cursor-pointer w-full h-full flex items-center justify-center">
             {isActiveAndPlaying ? (
               <div className="flex items-center gap-[2px]">
