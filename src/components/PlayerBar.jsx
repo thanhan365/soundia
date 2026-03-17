@@ -1,10 +1,10 @@
-import { useState, useRef, useCallback, useEffect } from "react";
+import { useState, useRef, useCallback, useEffect, useContext } from "react";
 import { usePlayer } from "../context/PlayerContext";
 import { useToast } from "../context/ToastContext";
+import { AuthContext } from "../context/AuthContext";
 import { useClickOutside } from "../hooks/useClickOutside";
 import ProgressBar from "./ProgressBar";
 import VolumeControl from "./VolumeControl";
-import SongContextMenu from "./SongContextMenu";
 import { HiPlay, HiPause, HiBackward, HiForward } from "react-icons/hi2";
 import { HiMusicNote, HiHeart, HiDotsHorizontal, HiPlus, HiLink, HiShare, HiClock } from "react-icons/hi";
 import { IoShuffle, IoRepeat } from "react-icons/io5";
@@ -17,22 +17,22 @@ export default function PlayerBar() {
     shuffle, toggleShuffle, repeatMode, toggleRepeat,
     toggleFavorite, isFavorite, queueOpen, setQueueOpen,
     lyricsOpen, setLyricsOpen, addToQueue,
-    playlists, addSongToPlaylist, isLoadingStream,
+    playlists, addSongToPlaylist, createPlaylist, isLoadingStream,
     sleepTimer, setSleepTimer,
     crossfade, setCrossfade,
   } = usePlayer();
   const { showToast } = useToast();
-  const [menuOpen, setMenuOpen] = useState(false);
-  const [contextMenuPos, setContextMenuPos] = useState(null);
+  const { user } = useContext(AuthContext);
+  const [dotMenuOpen, setDotMenuOpen] = useState(false);
   const [sleepMenuOpen, setSleepMenuOpen] = useState(false);
   const [customMinutes, setCustomMinutes] = useState('');
-  const menuRef = useRef(null);
+  const dotMenuRef = useRef(null);
   const sleepMenuRef = useRef(null);
 
   const liked = currentSong ? isFavorite(currentSong.id) : false;
 
   // Use click outside hook để đóng menu
-  useClickOutside(menuRef, () => setMenuOpen(false));
+  useClickOutside(dotMenuRef, () => setDotMenuOpen(false));
   useClickOutside(sleepMenuRef, () => setSleepMenuOpen(false));
 
   const handleSleepTimer = useCallback((option) => {
@@ -59,13 +59,45 @@ export default function PlayerBar() {
     showToast(liked ? "Đã bỏ yêu thích" : "Đã thêm vào yêu thích", liked ? "info" : "success");
   }, [currentSong, liked, toggleFavorite, showToast]);
 
-  const handleOpenContextMenu = useCallback((e) => {
+  const handleAddToQueue = useCallback(() => {
     if (!currentSong) return;
-    e.stopPropagation();
-    // Trên mobile dùng bottom sheet, trên desktop dùng vị trí click
-    const rect = e.currentTarget.getBoundingClientRect();
-    setContextMenuPos({ x: rect.left, y: rect.top });
-  }, [currentSong]);
+    addToQueue(currentSong);
+    showToast(`Đã thêm "${currentSong.title}" vào hàng đợi`, 'success');
+    setDotMenuOpen(false);
+  }, [currentSong, addToQueue, showToast]);
+
+  const handleAddToPlaylist = useCallback(async (pl) => {
+    if (!user) { showToast('Vui lòng đăng nhập', 'error'); return; }
+    if (!currentSong) return;
+    try {
+      await addSongToPlaylist(pl.id, currentSong);
+      showToast(`Đã thêm vào "${pl.name}"`, 'success');
+    } catch { showToast('Lỗi khi thêm vào playlist', 'error'); }
+    setDotMenuOpen(false);
+  }, [currentSong, user, addSongToPlaylist, showToast]);
+
+  const handleCopyLink = useCallback(() => {
+    if (!currentSong) return;
+    navigator.clipboard.writeText(`${currentSong.title} - ${currentSong.artist}`);
+    showToast('Đã sao chép liên kết', 'success');
+    setDotMenuOpen(false);
+  }, [currentSong, showToast]);
+
+  const handleShare = useCallback(() => {
+    if (!currentSong) return;
+    if (navigator.share) {
+      navigator.share({ title: currentSong.title, text: `${currentSong.title} - ${currentSong.artist}`, url: window.location.href }).catch(() => {});
+    } else {
+      navigator.clipboard.writeText(`${currentSong.title} - ${currentSong.artist} | ${window.location.href}`);
+      showToast('Đã sao chép để chia sẻ', 'success');
+    }
+    setDotMenuOpen(false);
+  }, [currentSong, showToast]);
+
+  const handleLyrics = useCallback(() => {
+    setLyricsOpen(true);
+    setDotMenuOpen(false);
+  }, [setLyricsOpen]);
 
   // Update Dynamic Document Title
   useEffect(() => {
@@ -110,9 +142,21 @@ export default function PlayerBar() {
                 <button onClick={handleLike} className={`p-1.5 flex-shrink-0 rounded-full ${liked ? "text-red-500" : "text-gray-600"}`}>
                   <HiHeart className="text-[16px]" />
                 </button>
-                <button onClick={handleOpenContextMenu} className={`p-1.5 rounded-full flex-shrink-0 ${contextMenuPos ? "text-neon" : "text-gray-600"}`}>
-                  <HiDotsHorizontal className="text-[16px]" />
-                </button>
+                <div className="relative flex-shrink-0" ref={dotMenuRef}>
+                  <button onClick={() => currentSong && setDotMenuOpen(v => !v)} className={`p-1.5 rounded-full ${dotMenuOpen ? "text-neon" : "text-gray-600"}`}>
+                    <HiDotsHorizontal className="text-[16px]" />
+                  </button>
+                  {dotMenuOpen && currentSong && (
+                    <div className="absolute bottom-full right-0 mb-2 w-52 bg-[#1a1a2e] border border-white/10 rounded-xl shadow-2xl py-2 z-[200]">
+                      <button onClick={handleAddToQueue} className="w-full flex items-center gap-3 px-4 py-2.5 text-[13px] text-gray-300 hover:bg-white/5 hover:text-white text-left"><HiQueueList className="text-sm text-gray-500" />Thêm vào hàng chờ</button>
+                      {playlists.map(pl => <button key={pl.id} onClick={() => handleAddToPlaylist(pl)} className="w-full flex items-center gap-3 px-4 py-2.5 text-[13px] text-gray-300 hover:bg-white/5 hover:text-white text-left truncate"><HiPlus className="text-sm text-gray-500 flex-shrink-0" /><span className="truncate">Thêm vào "{pl.name}"</span></button>)}
+                      <div className="border-t border-white/5 my-1" />
+                      <button onClick={handleCopyLink} className="w-full flex items-center gap-3 px-4 py-2.5 text-[13px] text-gray-300 hover:bg-white/5 hover:text-white text-left"><HiLink className="text-sm text-gray-500" />Sao chép liên kết</button>
+                      <button onClick={handleShare} className="w-full flex items-center gap-3 px-4 py-2.5 text-[13px] text-gray-300 hover:bg-white/5 hover:text-white text-left"><HiShare className="text-sm text-gray-500" />Chia sẻ</button>
+                      <button onClick={handleLyrics} className="w-full flex items-center gap-3 px-4 py-2.5 text-[13px] text-gray-300 hover:bg-white/5 hover:text-white text-left"><HiMusicNote className="text-sm text-gray-500" />Xem lời bài hát</button>
+                    </div>
+                  )}
+                </div>
               </>
             ) : (
               <div className="flex items-center gap-2">
@@ -198,9 +242,21 @@ export default function PlayerBar() {
                   <button onClick={handleLike} className={`flex-shrink-0 p-1 rounded-full transition-all ${liked ? "text-red-500" : "text-gray-600 hover:text-gray-300"}`}>
                     <HiHeart className={`text-sm sm:text-base ${liked ? "drop-shadow-[0_0_4px_rgba(239,68,68,0.4)]" : ""}`} />
                   </button>
-                  <button onClick={handleOpenContextMenu} className={`p-1 rounded-full transition-all flex-shrink-0 ${contextMenuPos ? "text-neon bg-white/10" : "text-gray-600 hover:text-gray-300"}`}>
-                    <HiDotsHorizontal className="text-sm sm:text-base" />
-                  </button>
+                  <div className="relative flex-shrink-0" ref={dotMenuRef}>
+                    <button onClick={() => currentSong && setDotMenuOpen(v => !v)} className={`p-1 rounded-full transition-all ${dotMenuOpen ? "text-neon bg-white/10" : "text-gray-600 hover:text-gray-300"}`}>
+                      <HiDotsHorizontal className="text-sm sm:text-base" />
+                    </button>
+                    {dotMenuOpen && currentSong && (
+                      <div className="absolute bottom-full left-0 mb-2 w-56 bg-[#1a1a2e] border border-white/10 rounded-xl shadow-2xl py-2 z-[200]">
+                        <button onClick={handleAddToQueue} className="w-full flex items-center gap-3 px-4 py-2.5 text-[13px] text-gray-300 hover:bg-white/5 hover:text-white text-left"><HiQueueList className="text-sm text-gray-500" />Thêm vào hàng chờ</button>
+                        {playlists.map(pl => <button key={pl.id} onClick={() => handleAddToPlaylist(pl)} className="w-full flex items-center gap-3 px-4 py-2.5 text-[13px] text-gray-300 hover:bg-white/5 hover:text-white text-left"><HiPlus className="text-sm text-gray-500 flex-shrink-0" /><span className="truncate">Thêm vào "{pl.name}"</span></button>)}
+                        <div className="border-t border-white/5 my-1" />
+                        <button onClick={handleCopyLink} className="w-full flex items-center gap-3 px-4 py-2.5 text-[13px] text-gray-300 hover:bg-white/5 hover:text-white text-left"><HiLink className="text-sm text-gray-500" />Sao chép liên kết</button>
+                        <button onClick={handleShare} className="w-full flex items-center gap-3 px-4 py-2.5 text-[13px] text-gray-300 hover:bg-white/5 hover:text-white text-left"><HiShare className="text-sm text-gray-500" />Chia sẻ</button>
+                        <button onClick={handleLyrics} className="w-full flex items-center gap-3 px-4 py-2.5 text-[13px] text-gray-300 hover:bg-white/5 hover:text-white text-left"><HiMusicNote className="text-sm text-gray-500" />Xem lời bài hát</button>
+                      </div>
+                    )}
+                  </div>
                 </>
               ) : (
                 <div className="flex items-center gap-3">
@@ -321,14 +377,7 @@ export default function PlayerBar() {
           <div className="px-4 pb-1 lg:hidden"><ProgressBar /></div>
         </div>
 
-        {/* Context Menu — shared component đầy đủ tính năng */}
-        {contextMenuPos && currentSong && (
-          <SongContextMenu
-            song={currentSong}
-            position={contextMenuPos}
-            onClose={() => setContextMenuPos(null)}
-          />
-        )}
+
 
       </div>
     </div>
