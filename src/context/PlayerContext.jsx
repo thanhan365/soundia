@@ -338,12 +338,10 @@ export function PlayerProvider({ children }) {
           // ✅ NCT tìm được → phát HTML5 Audio (ổn định hơn)
           if (isYTMode) { ytPlayerRef.current?.pause(); setIsYTMode(false); isYTModeRef.current = false; }
           audio.pause();
-          audio.removeAttribute('src');
-          audio.load();
           const backendBase = (import.meta.env.VITE_API_URL || 'http://localhost:5066/api').replace('/api', '');
           const audioUrl = nctStream.startsWith('/api/') ? `${backendBase}${nctStream}` : nctStream;
-          audio.src = audioUrl;
           audio.preload = 'auto';
+          audio.src = audioUrl;
           setIsLoadingStream(false);
           setIsPlaying(true);
           console.log(`⏱️ [playSong] NCT → audio.play() at ${(performance.now() - _t0).toFixed(0)}ms`);
