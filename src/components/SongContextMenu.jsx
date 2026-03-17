@@ -47,6 +47,7 @@ export default function SongContextMenu({ song, position, onClose, extraItems = 
 
   const handleCreatePlaylist = async () => {
     if (!user) { showToast("Vui lòng đăng nhập để tạo playlist", "error"); onClose(); return; }
+    onClose(); // Đóng menu trước để tránh useClickOutside gây lỗi
     const name = prompt('Tên playlist mới:');
     if (!name?.trim()) return;
     try {
@@ -58,7 +59,6 @@ export default function SongContextMenu({ song, position, onClose, extraItems = 
         showToast("Không thể tạo playlist", "error");
       }
     } catch (e) { showToast("Lỗi khi tạo playlist", "error"); }
-    onClose();
   };
 
   const handleToggleFavorite = async () => {
