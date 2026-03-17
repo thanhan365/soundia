@@ -57,8 +57,9 @@ namespace Soundia.Api.Services
             catch { return new List<NctSong>(); }
         }
 
-        // ─── Get Stream URL (scrape SSR page) ─────────────────────────────
-        // Overload: use provided linkShare directly (skips detail API call → faster)
+        // ─── Get Stream URL ────────────────────────────────────────────────
+        // FAST PATH: Use detail API's streamURL array (direct CDN links, no scraping)
+        // FALLBACK: Scrape SSR page if detail API doesn't have streamURL
         public async Task<string> GetStreamUrlAsync(string songKey, string linkShare = null)
         {
             var cacheKey = $"stream_{songKey}";
@@ -66,32 +67,72 @@ namespace Soundia.Api.Services
 
             try
             {
-                // If no linkShare provided, fetch from detail API
-                if (string.IsNullOrEmpty(linkShare))
+                // ── FAST PATH: Get stream URL from detail API ──
+                // The detail API returns streamURL[] with direct CDN links
+                // This avoids scraping the full HTML page (~800ms saved)
+                try
                 {
                     var detailUrl = $"{GRAPH_API}/song/detail/{songKey}";
                     var detailJson = await _http.GetStringAsync(detailUrl);
                     using var detailDoc = JsonDocument.Parse(detailJson);
                     var detailData = detailDoc.RootElement.GetProperty("data");
-                    linkShare = detailData.TryGetProperty("linkShare", out var ls) ? ls.GetString() : null;
 
+                    // Check streamURL array first — this is the fast path
+                    if (detailData.TryGetProperty("streamURL", out var streams) &&
+                        streams.ValueKind == JsonValueKind.Array)
+                    {
+                        string url128 = null, url320 = null;
+                        foreach (var stream in streams.EnumerateArray())
+                        {
+                            // Only use active streams (status=1), skip VIP-only (status=0)
+                            var status = stream.TryGetProperty("status", out var st) ? st.GetInt32() : 0;
+                            if (status != 1) continue;
+
+                            var streamVal = stream.TryGetProperty("stream", out var su) ? su.GetString() : null;
+                            if (string.IsNullOrEmpty(streamVal)) continue;
+
+                            var type = stream.TryGetProperty("type", out var t) ? t.GetString() : "";
+                            if (type == "128") url128 = streamVal;
+                            else if (type == "320") url320 = streamVal;
+                        }
+
+                        // Prefer 128kbps (smaller, faster start), fallback to 320kbps
+                        var directUrl = url128 ?? url320;
+                        if (!string.IsNullOrEmpty(directUrl))
+                        {
+                            Console.WriteLine($"[NCT] Fast path: detail API stream for {songKey}");
+                            SetCache(cacheKey, directUrl, TimeSpan.FromMinutes(30));
+                            return directUrl;
+                        }
+                    }
+
+                    // Detail API had no streamURL — extract linkShare for scrape fallback
                     if (string.IsNullOrEmpty(linkShare))
                     {
-                        var name = detailData.TryGetProperty("name", out var nm) ? nm.GetString() : "";
-                        var artistName = detailData.TryGetProperty("artistName", out var an) ? an.GetString() : "";
-                        if (!string.IsNullOrEmpty(name))
+                        linkShare = detailData.TryGetProperty("linkShare", out var ls) ? ls.GetString() : null;
+                        if (string.IsNullOrEmpty(linkShare))
                         {
-                            var slug = Regex.Replace($"{name} {artistName}".ToLowerInvariant(), @"[^a-z0-9\s]", "")
-                                .Trim().Replace(" ", "-");
-                            slug = Regex.Replace(slug, @"-+", "-");
-                            linkShare = $"{WEB_BASE}/bai-hat/{slug}.{songKey}.html";
+                            var name = detailData.TryGetProperty("name", out var nm) ? nm.GetString() : "";
+                            var artistName = detailData.TryGetProperty("artistName", out var an) ? an.GetString() : "";
+                            if (!string.IsNullOrEmpty(name))
+                            {
+                                var slug = Regex.Replace($"{name} {artistName}".ToLowerInvariant(), @"[^a-z0-9\s]", "")
+                                    .Trim().Replace(" ", "-");
+                                slug = Regex.Replace(slug, @"-+", "-");
+                                linkShare = $"{WEB_BASE}/bai-hat/{slug}.{songKey}.html";
+                            }
                         }
                     }
                 }
+                catch
+                {
+                    // Detail API failed — continue to scrape fallback if we have linkShare
+                    Console.WriteLine($"[NCT] Detail API failed for {songKey}, falling back to scrape");
+                }
 
+                // ── FALLBACK: Scrape SSR page for stream URL in __NUXT_DATA__ ──
                 if (string.IsNullOrEmpty(linkShare)) return null;
 
-                // Scrape SSR page for stream URL in __NUXT_DATA__
                 var pageHtml = await _http.GetStringAsync(linkShare);
                 var nuxtMatch = Regex.Match(pageHtml, @"<script[^>]*id=""__NUXT_DATA__""[^>]*>([\s\S]*?)</script>");
                 if (!nuxtMatch.Success) return null;
