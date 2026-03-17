@@ -386,8 +386,13 @@ export function PlayerProvider({ children }) {
   useEffect(() => { playSongRef.current = playSong; }, [playSong]); // eslint-disable-line
 
   // ── playNext / playPrev ────────────────────────────────────────────────────
+  const playNextGuardRef = useRef(false);
   const playNext = useCallback(async () => {
     if (!currentSong) return;
+    // Guard against double invocation (crossfade + onEnd, or rapid calls)
+    if (playNextGuardRef.current) return;
+    playNextGuardRef.current = true;
+    setTimeout(() => { playNextGuardRef.current = false; }, 500);
     // Sleep timer 'end' mode — dừng phát thay vì chuyển bài
     if (sleepTimerRef.current === 'end') {
       if (audioRef.current) audioRef.current.pause();
@@ -411,7 +416,7 @@ export function PlayerProvider({ children }) {
       const next = shuffle
         ? autoFiltered[Math.floor(Math.random() * autoFiltered.length)]
         : autoFiltered[0];
-      setAutoQueue(prev => prev.filter(s => s.id !== next.id && s.id !== currentSong?.id));
+      setAutoQueue(prev => prev.filter(s => s.id !== next.id));
       playSong(next);
       return;
     }
