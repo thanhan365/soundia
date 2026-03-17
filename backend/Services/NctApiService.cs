@@ -247,10 +247,19 @@ namespace Soundia.Api.Services
                     if (durationSec > 0 && s.Duration > 0)
                     {
                         var diff = Math.Abs(s.Duration - durationSec);
-                        if (diff <= 2) score += 3;       // exact/nearly exact match
+                        if (diff == 0) score += 5;       // exact match (same version)
+                        else if (diff <= 2) score += 3;  // nearly exact match
                         else if (diff <= 5) score += 2;  // close match
-                        else if (diff <= 15) score += 1; // moderate match
+                        else if (diff <= 15) score += 1;  // moderate match
                         // diff > 15 → no bonus (likely wrong version)
+                    }
+
+                    // Artist count penalty: if input has fewer artists than NCT result,
+                    // it's likely a collab/feat version — penalize to prefer solo original
+                    var nctArtistCount = SplitArtists(s.ArtistName).Count;
+                    if (inputArtists.Count > 0 && nctArtistCount > inputArtists.Count)
+                    {
+                        score -= 2; // penalize extra artists (collab/feat versions)
                     }
 
                     if (score > bestScore)
@@ -262,7 +271,7 @@ namespace Soundia.Api.Services
 
                 if (bestMatch == null || bestScore < 7) return (null, null);
 
-                Console.WriteLine($"[NCT-Match] \"{bestMatch.Name}\" by {bestMatch.ArtistName} (score={bestScore})");
+                Console.WriteLine($"[NCT-Match] \"{bestMatch.Name}\" by {bestMatch.ArtistName} (dur={bestMatch.Duration}s, expected={durationSec}s, score={bestScore})");
 
                 // Pass linkShare directly to skip detail API call (faster!)
                 var streamUrl = await GetStreamUrlAsync(bestMatch.Key, bestMatch.LinkShare);
