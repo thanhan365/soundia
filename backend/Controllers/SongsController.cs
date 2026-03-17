@@ -210,6 +210,7 @@ namespace Soundia.Api.Controllers
                         artist = artistName,
                         cover = image,
                         key,
+                        nctKey = key,
                         audio = string.IsNullOrEmpty(streamUrl) ? "YT_STREAM" : $"/api/stream/proxy-audio?url={System.Net.WebUtility.UrlEncode(streamUrl)}",
                         source = "nct",
                         duration
