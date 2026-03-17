@@ -469,6 +469,44 @@ export function PlayerProvider({ children }) {
 
   useEffect(() => { playNextRef.current = playNext; }, [playNext]);
 
+  // ── Pre-resolve next song: cache stream URL trước khi bài hiện tại hết ──
+  // Khi tắt màn hình trên mobile, browser throttle network requests.
+  // Nếu URL đã có sẵn trong cache → playNext không cần mạng → phát liên tục.
+  useEffect(() => {
+    if (!currentSong || !isPlaying) return;
+    const timer = setTimeout(() => {
+      // Xác định bài tiếp theo (giống logic playNext)
+      let nextSong = null;
+      if (manualQueue.length > 0) {
+        nextSong = manualQueue[0];
+      } else {
+        const autoFiltered = autoQueue.filter(s => s.id !== currentSong?.id);
+        if (autoFiltered.length > 0) {
+          nextSong = shuffle ? autoFiltered[Math.floor(Math.random() * autoFiltered.length)] : autoFiltered[0];
+        } else {
+          const list = filteredSongs.length > 0 ? filteredSongs : allSongs;
+          const idx = list.findIndex(s => s.id === currentSong.id);
+          if (idx !== -1 && idx < list.length - 1) nextSong = list[idx + 1];
+          else if (repeatMode !== 'none' && list.length > 0) nextSong = list[0];
+        }
+      }
+      if (!nextSong) return;
+      
+      // Pre-resolve stream URL (kết quả tự cache trong nctService)
+      const nctKey = nextSong.nctKey || nextSong.key;
+      if (nctKey) {
+        getNctStreamUrl(nctKey).catch(() => {});
+      } else if (nextSong.title) {
+        const dur = typeof nextSong.duration === 'string'
+          ? nextSong.duration.split(':').reduce((a, b) => a * 60 + parseInt(b, 10), 0)
+          : (nextSong.duration || 0);
+        resolveNctStream(nextSong.title, nextSong.artist, Math.round(dur)).catch(() => {});
+      }
+      console.log(`🔮 [preResolve] Pre-resolving next: "${nextSong.title}"`);
+    }, 3000); // Đợi 3s sau khi bài bắt đầu phát để không ảnh hưởng loading
+    return () => clearTimeout(timer);
+  }, [currentSong?.id, isPlaying]); // eslint-disable-line
+
   const playPrev = () => {
     if (!currentSong) return;
     // Pop from history stack
