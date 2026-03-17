@@ -52,9 +52,19 @@ namespace Soundia.Api.Controllers
         {
             var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
 
-            var history = await _context.ListeningHistories
+            // Fetch recent history, deduplicate by song identity (keep latest per song)
+            var raw = await _context.ListeningHistories
+                .Include(lh => lh.Song)
                 .Where(lh => lh.UserId == userId)
                 .OrderByDescending(lh => lh.PlayedAt)
+                .Take(limit * 3) // fetch extra to account for duplicates
+                .ToListAsync();
+
+            var history = raw
+                .GroupBy(lh => lh.SongId != null
+                    ? lh.SongId.ToString()!
+                    : $"{lh.ExternalTitle}||{lh.ExternalArtist}")
+                .Select(g => g.First())
                 .Take(limit)
                 .Select(lh => new
                 {
@@ -63,10 +73,12 @@ namespace Soundia.Api.Controllers
                     SongTitle = lh.Song != null ? lh.Song.Title : lh.ExternalTitle,
                     SongArtist = lh.Song != null ? lh.Song.Artist : lh.ExternalArtist,
                     SongCover = lh.Song != null ? lh.Song.CoverUrl : lh.ExternalCoverUrl,
+                    AudioUrl = lh.Song != null ? lh.Song.AudioUrl : (string?)null,
+                    SongDuration = lh.Song != null ? lh.Song.Duration : (string?)null,
                     lh.PlayedAt,
                     lh.DurationListened
                 })
-                .ToListAsync();
+                .ToList();
 
             return Ok(history);
         }

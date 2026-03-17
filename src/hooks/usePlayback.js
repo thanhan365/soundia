@@ -267,7 +267,7 @@ export function usePlayback({ showToast }) {
         currentTime, setCurrentTime, duration, setDuration,
         volume, error, setError, shuffle, repeatMode,
         isLoadingStream, setIsLoadingStream, isYTMode, setIsYTMode,
-        recentHistory, crossfade, setCrossfade, crossfadeTriggeredRef,
+        recentHistory, setRecentHistory, crossfade, setCrossfade, crossfadeTriggeredRef,
         audioRef, ytPlayerRef, isYTModeRef, currentSongRef, playSongRef, playNextRef, ytPlayStartedRef, sleepTimerRef, sharedProgressRef,
         addToRecent, handleAudioError,
         handleYTReady, handleYTStateChange, handleYTTimeUpdate, handleYTError,

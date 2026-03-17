@@ -40,7 +40,7 @@ export function PlayerProvider({ children }) {
     currentTime, setCurrentTime, duration, setDuration,
     volume, error, setError, shuffle, repeatMode,
     isLoadingStream, setIsLoadingStream, isYTMode, setIsYTMode,
-    recentHistory, crossfade, setCrossfade, crossfadeTriggeredRef,
+    recentHistory, setRecentHistory, crossfade, setCrossfade, crossfadeTriggeredRef,
     audioRef, ytPlayerRef, isYTModeRef, currentSongRef, playSongRef, playNextRef, ytPlayStartedRef, sleepTimerRef, sharedProgressRef,
     addToRecent, handleAudioError,
     handleYTReady, handleYTStateChange, handleYTTimeUpdate, handleYTError,
@@ -60,6 +60,27 @@ export function PlayerProvider({ children }) {
   const search = useSearchManager({ allSongs });
   const { searchQuery, setSearchQuery, filteredSongs, setFilteredSongs, searchArtistsResult, searchPlaylistsResult, searchHistory, addSearchHistory, clearSearchHistory, isSearching } = search;
   setFilteredSongsRef.current = setFilteredSongs;
+
+  // ── Load listening history from backend when user logs in ──────────────────
+  useEffect(() => {
+    if (!user) {
+      setRecentHistory([]);
+      return;
+    }
+    api.get('/history?limit=30').then(res => {
+      const mapped = res.data.map(h => ({
+        id: h.songId || `ext_${h.songTitle}_${h.songArtist}`,
+        title: h.songTitle,
+        artist: h.songArtist,
+        cover: h.songCover,
+        coverUrl: h.songCover,
+        audio: h.audioUrl || 'YT_STREAM',
+        audioUrl: h.audioUrl || 'YT_STREAM',
+        duration: h.songDuration || null,
+      }));
+      setRecentHistory(mapped);
+    }).catch(() => {});
+  }, [user]); // eslint-disable-line
 
   // ── UI State ───────────────────────────────────────────────────────────────
   const [queueOpen, setQueueOpen] = useState(false);
@@ -194,7 +215,7 @@ export function PlayerProvider({ children }) {
     const isStoredNctUrl = song.audio && (
       song.audio.includes('stream.nct.vn') || song.audio.includes('a01.nct.vn') || song.audio.includes('proxy-audio')
     );
-    const hasStableDirectUrl = song.audio && song.audio !== 'YT_STREAM' && 
+    const hasStableDirectUrl = song.audio && song.audio !== 'YT_STREAM' &&
       !isItunesPreview && !isStoredNctUrl &&
       (song.audio.startsWith('http') || song.audio.startsWith('/api/'));
 
@@ -227,7 +248,7 @@ export function PlayerProvider({ children }) {
       setIsLoadingStream(false);
       setIsPlaying(true);
       console.log(`⏱️ [playSong] Direct URL → play in ${(performance.now() - _t0).toFixed(0)}ms`);
-      audio.play().catch(() => {});
+      audio.play().catch(() => { });
     } else {
       // Needs stream resolution — show loading, set song info immediately
       setIsLoadingStream(true);
@@ -261,7 +282,7 @@ export function PlayerProvider({ children }) {
           audio.src = cached.url.startsWith('/api/') ? `${backendBase}${cached.url}` : cached.url;
           audio.preload = 'auto';
           setIsLoadingStream(false); setIsPlaying(true);
-          audio.play().catch(() => {});
+          audio.play().catch(() => { });
           return;
         } else if (cached.type === 'yt' && cached.videoId) {
           setIsYTMode(true); isYTModeRef.current = true; ytPlayStartedRef.current = false;
@@ -302,7 +323,7 @@ export function PlayerProvider({ children }) {
 
           nctStream = keyResult || titleResult?.url || null;
           if (!song.nctKey && titleResult?.nctKey) song.nctKey = titleResult.nctKey;
-        } catch {}
+        } catch { }
         // Cache result
         if (nctStream) streamCacheRef.current.set(cacheKey, { type: 'nct', url: nctStream });
         console.log(`⏱️ [playSong] Resolve done in ${(performance.now() - _t0).toFixed(0)}ms (NCT=${nctStream ? 'HIT' : 'MISS'})`);
@@ -326,7 +347,7 @@ export function PlayerProvider({ children }) {
           setIsLoadingStream(false);
           setIsPlaying(true);
           console.log(`⏱️ [playSong] NCT → audio.play() at ${(performance.now() - _t0).toFixed(0)}ms`);
-          audio.play().catch(() => {});
+          audio.play().catch(() => { });
         } else {
           // ❌ NCT không có → dùng YouTube (đã chạy ngầm, chỉ cần await)
           const ytResult = await ytPromise;
@@ -355,7 +376,7 @@ export function PlayerProvider({ children }) {
           setIsYTMode(true); isYTModeRef.current = true; ytPlayStartedRef.current = false;
           audio.pause(); audio.src = "";
           ytPlayerRef.current?.loadAndPlay(ytQuery, expectedDur, null, song.title, song.artist);
-        } catch {}
+        } catch { }
       } finally {
         clearTimeout(safetyTimer);
       }
@@ -458,23 +479,23 @@ export function PlayerProvider({ children }) {
   useMediaSession({ currentSong, isPlaying, togglePlay, playNext, playPrev, seekTo, audioRef, isYTModeRef, ytPlayerRef });
 
   const contextValue = useMemo(() => ({
-        songList: filteredSongs, allSongs, currentSong, isPlaying,
-        duration, volume, searchQuery, setSearchQuery,
-        error, shuffle, toggleShuffle, repeatMode, toggleRepeat,
-        favorites, toggleFavorite, isFavorite,
-        recentHistory, queueOpen, setQueueOpen, lyricsOpen, setLyricsOpen,
-        manualQueue, addToQueue, getQueue, autoQueue, fetchAutoQueue, setPlayContext, reorderAutoQueue, removeFromAutoQueue,
-        playlists, createPlaylist, deletePlaylist, addSongToPlaylist, removeSongFromPlaylist,
-        renamePlaylist, reorderPlaylistSongs, setPlaylistCover,
-        searchHistory, addSearchHistory, clearSearchHistory,
-        isLoadingStream, isYTMode,
-        sleepTimer, setSleepTimer,
-        crossfade, setCrossfade,
-        ytPlayerRef, audioRef, isYTModeRef, sharedProgressRef,
-        handleYTReady, handleYTStateChange, handleYTTimeUpdate, handleYTError,
-        playSong, togglePlay, playNext, playPrev, seekTo, changeVolume,
-        searchArtistsResult, searchPlaylistsResult,
-        isSearching,
+    songList: filteredSongs, allSongs, currentSong, isPlaying,
+    duration, volume, searchQuery, setSearchQuery,
+    error, shuffle, toggleShuffle, repeatMode, toggleRepeat,
+    favorites, toggleFavorite, isFavorite,
+    recentHistory, queueOpen, setQueueOpen, lyricsOpen, setLyricsOpen,
+    manualQueue, addToQueue, getQueue, autoQueue, fetchAutoQueue, setPlayContext, reorderAutoQueue, removeFromAutoQueue,
+    playlists, createPlaylist, deletePlaylist, addSongToPlaylist, removeSongFromPlaylist,
+    renamePlaylist, reorderPlaylistSongs, setPlaylistCover,
+    searchHistory, addSearchHistory, clearSearchHistory,
+    isLoadingStream, isYTMode,
+    sleepTimer, setSleepTimer,
+    crossfade, setCrossfade,
+    ytPlayerRef, audioRef, isYTModeRef, sharedProgressRef,
+    handleYTReady, handleYTStateChange, handleYTTimeUpdate, handleYTError,
+    playSong, togglePlay, playNext, playPrev, seekTo, changeVolume,
+    searchArtistsResult, searchPlaylistsResult,
+    isSearching,
   }), [
     filteredSongs, allSongs, currentSong, isPlaying,
     duration, volume, searchQuery, error, shuffle, repeatMode,
