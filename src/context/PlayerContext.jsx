@@ -314,15 +314,18 @@ export function PlayerProvider({ children }) {
           4000
         );
 
-        // NCT: 4s timeout (tăng từ 2s vì Vercel proxy thêm ~500ms latency)
+        // NCT: try nctKey first (fastest: 1 API call), fallback to title resolve
         try {
-          const [keyResult, titleResult] = await Promise.all([
-            song.nctKey ? withTimeout(getNctStreamUrl(song.nctKey), 4000) : Promise.resolve(null),
-            song.title ? withTimeout(resolveNctStream(song.title, song.artist, Math.round(expectedDur)), 4000) : Promise.resolve(null),
-          ]);
-
-          nctStream = keyResult || titleResult?.url || null;
-          if (!song.nctKey && titleResult?.nctKey) song.nctKey = titleResult.nctKey;
+          // 1. Fast path: if song has nctKey, get stream directly (1 API call, ~300-500ms)
+          if (song.nctKey) {
+            nctStream = await withTimeout(getNctStreamUrl(song.nctKey), 4000);
+          }
+          // 2. Fallback: title+artist resolve if nctKey didn't work (2 API calls, ~1500ms)
+          if (!nctStream && song.title) {
+            const titleResult = await withTimeout(resolveNctStream(song.title, song.artist, Math.round(expectedDur)), 4000);
+            nctStream = titleResult?.url || null;
+            if (!song.nctKey && titleResult?.nctKey) song.nctKey = titleResult.nctKey;
+          }
         } catch { }
         // Cache result
         if (nctStream) streamCacheRef.current.set(cacheKey, { type: 'nct', url: nctStream });
