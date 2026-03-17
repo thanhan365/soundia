@@ -124,10 +124,11 @@ namespace Soundia.Api.Services
         }
 
         // ─── Resolve Stream URL by Title+Artist (for any source) ─────────
-        public async Task<string> ResolveStreamByTitleAsync(string title, string artist, int durationSec = 0)
+        // Returns (streamUrl, nctKey) — nctKey is the matched song's key on NCT
+        public async Task<(string? url, string? nctKey)> ResolveStreamByTitleAsync(string title, string artist, int durationSec = 0)
         {
             var cacheKey = $"resolve_{title}_{artist}_{durationSec}".ToLowerInvariant();
-            if (TryGetCache<string>(cacheKey, out var cached)) return cached;
+            if (TryGetCache<(string url, string nctKey)>(cacheKey, out var cached)) return cached;
 
             try
             {
@@ -136,7 +137,7 @@ namespace Soundia.Api.Services
                 var searchArtists = string.Join(" ", artistParts.Take(2));
                 var searchKeyword = $"{title} {searchArtists}".Trim();
                 var songs = await SearchSongsAsync(searchKeyword, 1, 10);
-                if (songs.Count == 0) return null;
+                if (songs.Count == 0) return (null, null);
 
                 // Normalize input title & artist list (remove diacritics + non-alphanumeric)
                 var normTitle = NormalizeForMatch(title ?? "");
@@ -218,17 +219,17 @@ namespace Soundia.Api.Services
                     }
                 }
 
-                if (bestMatch == null || bestScore < 7) return null;
+                if (bestMatch == null || bestScore < 7) return (null, null);
 
                 Console.WriteLine($"[NCT-Match] \"{bestMatch.Name}\" by {bestMatch.ArtistName} (score={bestScore})");
 
                 // Pass linkShare directly to skip detail API call (faster!)
                 var streamUrl = await GetStreamUrlAsync(bestMatch.Key, bestMatch.LinkShare);
                 if (streamUrl != null)
-                    SetCache(cacheKey, streamUrl, TimeSpan.FromMinutes(30));
-                return streamUrl;
+                    SetCache(cacheKey, (streamUrl, bestMatch.Key), TimeSpan.FromMinutes(30));
+                return (streamUrl, bestMatch.Key);
             }
-            catch { return null; }
+            catch { return (null, null); }
         }
 
         /// <summary>Split multi-artist string into individual artists</summary>

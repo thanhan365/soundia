@@ -1324,31 +1324,9 @@ namespace Soundia.Api.Controllers
             if (string.IsNullOrWhiteSpace(title))
                 return BadRequest(new { message = "title is required" });
             
-            // Search NCT to find matching song key + stream URL
-            string? nctKey = null;
-            try
-            {
-                var primaryArtist = artist?.Split(new[] { ',', '/', '&' }, StringSplitOptions.RemoveEmptyEntries)
-                    .FirstOrDefault()?.Trim() ?? "";
-                var keyword = $"{title} {primaryArtist}".Trim();
-                var searchRes = await _nctApi.SearchSongsAsync(keyword, 1, 10);
-                if (searchRes.Count > 0)
-                {
-                    // Pick the search result with closest duration (if available)
-                    if (duration > 0)
-                    {
-                        var best = searchRes.OrderBy(s => s.Duration > 0 ? Math.Abs(s.Duration - duration) : 9999).First();
-                        nctKey = best.Key;
-                    }
-                    else
-                    {
-                        nctKey = searchRes[0].Key;
-                    }
-                }
-            }
-            catch { }
-
-            var url = await _nctApi.ResolveStreamByTitleAsync(title, artist ?? "", duration);
+            // ResolveStreamByTitleAsync already searches NCT, matches best result, and gets stream URL
+            // No need for a separate search — that was causing redundant API calls (~800ms wasted)
+            var (url, nctKey) = await _nctApi.ResolveStreamByTitleAsync(title, artist ?? "", duration);
             if (url == null)
             {
                 Console.WriteLine($"[NCT-Resolve] No match");
