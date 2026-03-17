@@ -47,14 +47,16 @@ export default function SongContextMenu({ song, position, onClose, extraItems = 
 
   const handleCreatePlaylist = async () => {
     if (!user) { showToast("Vui lòng đăng nhập để tạo playlist", "error"); onClose(); return; }
-    onClose(); // Đóng menu trước để tránh useClickOutside gây lỗi
+    // Lưu song data trước, gọi prompt TRƯỚC onClose (portal unmount khi onClose)
+    const songData = { ...song };
     const name = prompt('Tên playlist mới:');
+    onClose();
     if (!name?.trim()) return;
     try {
       const newId = await createPlaylist(name.trim());
       if (newId) {
-        await addSongToPlaylist(newId, song);
-        showToast(`Đã tạo playlist "${name.trim()}" và thêm "${song.title}"`, "success");
+        await addSongToPlaylist(newId, songData);
+        showToast(`Đã tạo playlist "${name.trim()}" và thêm "${songData.title}"`, "success");
       } else {
         showToast("Không thể tạo playlist", "error");
       }
