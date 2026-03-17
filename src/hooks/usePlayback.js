@@ -168,14 +168,20 @@ export function usePlayback({ showToast }) {
         audio.addEventListener("pause", onPause);
         audio.addEventListener("timeupdate", onTimeUpdate);
 
-        // ── Mobile background resume: khi mở màn hình lại, resume audio nếu bị browser tạm dừng ──
+        // ── Mobile background resume: khi mở màn hình lại ──
         const onVisibilityChange = () => {
             if (document.visibilityState === 'visible') {
-                // Nếu app nghĩ đang phát nhưng audio thực sự bị pause → resume
                 const wasPlayingYT = isYTModeRef.current;
-                if (!wasPlayingYT && audio.paused && audio.src && audio.currentTime > 0) {
-                    // HTML5 Audio bị browser tạm dừng khi background → resume
-                    audio.play().catch(() => {});
+                if (!wasPlayingYT && audio.src) {
+                    if (audio.ended) {
+                        // Bài đã kết thúc khi tắt màn hình nhưng bài tiếp chưa phát
+                        // (do mobile throttle network requests khi background)
+                        console.log('📱 [mobile] Song ended while screen off → playNext');
+                        playNextRef.current?.();
+                    } else if (audio.paused && audio.currentTime > 0) {
+                        // Audio bị browser tạm dừng khi background → resume
+                        audio.play().catch(() => {});
+                    }
                 }
             }
         };
