@@ -66,7 +66,13 @@ export const searchNctPlaylists = async (keyword, limit = 6) => {
 export const getNctStreamUrl = async (nctKey) => {
   try {
     const res = await api.get(`/nct-stream/${nctKey}`);
-    return res.data?.success ? res.data.streamUrl : null;
+    if (!res.data?.success) return null;
+    // Return directUrl (NCT CDN) — audio element dùng referrerPolicy=no-referrer nên không bị 403
+    // Proxy URL làm fallback nếu direct fail
+    return {
+      directUrl: res.data.directUrl || null,
+      proxyUrl: res.data.streamUrl || null,
+    };
   } catch { return null; }
 };
 

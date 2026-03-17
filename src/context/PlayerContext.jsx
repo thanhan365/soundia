@@ -278,9 +278,21 @@ export function PlayerProvider({ children }) {
         console.log(`⏱️ [playSong] Cache HIT → ${cached.type} in ${(performance.now() - _t0).toFixed(0)}ms`);
         if (cached.type === 'nct') {
           if (isYTMode) { ytPlayerRef.current?.pause(); setIsYTMode(false); isYTModeRef.current = false; }
-          audio.pause(); audio.removeAttribute('src'); audio.load();
+          audio.pause();
           const backendBase = BACKEND.replace('/api', '');
-          audio.src = cached.url.startsWith('/api/') ? `${backendBase}${cached.url}` : cached.url;
+          const cachedUrl = cached.url.startsWith('/api/') ? `${backendBase}${cached.url}` : cached.url;
+          // Proxy fallback for cached direct URLs
+          if (cached.directUrl && cached.proxyUrl && cached.url === cached.directUrl) {
+            const onCacheError = () => {
+              audio.removeEventListener('error', onCacheError);
+              const proxyUrl = cached.proxyUrl.startsWith('/api/') ? `${backendBase}${cached.proxyUrl}` : cached.proxyUrl;
+              audio.src = proxyUrl;
+              audio.play().catch(() => {});
+              streamCacheRef.current.set(cacheKey, { ...cached, url: cached.proxyUrl, directUrl: null });
+            };
+            audio.addEventListener('error', onCacheError, { once: true });
+          }
+          audio.src = cachedUrl;
           audio.preload = 'auto';
           setIsLoadingStream(false); setIsPlaying(true);
           audio.play().catch(() => { });
@@ -318,10 +330,17 @@ export function PlayerProvider({ children }) {
         // NCT: try nctKey first (fastest: 1 API call), fallback to title resolve
         // song.key is fallback — nct-top returns key but not nctKey
         const songNctKey = song.nctKey || song.key;
+        let nctDirect = null; // NCT CDN URL (fast)
+        let nctProxy = null;  // Backend proxy URL (fallback)
         try {
           // 1. Fast path: if song has NCT key, get stream directly (1 API call, ~300-500ms)
           if (songNctKey) {
-            nctStream = await withTimeout(getNctStreamUrl(songNctKey), 4000);
+            const nctResult = await withTimeout(getNctStreamUrl(songNctKey), 4000);
+            if (nctResult) {
+              nctDirect = nctResult.directUrl;
+              nctProxy = nctResult.proxyUrl;
+              nctStream = nctDirect || nctProxy; // Prefer direct CDN
+            }
           }
           // 2. Fallback: title+artist resolve if key didn't work (2 API calls, ~1500ms)
           if (!nctStream && song.title) {
@@ -331,8 +350,8 @@ export function PlayerProvider({ children }) {
           }
         } catch { }
         // Cache result
-        if (nctStream) streamCacheRef.current.set(cacheKey, { type: 'nct', url: nctStream });
-        console.log(`⏱️ [playSong] Resolve done in ${(performance.now() - _t0).toFixed(0)}ms (NCT=${nctStream ? 'HIT' : 'MISS'})`);
+        if (nctStream) streamCacheRef.current.set(cacheKey, { type: 'nct', url: nctStream, directUrl: nctDirect, proxyUrl: nctProxy });
+        console.log(`⏱️ [playSong] Resolve done in ${(performance.now() - _t0).toFixed(0)}ms (NCT=${nctStream ? 'HIT' : 'MISS'}${nctDirect ? ' DIRECT' : ''})`);
 
         // Race condition guard: if user clicked another song while we were resolving, abort
         if (sessionId !== playSessionRef.current) {
@@ -341,16 +360,31 @@ export function PlayerProvider({ children }) {
         }
 
         if (nctStream) {
-          // ✅ NCT tìm được → phát HTML5 Audio (ổn định hơn)
+          // ✅ NCT tìm được → phát HTML5 Audio
           if (isYTMode) { ytPlayerRef.current?.pause(); setIsYTMode(false); isYTModeRef.current = false; }
           audio.pause();
           const backendBase = (import.meta.env.VITE_API_URL || 'http://localhost:5066/api').replace('/api', '');
           const audioUrl = nctStream.startsWith('/api/') ? `${backendBase}${nctStream}` : nctStream;
+          
+          // Set error handler cho proxy fallback (nếu direct CDN bị 403)
+          if (nctDirect && nctProxy && nctStream === nctDirect) {
+            const onDirectError = () => {
+              audio.removeEventListener('error', onDirectError);
+              console.log(`⚠️ [playSong] Direct CDN failed → fallback to proxy`);
+              const proxyAudioUrl = nctProxy.startsWith('/api/') ? `${backendBase}${nctProxy}` : nctProxy;
+              audio.src = proxyAudioUrl;
+              audio.play().catch(() => {});
+              // Update cache với proxy URL
+              streamCacheRef.current.set(cacheKey, { type: 'nct', url: nctProxy, directUrl: null, proxyUrl: nctProxy });
+            };
+            audio.addEventListener('error', onDirectError, { once: true });
+          }
+          
           audio.preload = 'auto';
           audio.src = audioUrl;
           setIsLoadingStream(false);
           setIsPlaying(true);
-          console.log(`⏱️ [playSong] NCT → audio.play() at ${(performance.now() - _t0).toFixed(0)}ms`);
+          console.log(`⏱️ [playSong] NCT → audio.play() at ${(performance.now() - _t0).toFixed(0)}ms (${nctStream === nctDirect ? 'DIRECT CDN' : 'PROXY'})`);
           audio.play().catch(() => { });
         } else {
           // ❌ NCT không có → dùng YouTube (đã chạy ngầm, chỉ cần await)
