@@ -161,12 +161,46 @@ export default function PlayerBar() {
                 </button>
               </div>
 
-              {/* Right: repeat + lyrics + queue */}
+              {/* Right: repeat + sleep timer + lyrics + queue */}
               <div className="flex items-center gap-0.5">
                 <button onClick={toggleRepeat} className={`p-1.5 flex-shrink-0 ${repeatMode !== "none" ? "text-neon" : "text-gray-600"}`}>
                   <IoRepeat className="text-[16px]" />
                   {repeatMode === "one" && <span className="absolute text-[7px] ml-0.5">1</span>}
                 </button>
+                {/* Sleep Timer (mobile) */}
+                <div className="relative" ref={sleepMenuRef}>
+                  <button onClick={() => setSleepMenuOpen(!sleepMenuOpen)} className={`p-1.5 flex-shrink-0 relative ${sleepTimer ? 'text-neon' : 'text-gray-600'}`}>
+                    <HiClock className="text-[16px]" />
+                    {sleepTimer && (
+                      <span className="absolute -top-1 -right-1 text-[7px] text-neon font-bold bg-dark rounded-full px-1">
+                        {sleepTimer === 'end' ? '⏹' : `${sleepTimer}`}
+                      </span>
+                    )}
+                  </button>
+                  {sleepMenuOpen && (
+                    <div className="absolute bottom-full right-0 mb-2 bg-[#1a1a2e] border border-white/10 rounded-xl shadow-2xl py-2 w-48 z-50">
+                      <p className="px-3 py-1.5 text-[10px] font-semibold text-gray-500 uppercase tracking-wider">⏱️ Hẹn giờ tắt nhạc</p>
+                      {[15, 30, 45, 60].map(m => (
+                        <button key={m} onClick={() => handleSleepTimer(m)} className={`w-full flex justify-between px-4 py-2.5 text-[13px] text-left hover:bg-white/5 ${sleepTimer === m ? 'text-neon' : 'text-gray-300'}`}>
+                          <span>{m} phút</span>
+                          {sleepTimer === m && <span className="text-neon">✓</span>}
+                        </button>
+                      ))}
+                      <button onClick={() => handleSleepTimer('end')} className={`w-full flex justify-between px-4 py-2.5 text-[13px] text-left hover:bg-white/5 ${sleepTimer === 'end' ? 'text-neon' : 'text-gray-300'}`}>
+                        <span>Hết bài này</span>
+                        {sleepTimer === 'end' && <span className="text-neon">✓</span>}
+                      </button>
+                      {sleepTimer && (
+                        <>
+                          <div className="mx-3 my-1 h-px bg-white/5" />
+                          <button onClick={() => handleSleepTimer('off')} className="w-full px-4 py-2.5 text-[13px] text-red-400 text-left hover:bg-white/5">
+                            Tắt hẹn giờ
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  )}
+                </div>
                 <button data-player-lyrics-btn onClick={() => setLyricsOpen(!lyricsOpen)} className={`p-1.5 text-[10px] font-bold flex-shrink-0 ${lyricsOpen ? "text-neon" : "text-gray-600"}`}>
                   LRC
                 </button>
