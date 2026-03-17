@@ -411,7 +411,7 @@ export function PlayerProvider({ children }) {
       const next = shuffle
         ? autoFiltered[Math.floor(Math.random() * autoFiltered.length)]
         : autoFiltered[0];
-      setAutoQueue(prev => prev.filter(s => s.id !== next.id));
+      setAutoQueue(prev => prev.filter(s => s.id !== next.id && s.id !== currentSong?.id));
       playSong(next);
       return;
     }
@@ -484,7 +484,7 @@ export function PlayerProvider({ children }) {
     error, shuffle, toggleShuffle, repeatMode, toggleRepeat,
     favorites, toggleFavorite, isFavorite,
     recentHistory, queueOpen, setQueueOpen, lyricsOpen, setLyricsOpen,
-    manualQueue, addToQueue, getQueue, autoQueue, fetchAutoQueue, setPlayContext, reorderAutoQueue, removeFromAutoQueue,
+    manualQueue, setManualQueue, addToQueue, getQueue, autoQueue, setAutoQueue, fetchAutoQueue, setPlayContext, reorderAutoQueue, removeFromAutoQueue,
     playlists, createPlaylist, deletePlaylist, addSongToPlaylist, removeSongFromPlaylist,
     renamePlaylist, reorderPlaylistSongs, setPlaylistCover,
     searchHistory, addSearchHistory, clearSearchHistory,

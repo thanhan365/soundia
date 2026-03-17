@@ -90,7 +90,7 @@ export default function TrendingDetailPage() {
 
   const handlePlayAll = () => {
     if (songs.length > 0) {
-      setPlayContext(songs);
+      setPlayContext(songs, songs[0].id);
       playSong(songs[0]);
     }
   };
@@ -98,7 +98,7 @@ export default function TrendingDetailPage() {
   const handleShufflePlay = () => {
     if (songs.length > 0) {
       const shuffled = [...songs].sort(() => Math.random() - 0.5);
-      setPlayContext(shuffled);
+      setPlayContext(shuffled, shuffled[0].id);
       playSong(shuffled[0]);
     }
   };
@@ -159,7 +159,7 @@ export default function TrendingDetailPage() {
               return (
                 <div
                   key={song.id}
-                  onClick={() => { if (isActive) togglePlay(); else { setPlayContext(songs); playSong(song); } }}
+                  onClick={() => { if (isActive) togglePlay(); else { setPlayContext(songs, song.id); playSong(song); } }}
                   className={`group flex items-center gap-3 px-3 md:px-5 py-2.5 md:py-3 rounded-xl cursor-pointer transition-all duration-200
                     ${isActive ? "bg-neon/10 border border-neon/20" : "hover:bg-white/[0.04] border border-transparent"}`}
                 >

@@ -5,9 +5,25 @@ import { HiPlay } from "react-icons/hi2";
 import { HiQueueList } from "react-icons/hi2";
 
 export default function QueuePanel() {
-  const { queueOpen, setQueueOpen, getQueue, currentSong, isPlaying, playSong, manualQueue, reorderAutoQueue, removeFromAutoQueue } = usePlayer();
+  const { queueOpen, setQueueOpen, getQueue, currentSong, isPlaying, playSong, manualQueue, autoQueue, reorderAutoQueue, removeFromAutoQueue, setManualQueue, setAutoQueue } = usePlayer();
   const queue = getQueue();
   const autoSongs = queue.filter((_, i) => i >= manualQueue.length);
+
+  // Play song from manual queue — remove it from queue first
+  const playFromManualQueue = (song, index) => {
+    setManualQueue(q => q.filter((_, i) => i !== index));
+    playSong(song);
+  };
+
+  // Play song from auto queue — remove it from queue first
+  const playFromAutoQueue = (song, index) => {
+    // Remove all songs before this one (consume in order) + the song itself
+    setAutoQueue(prev => {
+      const filtered = prev.filter(s => s.id !== currentSong?.id);
+      return filtered.filter((_, i) => i !== index);
+    });
+    playSong(song);
+  };
 
   // Drag state
   const [dragIdx, setDragIdx] = useState(null);
@@ -84,7 +100,7 @@ export default function QueuePanel() {
             </p>
             <div className="px-2 pb-2">
               {manualQueue.map((song, i) => (
-                <QueueItem key={`mq-${song.id}-${i}`} song={song} index={i + 1} onClick={() => playSong(song)} />
+                <QueueItem key={`mq-${song.id}-${i}`} song={song} index={i + 1} onClick={() => playFromManualQueue(song, i)} />
               ))}
             </div>
           </div>
@@ -113,7 +129,7 @@ export default function QueuePanel() {
                 <QueueItem
                   song={song}
                   index={i + 1}
-                  onClick={() => playSong(song)}
+                  onClick={() => playFromAutoQueue(song, i)}
                   onRemove={() => removeFromAutoQueue(i)}
                   draggable
                 />

@@ -73,12 +73,12 @@ export default function PlaylistPage() {
   const covers = songs.slice(0, 4).map((s) => s.cover);
 
   // Actions
-  const playAll = () => { if (songs.length) { setPlayContext(songs); playSong(songs[0]); showToast(`Đang phát "${playlist.name}"`, "success"); } };
+  const playAll = () => { if (songs.length) { setPlayContext(songs, songs[0].id); playSong(songs[0]); showToast(`Đang phát "${playlist.name}"`, "success"); } };
   const toggleAll = () => { isCurrentPl && isPlaying ? togglePlay() : playAll(); };
   const shufflePlay = () => {
     if (!songs.length) return;
     const shuffled = [...songs].sort(() => Math.random() - 0.5);
-    setPlayContext(songs);
+    setPlayContext(songs, shuffled[0].id);
     playSong(shuffled[0]);
     shuffled.slice(1).forEach(s => addToQueue(s));
     showToast(`Phát ngẫu nhiên "${playlist.name}"`, "success");

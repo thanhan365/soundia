@@ -90,7 +90,7 @@ export default function SuggestedPlaylistDetail() {
     const isCurrentSong = (song) => currentSong?.title === song.title && currentSong?.artist === song.artist;
     const isPlaylistPlaying = isPlaying && songs.some(s => isCurrentSong(s));
 
-    const handlePlayAll = () => { if (songs.length) { setPlayContext(songs); playSong(songs[0]); } };
+    const handlePlayAll = () => { if (songs.length) { setPlayContext(songs, songs[0].id); playSong(songs[0]); } };
     const handleToggleAll = () => { isPlaylistPlaying ? togglePlay() : handlePlayAll(); };
 
     // Autoplay when songs loaded
@@ -104,7 +104,7 @@ export default function SuggestedPlaylistDetail() {
     const handleShufflePlay = () => {
         if (!songs.length) return;
         const shuffled = [...songs].sort(() => Math.random() - 0.5);
-        setPlayContext(songs);
+        setPlayContext(songs, shuffled[0].id);
         playSong(shuffled[0]);
         shuffled.slice(1).forEach(s => addToQueue(s));
         showToast("Phát ngẫu nhiên", "success");

@@ -77,7 +77,7 @@ const YouTubeAudioPlayer = forwardRef(function YouTubeAudioPlayer(
   // Track last polled state to detect state changes (especially ENDED)
   const lastPolledStateRef = useRef(-99);
 
-   // ── Global Polling Interval for Time Update ──────────────────────────────
+  // ── Global Polling Interval for Time Update ──────────────────────────────
   // Tránh việc miss event onStateChange làm kẹt interval và xử lý background throttling
   useEffect(() => {
     const startInterval = () => {

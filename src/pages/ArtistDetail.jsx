@@ -172,7 +172,7 @@ export default function ArtistDetail() {
 
   const playAll = () => {
     if (topTracks.length > 0) {
-      setPlayContext(topTracks);
+      setPlayContext(topTracks, topTracks[0].id);
       playSong(topTracks[0]);
       showToast(`Đang phát bài hát của ${artist?.name}`, "success");
     }
@@ -185,7 +185,7 @@ export default function ArtistDetail() {
   const shufflePlay = () => {
     if (!topTracks.length) return;
     const shuffled = [...topTracks].sort(() => Math.random() - 0.5);
-    setPlayContext(topTracks);
+    setPlayContext(topTracks, shuffled[0].id);
     playSong(shuffled[0]);
     showToast(`Phát ngẫu nhiên ${artist?.name}`, "success");
   };
@@ -200,7 +200,7 @@ export default function ArtistDetail() {
     if (currentSong?.id === song.id) {
       togglePlay();
     } else {
-      setPlayContext(topTracks);
+      setPlayContext(topTracks, song.id);
       playSong(song);
     }
   };

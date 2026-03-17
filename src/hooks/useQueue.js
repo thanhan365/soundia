@@ -19,11 +19,13 @@ export function useQueue({ currentSong, allSongs }) {
     // Play context: songs from the page/playlist/album/artist the user is listening from
     const playContextRef = useRef([]);
 
-    const setPlayContext = useCallback((songs) => {
+    const setPlayContext = useCallback((songs, playingSongId) => {
         playContextRef.current = songs || [];
         // Immediately populate autoQueue with context songs
         if (songs && songs.length > 0) {
-            const filtered = songs.filter(s => s.id !== currentSong?.id);
+            // Use explicit playingSongId if provided (avoids stale currentSong closure)
+            const excludeId = playingSongId ?? currentSong?.id;
+            const filtered = songs.filter(s => s.id !== excludeId);
             setAutoQueue(filtered);
             lastRefillKeyRef.current = ""; // reset so refill can happen later
         }
