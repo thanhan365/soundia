@@ -143,7 +143,7 @@ namespace Soundia.Api.Controllers
                 try
                 {
 
-                    var searchUrl = $"https://graph.nhaccuatui.com/api/v1/search/song?keyword={Uri.EscapeDataString($"{cleanTrack} {cleanArtist}")}&pageindex=0&pagesize=5&correct=false";
+                    var searchUrl = $"https://graph.nhaccuatui.com/api/v1/search/song?keyword={Uri.EscapeDataString($"{cleanTrack} {cleanArtist}")}&pageindex=1&pagesize=5&correct=false";
                     var searchJson = await http.GetStringAsync(searchUrl);
                     var searchDoc = JsonSerializer.Deserialize<JsonElement>(searchJson);
                     
