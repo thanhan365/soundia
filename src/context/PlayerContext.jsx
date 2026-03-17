@@ -480,10 +480,10 @@ export function PlayerProvider({ children }) {
 
   // ── Pre-resolve next song: cache stream URL trước khi bài hiện tại hết ──
   // Khi tắt màn hình trên mobile, browser throttle network requests.
-  // Nếu URL đã có sẵn trong streamCacheRef → playNext/playSong cache HIT → phát liên tục.
+  // Nếu URL đã có sẵn trong cache → playNext không cần mạng → phát liên tục.
   useEffect(() => {
     if (!currentSong || !isPlaying) return;
-    const timer = setTimeout(async () => {
+    const timer = setTimeout(() => {
       // Xác định bài tiếp theo (giống logic playNext)
       let nextSong = null;
       if (manualQueue.length > 0) {
@@ -494,71 +494,25 @@ export function PlayerProvider({ children }) {
           nextSong = shuffle ? autoFiltered[Math.floor(Math.random() * autoFiltered.length)] : autoFiltered[0];
         } else {
           const list = filteredSongs.length > 0 ? filteredSongs : allSongs;
-          if (shuffle) {
-            if (list.length > 1) {
-              let idx;
-              do { idx = Math.floor(Math.random() * list.length); }
-              while (list[idx].id === currentSong.id);
-              nextSong = list[idx];
-            }
-          } else {
-            const idx = list.findIndex(s => s.id === currentSong.id);
-            if (idx !== -1 && idx < list.length - 1) nextSong = list[idx + 1];
-            else if (repeatMode !== 'none' && list.length > 0) nextSong = list[0];
-          }
+          const idx = list.findIndex(s => s.id === currentSong.id);
+          if (idx !== -1 && idx < list.length - 1) nextSong = list[idx + 1];
+          else if (repeatMode !== 'none' && list.length > 0) nextSong = list[0];
         }
       }
-      if (!nextSong || !nextSong.title) return;
-
-      // Check if already in streamCacheRef (the cache playSong actually checks)
-      const cacheKey = `${nextSong.title}_${nextSong.artist}`.toLowerCase();
-      if (streamCacheRef.current.has(cacheKey)) {
-        console.log(`🔮 [preResolve] Already cached: "${nextSong.title}"`);
-        return;
-      }
-
-      console.log(`🔮 [preResolve] Pre-resolving next: "${nextSong.title}"`);
-
-      try {
-        // 1. Try NCT
-        const nctKey = nextSong.nctKey || nextSong.key;
-        let nctStream = null;
-        if (nctKey) {
-          nctStream = await getNctStreamUrl(nctKey);
-        }
-        if (!nctStream && nextSong.title) {
-          const dur = typeof nextSong.duration === 'string'
-            ? nextSong.duration.split(':').reduce((a, b) => a * 60 + parseInt(b, 10), 0)
-            : (nextSong.duration || 0);
-          const titleResult = await resolveNctStream(nextSong.title, nextSong.artist, Math.round(dur));
-          nctStream = titleResult?.url || null;
-        }
-
-        if (nctStream) {
-          // ★ Cache vào streamCacheRef — đây là cache mà playSong check ★
-          streamCacheRef.current.set(cacheKey, { type: 'nct', url: nctStream });
-          console.log(`🔮 [preResolve] ✅ Cached: "${nextSong.title}" → NCT`);
-          return;
-        }
-
-        // 2. Fallback: pre-resolve YouTube video ID
-        const BACKEND = import.meta.env.VITE_API_URL || 'http://localhost:5066/api';
-        const ytQuery = `${nextSong.artist} - ${nextSong.title} official audio`;
-        const dur2 = typeof nextSong.duration === 'string'
+      if (!nextSong) return;
+      
+      // Pre-resolve stream URL (kết quả tự cache trong nctService)
+      const nctKey = nextSong.nctKey || nextSong.key;
+      if (nctKey) {
+        getNctStreamUrl(nctKey).catch(() => {});
+      } else if (nextSong.title) {
+        const dur = typeof nextSong.duration === 'string'
           ? nextSong.duration.split(':').reduce((a, b) => a * 60 + parseInt(b, 10), 0)
           : (nextSong.duration || 0);
-        const ytRes = await fetch(`${BACKEND}/stream/video-id?query=${encodeURIComponent(ytQuery)}${dur2 > 0 ? `&expectedDuration=${Math.round(dur2)}` : ''}&songTitle=${encodeURIComponent(nextSong.title || '')}&songArtist=${encodeURIComponent(nextSong.artist || '')}`);
-        if (ytRes.ok) {
-          const ytData = await ytRes.json();
-          if (ytData?.videoId) {
-            streamCacheRef.current.set(cacheKey, { type: 'yt', videoId: ytData.videoId, duration: ytData.matchedDuration || dur2 });
-            console.log(`🔮 [preResolve] ✅ Cached: "${nextSong.title}" → YT ${ytData.videoId}`);
-          }
-        }
-      } catch (err) {
-        console.log(`🔮 [preResolve] Failed for "${nextSong.title}":`, err);
+        resolveNctStream(nextSong.title, nextSong.artist, Math.round(dur)).catch(() => {});
       }
-    }, 5000); // Đợi 5s sau khi bài bắt đầu phát để không ảnh hưởng loading
+      console.log(`🔮 [preResolve] Pre-resolving next: "${nextSong.title}"`);
+    }, 3000); // Đợi 3s sau khi bài bắt đầu phát để không ảnh hưởng loading
     return () => clearTimeout(timer);
   }, [currentSong?.id, isPlaying]); // eslint-disable-line
 
