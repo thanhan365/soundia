@@ -6,6 +6,7 @@ import { useClickOutside } from "../hooks/useClickOutside";
 import ProgressBar from "./ProgressBar";
 import VolumeControl from "./VolumeControl";
 import SongContextMenu from "./SongContextMenu";
+import CreatePlaylistModal from "./CreatePlaylistModal";
 import { HiPlay, HiPause, HiBackward, HiForward } from "react-icons/hi2";
 import { HiMusicNote, HiHeart, HiDotsHorizontal, HiPlus, HiLink, HiShare, HiClock } from "react-icons/hi";
 import { IoShuffle, IoRepeat } from "react-icons/io5";
@@ -27,6 +28,8 @@ export default function PlayerBar() {
   const [contextMenuPos, setContextMenuPos] = useState(null);
   const [sleepMenuOpen, setSleepMenuOpen] = useState(false);
   const [customMinutes, setCustomMinutes] = useState('');
+  const [showCreatePlaylistModal, setShowCreatePlaylistModal] = useState(false);
+  const [createPlaylistSong, setCreatePlaylistSong] = useState(null);
   const menuRef = useRef(null);
   const sleepMenuRef = useRef(null);
 
@@ -328,6 +331,20 @@ export default function PlayerBar() {
             song={currentSong}
             position={contextMenuPos}
             onClose={() => setContextMenuPos(null)}
+            onRequestCreatePlaylist={(song) => {
+              setCreatePlaylistSong(song);
+              setShowCreatePlaylistModal(true);
+            }}
+          />,
+          document.body
+        )}
+
+        {/* CreatePlaylistModal — nằm ngoài SongContextMenu để không bị unmount */}
+        {createPortal(
+          <CreatePlaylistModal
+            isOpen={showCreatePlaylistModal}
+            onClose={() => { setShowCreatePlaylistModal(false); setCreatePlaylistSong(null); }}
+            songToAdd={createPlaylistSong}
           />,
           document.body
         )}

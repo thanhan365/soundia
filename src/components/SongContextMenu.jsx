@@ -6,7 +6,7 @@ import { useToast } from "../context/ToastContext";
 import { AuthContext } from "../context/AuthContext";
 import { useClickOutside } from "../hooks/useClickOutside";
 
-export default function SongContextMenu({ song, position, onClose, extraItems = [] }) {
+export default function SongContextMenu({ song, position, onClose, extraItems = [], onRequestCreatePlaylist }) {
   const ref = useRef(null);
   const { playlists, addSongToPlaylist, createPlaylist, setLyricsOpen, addToQueue, isFavorite, toggleFavorite } = usePlayer();
   const { showToast } = useToast();
@@ -47,20 +47,25 @@ export default function SongContextMenu({ song, position, onClose, extraItems = 
 
   const handleCreatePlaylist = async () => {
     if (!user) { showToast("Vui lòng đăng nhập để tạo playlist", "error"); onClose(); return; }
-    // Lưu song data trước, gọi prompt TRƯỚC onClose (portal unmount khi onClose)
-    const songData = { ...song };
+    // Nếu parent truyền callback (PlayerBar dùng portal), dùng modal của parent
+    if (onRequestCreatePlaylist) {
+      onClose();
+      onRequestCreatePlaylist(song);
+      return;
+    }
+    // Fallback: dùng prompt() cho các page khác (không qua portal)
     const name = prompt('Tên playlist mới:');
-    onClose();
     if (!name?.trim()) return;
     try {
       const newId = await createPlaylist(name.trim());
       if (newId) {
-        await addSongToPlaylist(newId, songData);
-        showToast(`Đã tạo playlist "${name.trim()}" và thêm "${songData.title}"`, "success");
+        await addSongToPlaylist(newId, song);
+        showToast(`Đã tạo playlist "${name.trim()}" và thêm "${song.title}"`, "success");
       } else {
         showToast("Không thể tạo playlist", "error");
       }
     } catch (e) { showToast("Lỗi khi tạo playlist", "error"); }
+    onClose();
   };
 
   const handleToggleFavorite = async () => {
