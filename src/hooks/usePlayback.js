@@ -55,6 +55,7 @@ export function usePlayback({ showToast }) {
     const volumeRef = useRef(volume);
     const sleepTimerRef = useRef(null); // synced from PlayerContext
     const sharedProgressRef = useRef({ time: 0, dur: 0 }); // shared between all ProgressBar instances
+    const pendingPlayNextRef = useRef(false); // flag: playNext cần retry khi mở màn hình
 
     // Sync refs
     useEffect(() => { currentSongRef.current = currentSong; }, [currentSong]);
@@ -118,7 +119,26 @@ export function usePlayback({ showToast }) {
             }
             if (repeatModeRef.current === "one") {
                 if (currentSongRef.current && playSongRef.current) playSongRef.current(currentSongRef.current, true);
-            } else { playNextRef.current?.(); }
+            } else {
+                // Đặt flag pending để retry khi mở màn hình nếu playNext fail
+                pendingPlayNextRef.current = true;
+                console.log('🔄 [onEnd] Calling playNext...');
+                playNextRef.current?.();
+                // Retry sau 3s nếu vẫn pending (mobile background có thể throttle)
+                setTimeout(() => {
+                    if (pendingPlayNextRef.current && audio.ended) {
+                        console.log('🔄 [onEnd] Retry playNext after 3s...');
+                        playNextRef.current?.();
+                    }
+                }, 3000);
+                // Retry lần 2 sau 8s
+                setTimeout(() => {
+                    if (pendingPlayNextRef.current && audio.ended) {
+                        console.log('🔄 [onEnd] Retry playNext after 8s...');
+                        playNextRef.current?.();
+                    }
+                }, 8000);
+            }
         };
         const onErr = () => handleAudioError("Không thể phát bài này.");
         const onPlay = () => { if (!isYTModeRef.current) setIsPlaying(true); };
@@ -172,10 +192,16 @@ export function usePlayback({ showToast }) {
         const onVisibilityChange = () => {
             if (document.visibilityState === 'visible') {
                 const wasPlayingYT = isYTModeRef.current;
+                // Check pending playNext flag (bài ended khi screen off nhưng playNext fail)
+                if (pendingPlayNextRef.current) {
+                    console.log('📱 [mobile] Screen on — pending playNext detected → retrying');
+                    pendingPlayNextRef.current = false;
+                    playNextRef.current?.();
+                    return;
+                }
                 if (!wasPlayingYT && audio.src) {
                     if (audio.ended) {
                         // Bài đã kết thúc khi tắt màn hình nhưng bài tiếp chưa phát
-                        // (do mobile throttle network requests khi background)
                         console.log('📱 [mobile] Song ended while screen off → playNext');
                         playNextRef.current?.();
                     } else if (audio.paused && audio.currentTime > 0) {
@@ -274,7 +300,7 @@ export function usePlayback({ showToast }) {
         volume, error, setError, shuffle, repeatMode,
         isLoadingStream, setIsLoadingStream, isYTMode, setIsYTMode,
         recentHistory, setRecentHistory, crossfade, setCrossfade, crossfadeTriggeredRef,
-        audioRef, ytPlayerRef, isYTModeRef, currentSongRef, playSongRef, playNextRef, ytPlayStartedRef, sleepTimerRef, sharedProgressRef,
+        audioRef, ytPlayerRef, isYTModeRef, currentSongRef, playSongRef, playNextRef, ytPlayStartedRef, sleepTimerRef, sharedProgressRef, pendingPlayNextRef,
         addToRecent, handleAudioError,
         handleYTReady, handleYTStateChange, handleYTTimeUpdate, handleYTError,
         togglePlay, seekTo, changeVolume, toggleShuffle, toggleRepeat,

@@ -41,7 +41,7 @@ export function PlayerProvider({ children }) {
     volume, error, setError, shuffle, repeatMode,
     isLoadingStream, setIsLoadingStream, isYTMode, setIsYTMode,
     recentHistory, setRecentHistory, crossfade, setCrossfade, crossfadeTriggeredRef,
-    audioRef, ytPlayerRef, isYTModeRef, currentSongRef, playSongRef, playNextRef, ytPlayStartedRef, sleepTimerRef, sharedProgressRef,
+    audioRef, ytPlayerRef, isYTModeRef, currentSongRef, playSongRef, playNextRef, ytPlayStartedRef, sleepTimerRef, sharedProgressRef, pendingPlayNextRef,
     addToRecent, handleAudioError,
     handleYTReady, handleYTStateChange, handleYTTimeUpdate, handleYTError,
     togglePlay, seekTo, changeVolume, toggleShuffle, toggleRepeat,
@@ -257,6 +257,7 @@ export function PlayerProvider({ children }) {
       audio.removeAttribute('src');
       audio.load();
       setCurrentSong(song);
+      pendingPlayNextRef.current = false; // Clear pending flag — playback initiated
       addToRecent(song);
       recordListening(song);
       setIsPlaying(false); // Don't show as playing until audio actually starts
