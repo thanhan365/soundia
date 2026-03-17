@@ -319,41 +319,7 @@ input[type="range"]::-moz-range-thumb {
   }
 }
 
-/* ── Equalizer Slider ─────────────────────────────────────── */
-.eq-slider {
-  -webkit-appearance: none;
-  appearance: none;
-  background: linear-gradient(to right, #ef4444 0%, #3a3a50 30%, #3a3a50 70%, #00ffcc 100%);
-  border-radius: 2px;
-  cursor: pointer;
-}
 
-.eq-slider::-webkit-slider-thumb {
-  -webkit-appearance: none;
-  appearance: none;
-  width: 14px;
-  height: 14px;
-  border-radius: 50%;
-  background: #00ffcc;
-  cursor: pointer;
-  box-shadow: 0 0 8px rgba(0, 255, 204, 0.5);
-  border: 2px solid #0a0e14;
-}
-
-.eq-slider::-moz-range-thumb {
-  width: 14px;
-  height: 14px;
-  border-radius: 50%;
-  background: #00ffcc;
-  cursor: pointer;
-  border: 2px solid #0a0e14;
-  box-shadow: 0 0 8px rgba(0, 255, 204, 0.5);
-}
-
-.eq-slider:disabled {
-  opacity: 0.3;
-  cursor: not-allowed;
-}
 
 /* ── Playing Indicator Bars ───────────────────────────────── */
 .playing-bars {
