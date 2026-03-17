@@ -4,12 +4,15 @@ import { HiQueueList } from "react-icons/hi2";
 import { usePlayer } from "../context/PlayerContext";
 import { useToast } from "../context/ToastContext";
 import { AuthContext } from "../context/AuthContext";
+import { useClickOutside } from "../hooks/useClickOutside";
 
 export default function SongContextMenu({ song, position, onClose, extraItems = [] }) {
   const ref = useRef(null);
   const { playlists, addSongToPlaylist, createPlaylist, setLyricsOpen, addToQueue, isFavorite, toggleFavorite } = usePlayer();
   const { showToast } = useToast();
   const { user } = useContext(AuthContext);
+
+  useClickOutside(ref, onClose);
 
   const handleCopyLink = () => {
     navigator.clipboard.writeText(`${song.title} - ${song.artist}`);
