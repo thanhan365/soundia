@@ -37,7 +37,7 @@ export default function PlayerBar() {
 
   // Use click outside hook để đóng menu
   useClickOutside(menuRef, () => setMenuOpen(false));
-  useClickOutside(sleepMenuRef, () => setSleepMenuOpen(false));
+  useClickOutside(sleepMenuRef, () => setSleepMenuOpen(false), '[data-sleep-portal]');
 
   const handleSleepTimer = useCallback((option) => {
     setSleepTimer(option);
@@ -179,6 +179,7 @@ export default function PlayerBar() {
                   </button>
                   {sleepMenuOpen && createPortal(
                     <div
+                      data-sleep-portal
                       className="fixed inset-0 z-[9999] sm:hidden"
                       onTouchStart={(e) => { if (e.target === e.currentTarget) { setSleepMenuOpen(false); } }}
                       onClick={(e) => { if (e.target === e.currentTarget) { setSleepMenuOpen(false); } }}
