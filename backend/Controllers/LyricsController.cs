@@ -127,11 +127,13 @@ namespace Soundia.Api.Controllers
                             return Ok(result);
                         }
                         
-                        // Chỉ có plain (LRC decrypt fail) → lưu fallback, tiếp tục tìm synced
+                        // Chỉ có plain (LRC decrypt fail) → trả plain ngay vì direct nctKey là nguồn đáng tin nhất
                         if (!string.IsNullOrWhiteSpace(plainLyrics) && plainLyrics.Length > 20)
                         {
-                            nctFallbackPlain = plainLyrics;
-
+                            Console.WriteLine($"[Lyrics] OK → nct (plain, synced decrypt failed)");
+                            var result = new { syncedLyrics = (string?)null, plainLyrics, source = "nct" };
+                            _cache[cacheKey] = (result, DateTime.UtcNow.AddHours(24));
+                            return Ok(result);
                         }
                     }
                 }
@@ -153,6 +155,14 @@ namespace Soundia.Api.Controllers
                     {
                         foreach (var song in songsArr.EnumerateArray())
                         {
+                            // Validate title match trước khi lấy lyrics — tránh trả lyrics bài sai
+                            var songName = song.TryGetProperty("name", out var sn) ? sn.GetString()?.Trim() ?? "" : "";
+                            var songNameClean = System.Text.RegularExpressions.Regex.Replace(songName,
+                                @"\s*[\(\[].*?[\)\]]\s*", "").Trim().ToLowerInvariant();
+                            if (!songNameClean.Contains(cleanTrack.ToLowerInvariant()) 
+                                && !cleanTrack.ToLowerInvariant().Contains(songNameClean))
+                                continue; // title không khớp → bỏ qua
+                            
                             if (song.TryGetProperty("key", out var songKey))
                             {
                                 var foundKey = songKey.GetString();
