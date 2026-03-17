@@ -315,12 +315,14 @@ export function PlayerProvider({ children }) {
         );
 
         // NCT: try nctKey first (fastest: 1 API call), fallback to title resolve
+        // song.key is fallback — nct-top returns key but not nctKey
+        const songNctKey = song.nctKey || song.key;
         try {
-          // 1. Fast path: if song has nctKey, get stream directly (1 API call, ~300-500ms)
-          if (song.nctKey) {
-            nctStream = await withTimeout(getNctStreamUrl(song.nctKey), 4000);
+          // 1. Fast path: if song has NCT key, get stream directly (1 API call, ~300-500ms)
+          if (songNctKey) {
+            nctStream = await withTimeout(getNctStreamUrl(songNctKey), 4000);
           }
-          // 2. Fallback: title+artist resolve if nctKey didn't work (2 API calls, ~1500ms)
+          // 2. Fallback: title+artist resolve if key didn't work (2 API calls, ~1500ms)
           if (!nctStream && song.title) {
             const titleResult = await withTimeout(resolveNctStream(song.title, song.artist, Math.round(expectedDur)), 4000);
             nctStream = titleResult?.url || null;
