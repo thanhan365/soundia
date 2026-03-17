@@ -210,7 +210,7 @@ export function PlayerProvider({ children }) {
     if (song.source === 'spotify' && !song.audio) song.audio = "YT_STREAM";
 
     // Detect stored NCT/iTunes URLs that need re-resolution
-    const isItunesPreview = song.source === 'itunes' && song.audio &&
+    const isItunesPreview = song.audio &&
       (song.audio.includes('audio.itunes.apple.com') || song.audio.includes('audio-ssl.itunes.apple.com'));
     const isStoredNctUrl = song.audio && (
       song.audio.includes('stream.nct.vn') || song.audio.includes('a01.nct.vn') || song.audio.includes('proxy-audio')
