@@ -229,6 +229,14 @@ export function PlayerProvider({ children }) {
     const expectedDur = parseDurationStr(song.duration);
     const ytQuery = `${song.artist} - ${song.title} official audio`;
 
+    // ═══ PRE-FETCH LYRICS: Start ngay khi click bài — chạy song song với stream resolve ═══
+    if (song.title && song.artist) {
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5066/api';
+      const nctKeyParam = (song.nctKey || song.key) ? `&nctKey=${encodeURIComponent(song.nctKey || song.key)}` : '';
+      fetch(`${apiUrl}/lyrics?track=${encodeURIComponent(song.title)}&artist=${encodeURIComponent(song.artist)}${nctKeyParam}`)
+        .catch(() => {}); // fire-and-forget, LyricsView sẽ dùng cache từ browser/service worker
+    }
+
     // ═══ FAST PLAYBACK: Set UI immediately, resolve stream in background ═══
     if (hasStableDirectUrl) {
       // Direct URL — play instantly
