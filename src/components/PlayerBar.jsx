@@ -177,28 +177,71 @@ export default function PlayerBar() {
                       </span>
                     )}
                   </button>
-                  {sleepMenuOpen && (
-                    <div className="absolute bottom-full right-0 mb-2 bg-[#1a1a2e] border border-white/10 rounded-xl shadow-2xl py-2 w-48 z-50">
-                      <p className="px-3 py-1.5 text-[10px] font-semibold text-gray-500 uppercase tracking-wider">⏱️ Hẹn giờ tắt nhạc</p>
-                      {[15, 30, 45, 60].map(m => (
-                        <button key={m} onClick={() => handleSleepTimer(m)} className={`w-full flex justify-between px-4 py-2.5 text-[13px] text-left hover:bg-white/5 ${sleepTimer === m ? 'text-neon' : 'text-gray-300'}`}>
-                          <span>{m} phút</span>
-                          {sleepTimer === m && <span className="text-neon">✓</span>}
-                        </button>
-                      ))}
-                      <button onClick={() => handleSleepTimer('end')} className={`w-full flex justify-between px-4 py-2.5 text-[13px] text-left hover:bg-white/5 ${sleepTimer === 'end' ? 'text-neon' : 'text-gray-300'}`}>
-                        <span>Hết bài này</span>
-                        {sleepTimer === 'end' && <span className="text-neon">✓</span>}
-                      </button>
-                      {sleepTimer && (
-                        <>
-                          <div className="mx-3 my-1 h-px bg-white/5" />
-                          <button onClick={() => handleSleepTimer('off')} className="w-full px-4 py-2.5 text-[13px] text-red-400 text-left hover:bg-white/5">
-                            Tắt hẹn giờ
+                  {sleepMenuOpen && createPortal(
+                    <div
+                      className="fixed inset-0 z-[9999]"
+                      onTouchStart={(e) => { if (e.target === e.currentTarget) { setSleepMenuOpen(false); } }}
+                      onClick={(e) => { if (e.target === e.currentTarget) { setSleepMenuOpen(false); } }}
+                    >
+                      <div
+                        className="absolute bottom-20 right-2 bg-[#1a1a2e] border border-white/10 rounded-xl shadow-2xl py-2 w-52"
+                        onTouchStart={(e) => e.stopPropagation()}
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <p className="px-3 py-1.5 text-[10px] font-semibold text-gray-500 uppercase tracking-wider">⏱️ Hẹn giờ tắt nhạc</p>
+                        {[15, 30, 45, 60].map(m => (
+                          <button
+                            key={m}
+                            onTouchEnd={(e) => { e.preventDefault(); handleSleepTimer(m); }}
+                            onClick={() => handleSleepTimer(m)}
+                            className={`w-full flex justify-between px-4 py-3 text-sm text-left active:bg-white/10 ${sleepTimer === m ? 'text-neon' : 'text-gray-300'}`}
+                          >
+                            <span>{m} phút</span>
+                            {sleepTimer === m && <span className="text-neon">✓</span>}
                           </button>
-                        </>
-                      )}
-                    </div>
+                        ))}
+                        <button
+                          onTouchEnd={(e) => { e.preventDefault(); handleSleepTimer('end'); }}
+                          onClick={() => handleSleepTimer('end')}
+                          className={`w-full flex justify-between px-4 py-3 text-sm text-left active:bg-white/10 ${sleepTimer === 'end' ? 'text-neon' : 'text-gray-300'}`}
+                        >
+                          <span>Hết bài này</span>
+                          {sleepTimer === 'end' && <span className="text-neon">✓</span>}
+                        </button>
+                        <div className="mx-3 my-1 h-px bg-white/5" />
+                        <div className="px-3 py-1.5 flex items-center gap-2">
+                          <input
+                            type="number"
+                            min="1"
+                            max="999"
+                            inputMode="numeric"
+                            placeholder="Tùy chọn (phút)"
+                            value={customMinutes}
+                            onChange={(e) => setCustomMinutes(e.target.value)}
+                            onKeyDown={(e) => { if (e.key === 'Enter' && customMinutes) { handleSleepTimer(Number(customMinutes)); setCustomMinutes(''); } }}
+                            className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-neon/50 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                          />
+                          <button
+                            onTouchEnd={(e) => { e.preventDefault(); if (customMinutes) { handleSleepTimer(Number(customMinutes)); setCustomMinutes(''); } }}
+                            onClick={() => { if (customMinutes) { handleSleepTimer(Number(customMinutes)); setCustomMinutes(''); } }}
+                            className="text-neon text-xs font-semibold px-2.5 py-2 rounded-lg active:bg-neon/10 transition-colors whitespace-nowrap"
+                          >OK</button>
+                        </div>
+                        {sleepTimer && (
+                          <>
+                            <div className="mx-3 my-1 h-px bg-white/5" />
+                            <button
+                              onTouchEnd={(e) => { e.preventDefault(); handleSleepTimer('off'); }}
+                              onClick={() => handleSleepTimer('off')}
+                              className="w-full px-4 py-3 text-sm text-red-400 text-left active:bg-white/10"
+                            >
+                              Tắt hẹn giờ
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    </div>,
+                    document.body
                   )}
                 </div>
                 <button data-player-lyrics-btn onClick={() => setLyricsOpen(!lyricsOpen)} className={`p-1.5 text-[10px] font-bold flex-shrink-0 ${lyricsOpen ? "text-neon" : "text-gray-600"}`}>
