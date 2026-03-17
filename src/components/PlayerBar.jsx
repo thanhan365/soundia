@@ -179,7 +179,7 @@ export default function PlayerBar() {
                   </button>
                   {sleepMenuOpen && createPortal(
                     <div
-                      className="fixed inset-0 z-[9999]"
+                      className="fixed inset-0 z-[9999] sm:hidden"
                       onTouchStart={(e) => { if (e.target === e.currentTarget) { setSleepMenuOpen(false); } }}
                       onClick={(e) => { if (e.target === e.currentTarget) { setSleepMenuOpen(false); } }}
                     >
