@@ -314,11 +314,11 @@ export function PlayerProvider({ children }) {
           4000
         );
 
-        // NCT: 2s timeout (giảm từ 3s → nhanh hơn trên mobile)
+        // NCT: 4s timeout (tăng từ 2s vì Vercel proxy thêm ~500ms latency)
         try {
           const [keyResult, titleResult] = await Promise.all([
-            song.nctKey ? withTimeout(getNctStreamUrl(song.nctKey), 2000) : Promise.resolve(null),
-            song.title ? withTimeout(resolveNctStream(song.title, song.artist, Math.round(expectedDur)), 2000) : Promise.resolve(null),
+            song.nctKey ? withTimeout(getNctStreamUrl(song.nctKey), 4000) : Promise.resolve(null),
+            song.title ? withTimeout(resolveNctStream(song.title, song.artist, Math.round(expectedDur)), 4000) : Promise.resolve(null),
           ]);
 
           nctStream = keyResult || titleResult?.url || null;
