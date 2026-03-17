@@ -1216,7 +1216,7 @@ namespace Soundia.Api.Controllers
             if (url == null) return NotFound(new { message = "Stream not found" });
             // Proxy through backend to bypass CORS
             var proxyUrl = $"/api/stream/proxy-audio?url={System.Net.WebUtility.UrlEncode(url)}";
-            return Ok(new { success = true, streamUrl = proxyUrl });
+            return Ok(new { success = true, streamUrl = proxyUrl, directUrl = url });
         }
 
         [HttpGet("nct-song-detail/{key}")]
@@ -1334,7 +1334,8 @@ namespace Soundia.Api.Controllers
             }
             var proxyUrl = $"/api/stream/proxy-audio?url={System.Net.WebUtility.UrlEncode(url)}";
             Console.WriteLine($"[NCT-Resolve] OK → nctKey={nctKey}");
-            return Ok(new { success = true, streamUrl = proxyUrl, nctKey = nctKey });
+            // Return both direct CDN URL and proxy URL — frontend tries direct first (faster, NCT allows CORS)
+            return Ok(new { success = true, streamUrl = proxyUrl, directUrl = url, nctKey = nctKey });
         }
 
         [HttpGet("nct-charts")]

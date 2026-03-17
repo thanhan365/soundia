@@ -66,7 +66,8 @@ export const searchNctPlaylists = async (keyword, limit = 6) => {
 export const getNctStreamUrl = async (nctKey) => {
   try {
     const res = await api.get(`/nct-stream/${nctKey}`);
-    return res.data?.success ? res.data.streamUrl : null;
+    // Prefer directUrl (NCT CDN, no proxy delay) over streamUrl (proxy)
+    return res.data?.success ? (res.data.directUrl || res.data.streamUrl) : null;
   } catch { return null; }
 };
 
@@ -84,7 +85,8 @@ export const resolveNctStream = async (title, artist, durationSec = 0) => {
   try {
     const durParam = durationSec > 0 ? `&duration=${durationSec}` : '';
     const res = await api.get(`/nct-resolve?title=${encodeURIComponent(title)}&artist=${encodeURIComponent(artist || "")}${durParam}`);
-    const url = res.data?.success ? res.data.streamUrl : null;
+    // Prefer directUrl (NCT CDN, no proxy delay) over streamUrl (proxy)
+    const url = res.data?.success ? (res.data.directUrl || res.data.streamUrl) : null;
     const nctKey = res.data?.nctKey || null;
     if (url) {
       if (_streamCache.size >= CACHE_MAX) _streamCache.clear();
