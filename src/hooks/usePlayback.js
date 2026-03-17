@@ -126,33 +126,22 @@ export function usePlayback({ showToast }) {
                 playNextRef.current?.();
                 // Retry sau 3s nếu vẫn pending (mobile background có thể throttle)
                 setTimeout(() => {
-                    if (pendingPlayNextRef.current) {
+                    if (pendingPlayNextRef.current && audio.ended) {
                         console.log('🔄 [onEnd] Retry playNext after 3s...');
                         playNextRef.current?.();
                     }
                 }, 3000);
                 // Retry lần 2 sau 8s
                 setTimeout(() => {
-                    if (pendingPlayNextRef.current) {
+                    if (pendingPlayNextRef.current && audio.ended) {
                         console.log('🔄 [onEnd] Retry playNext after 8s...');
                         playNextRef.current?.();
                     }
                 }, 8000);
-                // Retry lần 3 sau 15s (mobile throttle rất mạnh)
-                setTimeout(() => {
-                    if (pendingPlayNextRef.current) {
-                        console.log('🔄 [onEnd] Retry playNext after 15s...');
-                        playNextRef.current?.();
-                    }
-                }, 15000);
             }
         };
         const onErr = () => handleAudioError("Không thể phát bài này.");
-        const onPlay = () => {
-            if (!isYTModeRef.current) setIsPlaying(true);
-            // Clear pending flag — audio thực sự đang phát
-            pendingPlayNextRef.current = false;
-        };
+        const onPlay = () => { if (!isYTModeRef.current) setIsPlaying(true); };
         const onPause = () => { if (!isYTModeRef.current) setIsPlaying(false); };
         const lastReportedDur = { value: 0 }; // track to avoid redundant setDuration on mobile
         const onTimeUpdate = () => {
