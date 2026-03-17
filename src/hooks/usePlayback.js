@@ -30,7 +30,6 @@ export function usePlayback({ showToast }) {
         const audio = document.createElement('audio');
         audio.id = 'soundia-main-audio';
         audio.preload = 'auto';
-        audio.referrerPolicy = 'no-referrer'; // NCT CDN chặn Referer khác domain → bỏ Referer
         audio.setAttribute('playsinline', '');
         audio.setAttribute('webkit-playsinline', '');
         // Ẩn khỏi giao diện nhưng vẫn trong DOM
