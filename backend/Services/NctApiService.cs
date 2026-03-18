@@ -210,7 +210,13 @@ namespace Soundia.Api.Services
                     if (normName == normTitle || normNameBase == normTitle)
                         titleScore = 10;
                     else if (normTitle.Length >= 4 && normName.StartsWith(normTitle) && normName.Length <= normTitle.Length + 8)
+                    {
+                        // Check if extra suffix contains digits → likely sequel ("song 2", "song 3")
+                        var suffix = normName.Substring(normTitle.Length);
+                        if (suffix.Any(char.IsDigit))
+                            continue; // "Lưu Luyến Sau Chia Tay 2" ≠ "Lưu Luyến Sau Chia Tay"
                         titleScore = 7;
+                    }
                     else
                         continue;
 
