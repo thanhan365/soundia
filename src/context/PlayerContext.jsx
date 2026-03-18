@@ -361,8 +361,10 @@ export function PlayerProvider({ children }) {
         const songNctKey = song.nctKey || song.key;
         try {
           // 1. Fast path: if song has NCT key, get stream directly (1 API call, ~300-500ms)
+          console.log(`🔍 [playSong] songNctKey=${songNctKey} | song.nctKey=${song.nctKey} | song.key=${song.key} | song.source=${song.source}`);
           if (songNctKey) {
             nctStream = await withTimeout(getNctStreamUrl(songNctKey), 4000);
+            console.log(`🔍 [playSong] getNctStreamUrl result: ${nctStream ? 'GOT STREAM' : 'null'}`);
           }
           // 2. Fallback: title+artist resolve if key didn't work (2 API calls, ~1500ms)
           if (!nctStream && song.title) {
