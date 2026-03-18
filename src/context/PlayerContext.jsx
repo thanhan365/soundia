@@ -82,6 +82,39 @@ export function PlayerProvider({ children }) {
     }).catch(() => {});
   }, [user]); // eslint-disable-line
 
+  // ── Persist last-played song per user (localStorage) ───────────────────────
+  // Save currentSong whenever it changes
+  useEffect(() => {
+    if (!user || !currentSong) return;
+    try {
+      const key = `soundia_lastSong_${user.id}`;
+      localStorage.setItem(key, JSON.stringify({
+        id: currentSong.id,
+        title: currentSong.title,
+        artist: currentSong.artist,
+        cover: currentSong.cover || currentSong.coverUrl,
+        audio: currentSong.audio || currentSong.audioUrl || 'YT_STREAM',
+        duration: currentSong.duration,
+      }));
+    } catch (e) { /* quota exceeded or private mode */ }
+  }, [currentSong, user]);
+
+  // Restore last-played song on login (show in PlayerBar, paused)
+  useEffect(() => {
+    if (!user || currentSong) return; // don't overwrite if already playing
+    try {
+      const key = `soundia_lastSong_${user.id}`;
+      const saved = localStorage.getItem(key);
+      if (saved) {
+        const song = JSON.parse(saved);
+        if (song?.id && song?.title) {
+          setCurrentSong(song);
+          currentSongRef.current = song;
+        }
+      }
+    } catch (e) { /* corrupted data */ }
+  }, [user]); // eslint-disable-line
+
   // ── UI State ───────────────────────────────────────────────────────────────
   const [queueOpen, setQueueOpen] = useState(false);
   const [lyricsOpen, setLyricsOpen] = useState(false);
