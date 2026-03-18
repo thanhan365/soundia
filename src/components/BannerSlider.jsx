@@ -1,10 +1,12 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { usePlayer } from "../context/PlayerContext";
+import { useToast } from "../context/ToastContext";
 import { FaPlay, FaPause, FaHeart, FaChevronLeft, FaChevronRight, FaPlus } from "react-icons/fa";
 
 
 export default function BannerSlider() {
-  const { playSong, currentSong, isPlaying, togglePlay } = usePlayer();
+  const { playSong, currentSong, isPlaying, togglePlay, addToQueue } = usePlayer();
+  const { showToast } = useToast();
   const [songs, setSongs] = useState([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [paused, setPaused] = useState(false);
@@ -184,7 +186,10 @@ export default function BannerSlider() {
                         </>
                       )}
                     </button>
-                    <button className="flex items-center justify-center border border-white/20 bg-white/5 hover:bg-white/10 backdrop-blur-md text-white p-2 md:p-3 rounded-full transition-all duration-300 hover:scale-105 hover:border-pink-500/50 hover:shadow-[0_0_15px_rgba(236,72,153,0.3)]">
+                    <button
+                      onClick={(e) => { e.stopPropagation(); addToQueue(song); showToast(`Đã thêm "${song.title}" vào hàng chờ`, "success"); }}
+                      className="flex items-center justify-center border border-white/20 bg-white/5 hover:bg-white/10 backdrop-blur-md text-white p-2 md:p-3 rounded-full transition-all duration-300 hover:scale-105 hover:border-neon/50 hover:shadow-[0_0_15px_rgba(29,170,156,0.3)]"
+                    >
                       <FaPlus className="w-4 h-4 md:w-5 md:h-5" />
                     </button>
                   </div>
