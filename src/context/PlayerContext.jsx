@@ -245,7 +245,7 @@ export function PlayerProvider({ children }) {
     // Detect stored NCT/iTunes URLs that need re-resolution
     const isItunesPreview = song.audio &&
       (song.audio.includes('audio.itunes.apple.com') || song.audio.includes('audio-ssl.itunes.apple.com'));
-    const isStoredNctUrl = song.audio && (
+    const isStoredNctUrl = song.audio && !song.audio.startsWith('/api/') && (
       song.audio.includes('stream.nct.vn') || song.audio.includes('a01.nct.vn')
     );
     const hasStableDirectUrl = song.audio && song.audio !== 'YT_STREAM' &&
