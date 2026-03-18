@@ -10,7 +10,7 @@ import api from "../utils/api";
 const tabs = ["Yêu thích", "Playlist", "Album", "MV"];
 
 export default function LibraryPage() {
-  const { allSongs, playlists, deletePlaylist, playSong, favorites } = usePlayer();
+  const { allSongs, playlists, deletePlaylist, playSong, favorites, setPlayContext } = usePlayer();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("Yêu thích");
   const [localSearch, setLocalSearch] = useState("");
@@ -110,7 +110,7 @@ export default function LibraryPage() {
 
           <div className="grid grid-cols-1 lg:grid-cols-2 2xl:grid-cols-3 gap-1.5 sm:gap-2">
             {filteredLibSongs.map((song, i) => (
-              <SongItem key={song.id} song={song} index={i} />
+              <SongItem key={song.id} song={song} index={i} onPlay={(s) => { setPlayContext(filteredLibSongs, s.id); playSong(s); }} />
             ))}
           </div>
         </div>

@@ -18,7 +18,7 @@ function formatDuration(d) {
   const s = sec % 60;
   return `${m}:${s.toString().padStart(2, "0")}`;
 }
-const SongItem = memo(function SongItem({ song, index }) {
+const SongItem = memo(function SongItem({ song, index, onPlay }) {
   const { currentSong, isPlaying, playSong, toggleFavorite, isFavorite, addToQueue } = usePlayer();
   const { showToast } = useToast();
   const isActive = currentSong?.id === song.id;
@@ -73,7 +73,7 @@ const SongItem = memo(function SongItem({ song, index }) {
   // Memoize card to avoid re-renders from unrelated context changes
   const cardContent = useMemo(() => (
     <div
-      onClick={() => playSong(song)}
+      onClick={() => onPlay ? onPlay(song) : playSong(song)}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
       className={`
