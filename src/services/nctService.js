@@ -1,6 +1,4 @@
-import axios from "axios";
-
-const api = axios.create({ baseURL: "/api/songs" });
+import api from "../utils/api";
 
 // ── Frontend cache for resolved stream URLs (avoids re-querying on repeat plays) ──
 const _streamCache = new Map();
@@ -12,7 +10,7 @@ const CACHE_MAX = 100;
 export const searchNctSongs = async (keyword, limit = 20) => {
   if (!keyword) return { tracks: [] };
   try {
-    const res = await api.get(`/nct-search?keyword=${encodeURIComponent(keyword)}&limit=${limit}`);
+    const res = await api.get(`/songs/nct-search?keyword=${encodeURIComponent(keyword)}&limit=${limit}`);
     if (res.data?.success && res.data.data) {
       const tracks = res.data.data.map(s => ({
         id: s.id,
@@ -41,7 +39,7 @@ export const searchNctSongs = async (keyword, limit = 20) => {
 export const searchNctPlaylists = async (keyword, limit = 6) => {
   if (!keyword) return [];
   try {
-    const res = await api.get(`/nct-search-playlists?keyword=${encodeURIComponent(keyword)}&limit=${limit}`);
+    const res = await api.get(`/songs/nct-search-playlists?keyword=${encodeURIComponent(keyword)}&limit=${limit}`);
     if (res.data?.success && res.data.data) {
       return res.data.data.map(pl => ({
         id: pl.key,
@@ -65,7 +63,7 @@ export const searchNctPlaylists = async (keyword, limit = 6) => {
  */
 export const getNctStreamUrl = async (nctKey) => {
   try {
-    const res = await api.get(`/nct-stream/${nctKey}`);
+    const res = await api.get(`/songs/nct-stream/${nctKey}`);
     return res.data?.success ? res.data.streamUrl : null;
   } catch { return null; }
 };
@@ -83,7 +81,7 @@ export const resolveNctStream = async (title, artist, durationSec = 0) => {
 
   try {
     const durParam = durationSec > 0 ? `&duration=${durationSec}` : '';
-    const res = await api.get(`/nct-resolve?title=${encodeURIComponent(title)}&artist=${encodeURIComponent(artist || "")}${durParam}`);
+    const res = await api.get(`/songs/nct-resolve?title=${encodeURIComponent(title)}&artist=${encodeURIComponent(artist || "")}${durParam}`);
     const url = res.data?.success ? res.data.streamUrl : null;
     const nctKey = res.data?.nctKey || null;
     if (url) {
@@ -103,7 +101,7 @@ export const resolveNctStream = async (title, artist, durationSec = 0) => {
  */
 export const getNctCharts = async () => {
   try {
-    const res = await api.get("/nct-charts");
+    const res = await api.get("/songs/nct-charts");
     return res.data?.success ? res.data.data : [];
   } catch { return []; }
 };
@@ -113,7 +111,7 @@ export const getNctCharts = async () => {
  */
 export const getNctTop100 = async () => {
   try {
-    const res = await api.get("/nct-top100");
+    const res = await api.get("/songs/nct-top100");
     return res.data?.success ? res.data.data : [];
   } catch { return []; }
 };
