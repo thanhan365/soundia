@@ -342,7 +342,7 @@ export default function LyricsView() {
             <button
               onClick={togglePlay}
               disabled={!currentSong || isLoadingStream}
-              className={`w-11 h-11 rounded-full flex items-center justify-center transition-all ${currentSong ? "bg-white text-dark hover:scale-110" : "bg-white/10 text-gray-600 cursor-not-allowed"} ${isLoadingStream ? "opacity-70 cursor-wait hover:scale-100" : ""}`}
+              className={`w-11 h-11 rounded-full flex items-center justify-center transition-all ${currentSong ? "bg-neon text-dark hover:scale-110" : "bg-white/10 text-gray-600 cursor-not-allowed"} ${isLoadingStream ? "opacity-70 cursor-wait hover:scale-100" : ""}`}
             >
               {isLoadingStream ? (
                 <div className="w-5 h-5 rounded-full border-[2px] border-dark border-t-transparent animate-spin" />
