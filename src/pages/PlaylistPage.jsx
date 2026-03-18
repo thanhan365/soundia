@@ -240,7 +240,7 @@ export default function PlaylistPage() {
                   index={i}
                   isPlaying={isPlaying}
                   isCurrent={currentSong?.id === song.id}
-                  onPlay={playSong}
+                  onPlay={(s) => { setPlayContext(songs, s.id); playSong(s); }}
                   onRemove={removeSong}
                   onDragStart={onDragStart}
                   onDragOver={onDragOver}
