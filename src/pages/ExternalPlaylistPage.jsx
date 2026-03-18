@@ -13,7 +13,7 @@ export default function ExternalPlaylistPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const autoplay = searchParams.get("autoplay") === "true";
-  const { playSong, currentSong, isPlaying, togglePlay, playlists, allSongs, addToQueue, isFavorite, toggleFavorite, addSongToPlaylist, createPlaylist, setPlayContext } = usePlayer();
+  const { playSong, currentSong, isPlaying, togglePlay, playlists, allSongs, addToQueue, isFavorite, toggleFavorite, addSongToPlaylist, addSongsToPlaylistBatch, createPlaylist, setPlayContext } = usePlayer();
   const { showToast } = useToast();
   const { user } = useContext(AuthContext);
   const [songMenu, setSongMenu] = useState(null); // {id, x, y, song, sub}
@@ -52,9 +52,7 @@ export default function ExternalPlaylistPage() {
     if (!user) { showToast("Vui lòng đăng nhập để thêm vào playlist", "error"); setHeaderPlMenu(false); return; }
     if (!playlist?.tracks?.length) return;
     try {
-      for (const song of playlist.tracks) {
-        await addSongToPlaylist(playlistId, { ...song, isExternal: true });
-      }
+      await addSongsToPlaylistBatch(playlistId, playlist.tracks.map(s => ({ ...s, isExternal: true })));
       const pl = playlists.find(p => p.id === playlistId);
       showToast(`Đã thêm ${playlist.tracks.length} bài vào "${pl?.name || 'playlist'}"`, "success");
     } catch (e) { showToast("Lỗi khi thêm vào playlist", "error"); }

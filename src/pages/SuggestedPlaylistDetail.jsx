@@ -28,7 +28,7 @@ export default function SuggestedPlaylistDetail() {
     const [createModalSong, setCreateModalSong] = useState(null);
     const menuRef = useRef(null);
     const headerMenuRef = useRef(null);
-    const { playSong, currentSong, isPlaying, togglePlay, isFavorite, toggleFavorite, addToQueue, playlists, addSongToPlaylist, createPlaylist, setPlayContext } = usePlayer();
+    const { playSong, currentSong, isPlaying, togglePlay, isFavorite, toggleFavorite, addToQueue, playlists, addSongToPlaylist, addSongsToPlaylistBatch, createPlaylist, setPlayContext } = usePlayer();
     const { showToast } = useToast();
     const { user } = useContext(AuthContext);
 
@@ -144,7 +144,7 @@ export default function SuggestedPlaylistDetail() {
     const handleAddAllToPlaylist = async (plId) => {
         if (!user) { showToast("Vui lòng đăng nhập để thêm vào playlist", "error"); setHeaderPlMenu(false); return; }
         try {
-            for (const s of songs) await addSongToPlaylist(plId, { ...s, isExternal: true });
+            await addSongsToPlaylistBatch(plId, songs.map(s => ({ ...s, isExternal: true })));
             const pl = playlists.find(p => p.id === plId);
             showToast(`Đã thêm ${songs.length} bài vào "${pl?.name || 'playlist'}"`, "success");
         } catch (e) { showToast("Lỗi khi thêm vào playlist", "error"); }

@@ -92,6 +92,39 @@ namespace Soundia.Api.Controllers
             return Ok(new { message = "Song added to playlist." });
         }
 
+        [HttpPost("{id}/songs/batch")]
+        public async Task<ActionResult> AddSongsToPlaylistBatch(int id, [FromBody] BatchAddSongsRequest request)
+        {
+            var userId = GetCurrentUserId();
+
+            var playlist = await _context.Playlists
+                .Include(p => p.PlaylistSongs)
+                .FirstOrDefaultAsync(p => p.Id == id && p.UserId == userId);
+
+            if (playlist == null)
+                return NotFound("Playlist not found or access denied.");
+
+            var existingSongIds = new HashSet<int>(playlist.PlaylistSongs.Select(ps => ps.SongId));
+            var newSongs = new List<PlaylistSong>();
+
+            foreach (var songId in request.SongIds)
+            {
+                if (!existingSongIds.Contains(songId))
+                {
+                    newSongs.Add(new PlaylistSong { PlaylistId = id, SongId = songId });
+                    existingSongIds.Add(songId);
+                }
+            }
+
+            if (newSongs.Count > 0)
+            {
+                _context.PlaylistSongs.AddRange(newSongs);
+                await _context.SaveChangesAsync();
+            }
+
+            return Ok(new { message = $"{newSongs.Count} songs added to playlist.", added = newSongs.Count });
+        }
+
         [HttpDelete("{id}")]
         public async Task<ActionResult> DeletePlaylist(int id)
         {

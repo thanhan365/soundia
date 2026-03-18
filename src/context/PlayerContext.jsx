@@ -55,7 +55,7 @@ export function PlayerProvider({ children }) {
   const queue = useQueue({ currentSong, allSongs });
   const { manualQueue, setManualQueue, autoQueue, setAutoQueue, autoQueueLoadedRef, fetchAutoQueue, addToQueue, getQueue, setPlayContext, reorderAutoQueue, removeFromAutoQueue } = queue;
 
-  const { playlists, createPlaylist, deletePlaylist, addSongToPlaylist, removeSongFromPlaylist, renamePlaylist, reorderPlaylistSongs, setPlaylistCover } = usePlaylistManager({ user, allSongs, setAllSongs });
+  const { playlists, createPlaylist, deletePlaylist, addSongToPlaylist, addSongsToPlaylistBatch, removeSongFromPlaylist, renamePlaylist, reorderPlaylistSongs, setPlaylistCover } = usePlaylistManager({ user, allSongs, setAllSongs });
 
   const search = useSearchManager({ allSongs });
   const { searchQuery, setSearchQuery, filteredSongs, setFilteredSongs, searchArtistsResult, searchPlaylistsResult, searchHistory, addSearchHistory, clearSearchHistory, isSearching } = search;
@@ -540,7 +540,7 @@ export function PlayerProvider({ children }) {
     favorites, toggleFavorite, isFavorite,
     recentHistory, queueOpen, setQueueOpen, lyricsOpen, setLyricsOpen,
     manualQueue, setManualQueue, addToQueue, getQueue, autoQueue, setAutoQueue, fetchAutoQueue, setPlayContext, reorderAutoQueue, removeFromAutoQueue,
-    playlists, createPlaylist, deletePlaylist, addSongToPlaylist, removeSongFromPlaylist,
+    playlists, createPlaylist, deletePlaylist, addSongToPlaylist, addSongsToPlaylistBatch, removeSongFromPlaylist,
     renamePlaylist, reorderPlaylistSongs, setPlaylistCover,
     searchHistory, addSearchHistory, clearSearchHistory,
     isLoadingStream, isYTMode,
