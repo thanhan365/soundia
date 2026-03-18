@@ -87,11 +87,21 @@ export function useSearchManager({ allSongs }) {
 
             // Add localDB, NCT, iTunes, Zing — skip if already seen
             const allExternal = [...localDbTracks, ...(nctResults.tracks || []), ...(itunesResults.tracks || []), ...zingTracks];
+            const keyToTrackIndex = new Map(); // track dedup key → index in externalTracks
             for (const track of allExternal) {
                 const key = generateKey(track);
                 if (!seenKeys.has(key)) {
+                    keyToTrackIndex.set(key, externalTracks.length);
                     externalTracks.push(track);
                     seenKeys.add(key);
+                } else if (track.nctKey) {
+                    // Duplicate found but this NCT track has nctKey — merge it into the existing track
+                    // so playSong can use nct-stream/{key} fast path
+                    const idx = keyToTrackIndex.get(key);
+                    if (idx !== undefined && !externalTracks[idx].nctKey) {
+                        externalTracks[idx].nctKey = track.nctKey;
+                        if (track.durationSec) externalTracks[idx].durationSec = track.durationSec;
+                    }
                 }
             }
 
