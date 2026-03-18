@@ -70,8 +70,13 @@ export function usePlaylistManager({ user, allSongs, setAllSongs }) {
         }
     };
 
-    const removeSongFromPlaylist = (playlistId, songId) =>
-        setPlaylists((p) => p.map((pl) => pl.id === playlistId ? { ...pl, songs: pl.songs.filter((id) => String(id) !== String(songId)) } : pl));
+    const removeSongFromPlaylist = async (playlistId, songId) => {
+        // Optimistic update (UI trước, API sau)
+        setPlaylists((p) => p.map((pl) => String(pl.id) === String(playlistId) ? { ...pl, songs: pl.songs.filter((id) => String(id) !== String(songId)) } : pl));
+        try {
+            await api.delete(`/playlists/${playlistId}/songs/${songId}`);
+        } catch (e) { console.error("Failed to remove song from playlist:", e); }
+    };
 
     const renamePlaylist = (id, name) => {
         if (!name.trim()) return;

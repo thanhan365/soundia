@@ -112,5 +112,25 @@ namespace Soundia.Api.Controllers
 
             return Ok(new { message = "Playlist deleted." });
         }
+
+        [HttpDelete("{id}/songs/{songId}")]
+        public async Task<ActionResult> RemoveSongFromPlaylist(int id, int songId)
+        {
+            var userId = GetCurrentUserId();
+
+            var playlistSong = await _context.PlaylistSongs
+                .FirstOrDefaultAsync(ps => ps.PlaylistId == id && ps.SongId == songId
+                    && _context.Playlists.Any(p => p.Id == id && p.UserId == userId));
+
+            if (playlistSong == null)
+            {
+                return NotFound("Song not found in playlist or access denied.");
+            }
+
+            _context.PlaylistSongs.Remove(playlistSong);
+            await _context.SaveChangesAsync();
+
+            return Ok(new { message = "Song removed from playlist." });
+        }
     }
 }
