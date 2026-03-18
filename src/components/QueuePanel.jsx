@@ -25,9 +25,12 @@ export default function QueuePanel() {
     playSong(song);
   };
 
-  // Drag state
+  // Drag state - auto queue
   const [dragIdx, setDragIdx] = useState(null);
   const [dragOverIdx, setDragOverIdx] = useState(null);
+  // Drag state - manual queue
+  const [mqDragIdx, setMqDragIdx] = useState(null);
+  const [mqDragOverIdx, setMqDragOverIdx] = useState(null);
 
   const onDragStart = useCallback((e, i) => {
     setDragIdx(i);
@@ -92,19 +95,41 @@ export default function QueuePanel() {
           </div>
         )}
 
-        {/* Manual queue */}
-        {manualQueue.length > 0 && (
-          <div className="border-b border-white/5">
-            <p className="px-3 sm:px-4 pt-2 sm:pt-3 pb-1 text-[9px] sm:text-[10px] font-bold text-neon/70 uppercase tracking-widest">
-              Hàng đợi ({manualQueue.length})
-            </p>
-            <div className="px-2 pb-2">
-              {manualQueue.map((song, i) => (
-                <QueueItem key={`mq-${song.id}-${i}`} song={song} index={i + 1} onClick={() => playFromManualQueue(song, i)} />
-              ))}
+        {/* Manual queue — with drag reorder + remove */}
+        {manualQueue.length > 0 && (() => {
+          const onMqDragStart = (e, i) => { setMqDragIdx(i); e.dataTransfer.effectAllowed = "move"; };
+          const onMqDragOver = (e, i) => { e.preventDefault(); e.dataTransfer.dropEffect = "move"; setMqDragOverIdx(i); };
+          const onMqDrop = (e, dropI) => {
+            e.preventDefault();
+            if (mqDragIdx !== null && mqDragIdx !== dropI) {
+              setManualQueue(q => { const n = [...q]; const [item] = n.splice(mqDragIdx, 1); n.splice(dropI, 0, item); return n; });
+            }
+            setMqDragIdx(null); setMqDragOverIdx(null);
+          };
+          const onMqDragEnd = () => { setMqDragIdx(null); setMqDragOverIdx(null); };
+          return (
+            <div className="border-b border-white/5">
+              <p className="px-3 sm:px-4 pt-2 sm:pt-3 pb-1 text-[9px] sm:text-[10px] font-bold text-neon/70 uppercase tracking-widest">
+                Hàng đợi ({manualQueue.length})
+              </p>
+              <div className="px-2 pb-2">
+                {manualQueue.map((song, i) => (
+                  <div
+                    key={`mq-${song.id}-${i}`}
+                    draggable
+                    onDragStart={(e) => onMqDragStart(e, i)}
+                    onDragOver={(e) => onMqDragOver(e, i)}
+                    onDrop={(e) => onMqDrop(e, i)}
+                    onDragEnd={onMqDragEnd}
+                    className={`transition-all duration-150 rounded-lg ${mqDragIdx === i ? "opacity-40 scale-95" : ""} ${mqDragOverIdx === i && mqDragIdx !== i ? "border-t-2 border-neon/50" : "border-t-2 border-transparent"}`}
+                  >
+                    <QueueItem song={song} index={i + 1} onClick={() => playFromManualQueue(song, i)} onRemove={() => setManualQueue(q => q.filter((_, j) => j !== i))} draggable />
+                  </div>
+                ))}
+              </div>
             </div>
-          </div>
-        )}
+          );
+        })()}
 
         {/* Auto queue - draggable */}
         <div className="flex-1 overflow-y-auto pb-28">
