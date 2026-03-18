@@ -6,7 +6,7 @@ import HeroSection from "../components/HeroSection";
 import api from "../utils/api";
 
 export default function FavoritesPage() {
-  const { favorites } = usePlayer();
+  const { favorites, playSong, setPlayContext } = usePlayer();
   const [favoriteSongs, setFavoriteSongs] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -66,7 +66,7 @@ export default function FavoritesPage() {
           </div>
           <div className="grid grid-cols-1 lg:grid-cols-2 2xl:grid-cols-3 gap-1.5 sm:gap-2">
             {favoriteSongs.map((song, index) => (
-              <SongItem key={song.id} song={song} index={index} />
+              <SongItem key={song.id} song={song} index={index} onPlay={(s) => { setPlayContext(favoriteSongs, s.id); playSong(s); }} />
             ))}
           </div>
         </div>
