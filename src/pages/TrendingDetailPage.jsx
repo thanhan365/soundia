@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { usePlayer } from "../context/PlayerContext";
 import { useToast } from "../context/ToastContext";
-import { FaPlay } from "react-icons/fa";
+import { FaPlay, FaRandom } from "react-icons/fa";
 import { HiArrowLeft, HiHeart, HiDotsHorizontal } from "react-icons/hi";
 import SongContextMenu from "../components/SongContextMenu";
 import api from "../utils/api";
@@ -130,8 +130,8 @@ export default function TrendingDetailPage() {
             <button onClick={handlePlayAll} className="px-5 py-2.5 bg-neon text-dark font-bold rounded-full text-sm hover:brightness-110 transition-all hover:scale-105 shadow-neon/30 shadow-md flex items-center gap-2">
               <FaPlay className="text-xs" /> Phát tất cả
             </button>
-            <button onClick={handleShufflePlay} className="px-5 py-2.5 bg-white/10 text-white font-bold rounded-full text-sm hover:bg-white/20 transition-all hover:scale-105 border border-white/10">
-              🔀 Trộn bài
+            <button onClick={handleShufflePlay} className="px-5 py-2.5 bg-white/10 text-white font-bold rounded-full text-sm hover:bg-white/20 transition-all hover:scale-105 border border-white/10 flex items-center gap-2">
+              <FaRandom className="text-xs" /> Phát ngẫu nhiên
             </button>
           </div>
         </div>
