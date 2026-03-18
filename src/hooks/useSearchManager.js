@@ -138,6 +138,21 @@ export function useSearchManager({ allSongs }) {
 
             // Merge API results with local (only if query hasn't changed)
             if (!cancelled) {
+                // Enrich local songs with nctKey from NCT results (local songs from DB don't have nctKey)
+                const nctKeyMap = new Map();
+                for (const track of (nctResults.tracks || [])) {
+                    if (track.nctKey) {
+                        nctKeyMap.set(generateKey(track), track.nctKey);
+                    }
+                }
+                if (nctKeyMap.size > 0) {
+                    for (const song of local) {
+                        if (!song.nctKey) {
+                            const k = generateKey(song);
+                            if (nctKeyMap.has(k)) song.nctKey = nctKeyMap.get(k);
+                        }
+                    }
+                }
                 setFilteredSongs([...local, ...externalTracks]);
                 setSearchArtistsResult(mergedArtists);
                 setSearchPlaylistsResult(mergedPlaylists);
