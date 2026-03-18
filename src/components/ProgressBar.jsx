@@ -77,7 +77,10 @@ export default function ProgressBar() {
         lastMsRef.current = now;
 
         const timeSinceSongChange = now - songChangeTsRef.current;
-        const isStaleWindow = timeSinceSongChange < 2500;
+        // Stale window: short guard to ignore leftover audio from previous song
+        // Exit early if audio is already playing (fast direct-URL songs load in <100ms)
+        const audioReady = !isYTModeRef?.current && audioRef?.current?.readyState >= 3 && audioRef?.current?.currentTime > 0;
+        const isStaleWindow = timeSinceSongChange < 800 && !audioReady;
 
         let t = -1, d = 0;
 
