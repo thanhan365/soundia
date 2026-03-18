@@ -616,3 +616,5 @@ namespace Soundia.Api.Controllers
     }
 }
 
+/ /   r e - d e p l o y   t r i g g e r  
+ 
