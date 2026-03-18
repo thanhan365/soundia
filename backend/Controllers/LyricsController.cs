@@ -127,13 +127,12 @@ namespace Soundia.Api.Controllers
                             return Ok(result);
                         }
                         
-                        // Chỉ có plain (LRC decrypt fail) → trả plain ngay vì direct nctKey là nguồn đáng tin nhất
+                        // Chỉ có plain (LRC decrypt fail) → lưu làm fallback, tiếp tục tìm synced từ LRCLIB
                         if (!string.IsNullOrWhiteSpace(plainLyrics) && plainLyrics.Length > 20)
                         {
-                            Console.WriteLine($"[Lyrics] OK → nct (plain, synced decrypt failed)");
-                            var result = new { syncedLyrics = (string?)null, plainLyrics, source = "nct" };
-                            _cache[cacheKey] = (result, DateTime.UtcNow.AddHours(24));
-                            return Ok(result);
+                            Console.WriteLine($"[Lyrics] NCT has plain but no synced → save as fallback, continue to LRCLIB");
+                            nctFallbackPlain = plainLyrics;
+                            // KHÔNG return ở đây — tiếp tục tìm synced lyrics từ LRCLIB/NCT search
                         }
                     }
                 }
