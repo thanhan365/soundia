@@ -42,23 +42,30 @@ builder.Services.AddControllers()
         options.JsonSerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles;
     });
 
-// 3. CORS Settings (Allow React App)
+// 3. CORS Settings — origins loaded from config, localhost only in Development
+var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() 
+    ?? new[] { "https://soundia.vercel.app", "https://soundia-thanhan365.vercel.app" };
+
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowReactApp",
-        policy => policy
-            .WithOrigins(
-                "http://localhost:5173", "http://localhost:5174", "http://localhost:5175", "http://localhost:5176",
-                "http://localhost:3000",
-                "http://127.0.0.1:5173", "http://127.0.0.1:5174", "http://127.0.0.1:5175", "http://127.0.0.1:5176",
-                "https://soundia-player.netlify.app",
-                "https://soundia.vercel.app",
-                "https://soundia-thanhan365.vercel.app",
-                "https://soundia-git-main-thanhan365.vercel.app"
-            )
-            .AllowAnyMethod()
-            .AllowAnyHeader()
-            .AllowCredentials());
+        policy =>
+        {
+            var origins = allowedOrigins.ToList();
+            // Only allow localhost in Development
+            if (builder.Environment.IsDevelopment())
+            {
+                origins.AddRange(new[] {
+                    "http://localhost:5173", "http://localhost:5174", "http://localhost:5175", "http://localhost:5176",
+                    "http://localhost:3000",
+                    "http://127.0.0.1:5173", "http://127.0.0.1:5174", "http://127.0.0.1:5175", "http://127.0.0.1:5176"
+                });
+            }
+            policy.WithOrigins(origins.ToArray())
+                .AllowAnyMethod()
+                .AllowAnyHeader()
+                .AllowCredentials();
+        });
 });
 
 // 4. JWT Authentication
