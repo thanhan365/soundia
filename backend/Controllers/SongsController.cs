@@ -1195,17 +1195,23 @@ namespace Soundia.Api.Controllers
                 return BadRequest(new { message = "keyword is required" });
 
             var songs = await _nctApi.SearchSongsAsync(keyword, 1, limit);
-            var result = songs.Select(s => new
+            var result = songs.Select(s =>
             {
-                id = $"nct_{s.Key}",
-                title = s.Name,
-                artist = s.ArtistName,
-                cover = s.Image,
-                audio = !string.IsNullOrEmpty(s.StreamUrl) ? s.StreamUrl : "YT_STREAM",
-                isExternal = true,
-                source = "nct",
-                duration = s.Duration,
-                nctKey = s.Key,
+                var proxiedUrl = !string.IsNullOrEmpty(s.StreamUrl)
+                    ? $"/api/stream/proxy-audio?url={System.Net.WebUtility.UrlEncode(s.StreamUrl)}"
+                    : "";
+                return new
+                {
+                    id = $"nct_{s.Key}",
+                    title = s.Name,
+                    artist = s.ArtistName,
+                    cover = s.Image,
+                    audio = !string.IsNullOrEmpty(proxiedUrl) ? proxiedUrl : "YT_STREAM",
+                    isExternal = true,
+                    source = "nct",
+                    duration = s.Duration,
+                    nctKey = s.Key,
+                };
             });
             return Ok(new { success = true, data = result, total = songs.Count });
         }
