@@ -292,7 +292,7 @@ export function PlayerProvider({ children }) {
       audio.preload = 'auto';
       setIsLoadingStream(false);
       setIsPlaying(true);
-
+      console.log(`[stream] "${song.title}" -> Direct URL`);
       audio.play().catch(() => { });
     } else {
       // Needs stream resolution — show loading, set song info immediately
@@ -328,6 +328,7 @@ export function PlayerProvider({ children }) {
           audio.src = cached.url.startsWith('/api/') ? `${backendBase}${cached.url}` : cached.url;
           audio.preload = 'auto';
           setIsLoadingStream(false); setIsPlaying(true);
+          console.log(`[stream] "${song.title}" -> NCT (cached)`);
           audio.play().catch(() => { });
           return;
         } else if (cached.type === 'yt' && cached.videoId) {
@@ -335,6 +336,7 @@ export function PlayerProvider({ children }) {
           audio.pause(); audio.src = "";
           if (cached.duration > 0) setDuration(cached.duration);
           setIsLoadingStream(false);
+          console.log(`[stream] "${song.title}" -> YouTube (cached)`);
           ytPlayerRef.current?.loadAndPlay(ytQuery, expectedDur, cached.videoId);
           return;
         }
@@ -376,7 +378,6 @@ export function PlayerProvider({ children }) {
         } catch { }
         // Cache result
         if (nctStream) streamCacheRef.current.set(cacheKey, { type: 'nct', url: nctStream });
-        console.log(`[playSong] Resolve done in ${(performance.now() - _t0).toFixed(0)}ms (NCT=${nctStream ? 'HIT' : 'MISS'})`);
 
         // Race condition guard: if user clicked another song while we were resolving, abort
         if (sessionId !== playSessionRef.current) {
@@ -394,7 +395,7 @@ export function PlayerProvider({ children }) {
           audio.src = audioUrl;
           setIsLoadingStream(false);
           setIsPlaying(true);
-          console.log(`[playSong] NCT → audio.play() at ${(performance.now() - _t0).toFixed(0)}ms`);
+          console.log(`[stream] "${song.title}" -> NCT (${(performance.now() - _t0).toFixed(0)}ms)`);
           audio.play().catch(() => { });
         } else {
           // ❌ NCT không có → dùng YouTube (đã chạy ngầm, chỉ cần await)
@@ -408,7 +409,7 @@ export function PlayerProvider({ children }) {
           audio.src = "";
           const ytDur = ytResult?.matchedDuration > 0 ? ytResult.matchedDuration : expectedDur;
           if (ytDur > 0) setDuration(ytDur);
-          console.log(`[playSong] YouTube → loadAndPlay at ${(performance.now() - _t0).toFixed(0)}ms`);
+          console.log(`[stream] "${song.title}" -> YouTube (${(performance.now() - _t0).toFixed(0)}ms)`);
           if (ytResult?.videoId) {
             streamCacheRef.current.set(cacheKey, { type: 'yt', videoId: ytResult.videoId, duration: ytDur });
             ytPlayerRef.current?.loadAndPlay(ytQuery, expectedDur, ytResult.videoId);
