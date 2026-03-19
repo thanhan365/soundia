@@ -180,7 +180,6 @@ export default function SearchBar() {
                     <p className="text-sm text-white truncate group-hover:text-neon transition-colors">{song.title}</p>
                     <p className="text-xs text-gray-500 truncate">{song.artist}</p>
                   </div>
-                  <span className="text-[10px] text-gray-600 uppercase flex-shrink-0">{song.source}</span>
                 </button>
               ))}
             </div>
