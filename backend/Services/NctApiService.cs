@@ -57,6 +57,33 @@ namespace Soundia.Api.Services
             catch { return new List<NctSong>(); }
         }
 
+        // ─── Keyword Suggestions (prefix autocomplete) ─────────────────────
+        public async Task<List<string>> GetSuggestKeywordsAsync(string prefix, int limit = 5)
+        {
+            try
+            {
+                var ts = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+                var url = $"{GRAPH_API}/search/prefix-word?prefix={Uri.EscapeDataString(prefix)}&timestamp={ts}";
+                var json = await _http.GetStringAsync(url);
+                using var doc = JsonDocument.Parse(json);
+                var root = doc.RootElement;
+                if (root.GetProperty("code").GetInt32() != 0) return new List<string>();
+
+                var result = new List<string>();
+                if (root.TryGetProperty("data", out var data) && data.TryGetProperty("list", out var list))
+                {
+                    foreach (var item in list.EnumerateArray())
+                    {
+                        if (result.Count >= limit) break;
+                        var name = item.TryGetProperty("name", out var n) ? n.GetString()?.Trim() : null;
+                        if (!string.IsNullOrEmpty(name)) result.Add(name);
+                    }
+                }
+                return result;
+            }
+            catch { return new List<string>(); }
+        }
+
         // ─── Get Stream URL ────────────────────────────────────────────────
         // FAST PATH: Use detail API's streamURL array (direct CDN links, no scraping)
         // FALLBACK: Scrape SSR page if detail API doesn't have streamURL
