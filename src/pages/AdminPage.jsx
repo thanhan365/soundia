@@ -602,13 +602,10 @@ function UsersTab() {
         setConfirmId(null);
         setDeleteError('');
         setDeleting(id);
-        console.log('[Admin] Deleting user id=', id, 'username=', username);
         try {
             const res = await api.delete(`/admin/users/${id}`);
-            console.log('[Admin] Delete success:', res.data);
             fetchUsers();
         } catch (err) {
-            console.error('[Admin] Delete error:', err.response?.status, err.response?.data, err);
             const msg = err.response?.data?.message || err.response?.data || err.message || 'Lỗi không xác định';
             setDeleteError(`Lỗi xóa "${username}": ${typeof msg === 'string' ? msg : JSON.stringify(msg)}`);
         } finally {

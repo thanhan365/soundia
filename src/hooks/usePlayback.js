@@ -122,19 +122,16 @@ export function usePlayback({ showToast }) {
             } else {
                 // Đặt flag pending để retry khi mở màn hình nếu playNext fail
                 pendingPlayNextRef.current = true;
-                console.log('🔄 [onEnd] Calling playNext...');
                 playNextRef.current?.();
                 // Retry sau 3s nếu vẫn pending (mobile background có thể throttle)
                 setTimeout(() => {
                     if (pendingPlayNextRef.current && audio.ended) {
-                        console.log('🔄 [onEnd] Retry playNext after 3s...');
                         playNextRef.current?.();
                     }
                 }, 3000);
                 // Retry lần 2 sau 8s
                 setTimeout(() => {
                     if (pendingPlayNextRef.current && audio.ended) {
-                        console.log('🔄 [onEnd] Retry playNext after 8s...');
                         playNextRef.current?.();
                     }
                 }, 8000);
@@ -194,7 +191,6 @@ export function usePlayback({ showToast }) {
                 const wasPlayingYT = isYTModeRef.current;
                 // Check pending playNext flag (bài ended khi screen off nhưng playNext fail)
                 if (pendingPlayNextRef.current) {
-                    console.log('📱 [mobile] Screen on — pending playNext detected → retrying');
                     pendingPlayNextRef.current = false;
                     playNextRef.current?.();
                     return;
@@ -202,7 +198,6 @@ export function usePlayback({ showToast }) {
                 if (!wasPlayingYT && audio.src) {
                     if (audio.ended) {
                         // Bài đã kết thúc khi tắt màn hình nhưng bài tiếp chưa phát
-                        console.log('📱 [mobile] Song ended while screen off → playNext');
                         playNextRef.current?.();
                     } else if (audio.paused && audio.currentTime > 0) {
                         // Audio bị browser tạm dừng khi background → resume
