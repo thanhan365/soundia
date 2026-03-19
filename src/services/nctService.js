@@ -82,7 +82,7 @@ export const resolveNctStream = async (title, artist, durationSec = 0) => {
   try {
     const durParam = durationSec > 0 ? `&duration=${durationSec}` : '';
     const res = await api.get(`/songs/nct-resolve?title=${encodeURIComponent(title)}&artist=${encodeURIComponent(artist || "")}${durParam}`);
-    const url = res.data?.success ? res.data.streamUrl : null;
+    const url = (res.data?.found && res.data?.success) ? res.data.streamUrl : null;
     const nctKey = res.data?.nctKey || null;
     if (url) {
       if (_streamCache.size >= CACHE_MAX) _streamCache.clear();

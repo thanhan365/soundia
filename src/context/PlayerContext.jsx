@@ -292,7 +292,7 @@ export function PlayerProvider({ children }) {
       audio.preload = 'auto';
       setIsLoadingStream(false);
       setIsPlaying(true);
-      console.log(`[playSong] Direct URL → play in ${(performance.now() - _t0).toFixed(0)}ms`);
+
       audio.play().catch(() => { });
     } else {
       // Needs stream resolution — show loading, set song info immediately
@@ -320,7 +320,7 @@ export function PlayerProvider({ children }) {
       const cacheKey = `${song.title}_${song.artist}`.toLowerCase();
       const cached = streamCacheRef.current.get(cacheKey);
       if (cached) {
-        console.log(`[playSong] Cache HIT → ${cached.type} in ${(performance.now() - _t0).toFixed(0)}ms`);
+
         if (cached.type === 'nct') {
           if (isYTMode) { ytPlayerRef.current?.pause(); setIsYTMode(false); isYTModeRef.current = false; }
           audio.pause(); audio.removeAttribute('src'); audio.load();
@@ -344,7 +344,6 @@ export function PlayerProvider({ children }) {
       // Safety timeout: clear loading after 10s no matter what (prevents infinite spinner on mobile)
       const safetyTimer = setTimeout(() => {
         if (sessionId === playSessionRef.current) {
-          console.warn(`[playSong] Safety timeout — clearing loading state after 10s`);
           setIsLoadingStream(false);
         }
       }, 10000);
@@ -381,7 +380,7 @@ export function PlayerProvider({ children }) {
 
         // Race condition guard: if user clicked another song while we were resolving, abort
         if (sessionId !== playSessionRef.current) {
-          console.log(`[playSong] Aborted — superseded by newer play request`);
+
           return;
         }
 
@@ -418,7 +417,7 @@ export function PlayerProvider({ children }) {
           }
         }
       } catch (err) {
-        console.error(`[playSong] Stream resolution failed:`, err);
+
         setIsLoadingStream(false);
         // Last resort: try YouTube search as fallback
         try {
@@ -548,7 +547,7 @@ export function PlayerProvider({ children }) {
           : (nextSong.duration || 0);
         resolveNctStream(nextSong.title, nextSong.artist, Math.round(dur)).catch(() => {});
       }
-      console.log(`[preResolve] Pre-resolving next: "${nextSong.title}"`);
+
     }, 3000); // Đợi 3s sau khi bài bắt đầu phát để không ảnh hưởng loading
     return () => clearTimeout(timer);
   }, [currentSong?.id, isPlaying]); // eslint-disable-line

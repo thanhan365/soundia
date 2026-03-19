@@ -1362,23 +1362,16 @@ namespace Soundia.Api.Controllers
         [HttpGet("nct-resolve")]
         public async Task<ActionResult> NctResolve([FromQuery] string title, [FromQuery] string artist, [FromQuery] int duration = 0)
         {
-            Console.WriteLine($"[NCT-Resolve] \"{title}\" by {artist} (duration={duration}s)");
-
             if (string.IsNullOrWhiteSpace(title))
                 return BadRequest(new { message = "title is required" });
             
-            // ResolveStreamByTitleAsync already searches NCT, matches best result, and gets stream URL
-            // No need for a separate search — that was causing redundant API calls (~800ms wasted)
             var (url, nctKey) = await _nctApi.ResolveStreamByTitleAsync(title, artist ?? "", duration);
             if (url == null)
             {
-                Console.WriteLine($"[NCT-Resolve] No match");
-                return NotFound(new { message = "Not found on NCT" });
+                return Ok(new { found = false });
             }
             var proxyUrl = $"/api/stream/proxy-audio?url={System.Net.WebUtility.UrlEncode(url)}";
-            Console.WriteLine($"[NCT-Resolve] OK → nctKey={nctKey}");
-            // Return both direct CDN URL and proxy URL — frontend tries direct first (faster, NCT allows CORS)
-            return Ok(new { success = true, streamUrl = proxyUrl, directUrl = url, nctKey = nctKey });
+            return Ok(new { found = true, success = true, streamUrl = proxyUrl, directUrl = url, nctKey = nctKey });
         }
 
         [HttpGet("nct-charts")]
