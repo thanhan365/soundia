@@ -95,6 +95,8 @@ export default function QueuePanel() {
           </div>
         )}
 
+        {/* Scrollable queue content */}
+        <div className="flex-1 overflow-y-auto pb-28">
         {/* Manual queue — with drag reorder + remove */}
         {manualQueue.length > 0 && (() => {
           const onMqDragStart = (e, i) => { setMqDragIdx(i); e.dataTransfer.effectAllowed = "move"; };
@@ -132,7 +134,7 @@ export default function QueuePanel() {
         })()}
 
         {/* Auto queue - draggable */}
-        <div className="flex-1 overflow-y-auto pb-28">
+        <div>
           <p className="px-3 sm:px-4 pt-2 sm:pt-3 pb-1 text-[9px] sm:text-[10px] font-bold text-gray-500 uppercase tracking-widest">
             {manualQueue.length > 0 ? "Tiếp theo" : "Gợi ý cho bạn"} ({autoSongs.length})
           </p>
@@ -161,6 +163,7 @@ export default function QueuePanel() {
               </div>
             ))}
           </div>
+        </div>
         </div>
       </aside>
     </>
