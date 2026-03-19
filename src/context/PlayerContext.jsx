@@ -588,7 +588,7 @@ export function PlayerProvider({ children }) {
     playSong, togglePlay: () => {
       if (isRestoredRef.current && currentSong && !isPlaying) {
         isRestoredRef.current = false;
-        playSong(currentSong);
+        playSong(currentSong, true);
       } else {
         togglePlay();
       }
