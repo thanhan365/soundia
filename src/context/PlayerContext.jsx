@@ -52,6 +52,8 @@ export function PlayerProvider({ children }) {
 
   // Stream resolution cache — avoid re-resolving the same song
   const streamCacheRef = useRef(new Map());
+  // Track if currentSong was restored from localStorage (no audio loaded yet)
+  const isRestoredRef = useRef(false);
   const queue = useQueue({ currentSong, allSongs });
   const { manualQueue, setManualQueue, autoQueue, setAutoQueue, autoQueueLoadedRef, fetchAutoQueue, addToQueue, getQueue, setPlayContext, reorderAutoQueue, removeFromAutoQueue } = queue;
 
@@ -110,6 +112,7 @@ export function PlayerProvider({ children }) {
         if (song?.id && song?.title) {
           setCurrentSong(song);
           currentSongRef.current = song;
+          isRestoredRef.current = true;
         }
       }
     } catch (e) { /* corrupted data */ }
@@ -227,6 +230,7 @@ export function PlayerProvider({ children }) {
     const _t0 = performance.now();
     const audio = audioRef.current;
     crossfadeTriggeredRef.current = false; // Reset crossfade trigger for new song
+    isRestoredRef.current = false; // Clear restored flag — now playing for real
     const sessionId = ++playSessionRef.current; // unique ID for this play call
 
     if (!forceReload && currentSong?.id === song.id) {
@@ -581,7 +585,14 @@ export function PlayerProvider({ children }) {
     crossfade, setCrossfade,
     ytPlayerRef, audioRef, isYTModeRef, sharedProgressRef,
     handleYTReady, handleYTStateChange, handleYTTimeUpdate, handleYTError,
-    playSong, togglePlay, playNext, playPrev, seekTo, changeVolume,
+    playSong, togglePlay: () => {
+      if (isRestoredRef.current && currentSong && !isPlaying) {
+        isRestoredRef.current = false;
+        playSong(currentSong);
+      } else {
+        togglePlay();
+      }
+    }, playNext, playPrev, seekTo, changeVolume,
     searchArtistsResult, searchPlaylistsResult,
     isSearching,
   }), [
