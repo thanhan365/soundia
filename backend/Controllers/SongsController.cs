@@ -1237,12 +1237,12 @@ namespace Soundia.Api.Controllers
                 var nctSearchTask = Task.Run(async () =>
                 {
                     try { return await _nctApi.SearchSongsAsync(q, 1, 4); }
-                    catch { return new List<NctSong>(); }
+                    catch { return new List<Soundia.Api.Services.NctSong>(); }
                 });
 
                 await Task.WhenAll(zingSuggestTask, nctSearchTask);
                 var zingJson = zingSuggestTask.Result;
-                var nctSongs = nctSearchTask.Result ?? new List<NctSong>();
+                var nctSongs = nctSearchTask.Result ?? new List<Soundia.Api.Services.NctSong>();
 
                 // ── Parse Zing keywords + songs ──
                 var keywords = new List<string>();
