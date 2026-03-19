@@ -74,7 +74,7 @@ export default function PlayerBar() {
   // Update Dynamic Document Title
   useEffect(() => {
     if (currentSong) {
-      document.title = `${isPlaying ? "▶ " : ""}${currentSong.title} - ${currentSong.artist} | Soundia`;
+      document.title = `${currentSong.title} - ${currentSong.artist} | Soundia`;
     } else {
       document.title = "Soundia - Web Player";
     }
