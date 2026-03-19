@@ -1216,6 +1216,106 @@ namespace Soundia.Api.Controllers
             return Ok(new { success = true, data = result, total = songs.Count });
         }
 
+        [HttpGet("search-suggest")]
+        public async Task<ActionResult> SearchSuggest([FromQuery] string q)
+        {
+            if (string.IsNullOrWhiteSpace(q) || q.Length < 1)
+                return Ok(new { keywords = Array.Empty<string>(), songs = Array.Empty<object>() });
+
+            try
+            {
+                using var client = new System.Net.Http.HttpClient();
+                client.DefaultRequestHeaders.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36");
+                client.Timeout = TimeSpan.FromSeconds(3);
+
+                // Run Zing suggest + NCT search in parallel (both are safe to fail)
+                var zingSuggestTask = Task.Run(async () =>
+                {
+                    try { return await client.GetStringAsync($"https://ac.zingmp3.vn/v1/web/ac-suggestions?num=10&query={Uri.EscapeDataString(q)}"); }
+                    catch { return (string)null; }
+                });
+                var nctSearchTask = Task.Run(async () =>
+                {
+                    try { return await _nctApi.SearchSongsAsync(q, 1, 4); }
+                    catch { return new List<NctSong>(); }
+                });
+
+                await Task.WhenAll(zingSuggestTask, nctSearchTask);
+                var zingJson = zingSuggestTask.Result;
+                var nctSongs = nctSearchTask.Result ?? new List<NctSong>();
+
+                // ── Parse Zing keywords + songs ──
+                var keywords = new List<string>();
+                var zingSongList = new List<(string title, string artist, string cover, int duration)>();
+                if (zingJson != null)
+                {
+                    try
+                    {
+                        using var doc = System.Text.Json.JsonDocument.Parse(zingJson);
+                        var data = doc.RootElement.GetProperty("data");
+                        if (data.TryGetProperty("items", out var items))
+                        {
+                            foreach (var item in items.EnumerateArray())
+                            {
+                                if (item.TryGetProperty("keyword", out var kw))
+                                {
+                                    var keyword = kw.GetString()?.Trim();
+                                    if (!string.IsNullOrEmpty(keyword) && keywords.Count < 5)
+                                        keywords.Add(keyword);
+                                }
+                                if (item.TryGetProperty("suggestions", out var sugs) && sugs.ValueKind == System.Text.Json.JsonValueKind.Array)
+                                {
+                                    foreach (var s in sugs.EnumerateArray())
+                                    {
+                                        if (zingSongList.Count >= 4) break;
+                                        var title = s.TryGetProperty("title", out var t) ? t.GetString() : null;
+                                        var artist = s.TryGetProperty("artists", out var a) ? a.GetString() : "";
+                                        if (string.IsNullOrEmpty(artist) && s.TryGetProperty("artistsNames", out var an))
+                                            artist = an.GetString() ?? "";
+                                        var thumb = s.TryGetProperty("thumb", out var th) ? th.GetString() : "";
+                                        var dur = s.TryGetProperty("duration", out var d) ? d.GetInt32() : 0;
+                                        if (!string.IsNullOrEmpty(title))
+                                            zingSongList.Add((title, artist, thumb, dur));
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    catch { }
+                }
+
+                // ── Merge songs: NCT first, then Zing — dedup by title ──
+                var mergedSongs = new List<object>();
+                var seenTitles = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+                foreach (var s in nctSongs.Take(4))
+                {
+                    if (mergedSongs.Count >= 6) break;
+                    if (!seenTitles.Contains(s.Name))
+                    {
+                        mergedSongs.Add(new { title = s.Name, artist = s.ArtistName, cover = s.Image, duration = s.Duration, nctKey = s.Key, source = "nct" });
+                        seenTitles.Add(s.Name);
+                    }
+                }
+                foreach (var s in zingSongList)
+                {
+                    if (mergedSongs.Count >= 6) break;
+                    if (!seenTitles.Contains(s.title))
+                    {
+                        mergedSongs.Add(new { title = s.title, artist = s.artist, cover = s.cover, duration = s.duration, source = "zing" });
+                        seenTitles.Add(s.title);
+                    }
+                }
+
+                return Ok(new { keywords, songs = mergedSongs });
+            }
+            catch (System.Exception ex)
+            {
+                return StatusCode(500, new { message = "Suggest error", details = ex.Message });
+            }
+        }
+
+
         [HttpGet("nct-stream/{key}")]
         public async Task<ActionResult> NctStream(string key)
         {
