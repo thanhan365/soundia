@@ -39,7 +39,9 @@ export default function LyricsView() {
         const ms = parseInt(match[3].padEnd(3, '0'), 10);
         const time = m * 60 + s + ms / 1000;
         const text = match[4].trim();
-        if (text) parsed.push({ time, text });
+        // Filter out metadata lines (song info, credits, URLs)
+        const isMetadata = /^(Bài Hát|Ca Sĩ|Sáng Tác|Lyric|Nhạc Sĩ|Phối Khí|Hòa Âm|Beat|http)/i.test(text);
+        if (text && !isMetadata) parsed.push({ time, text });
       }
     }
     return parsed;
@@ -63,9 +65,11 @@ export default function LyricsView() {
 
       if (res.ok) {
         const data = await res.json();
+        const metaRegex = /^(Bài Hát|Ca Sĩ|Sáng Tác|Lyric|Nhạc Sĩ|Phối Khí|Hòa Âm|Beat|http)/i;
+        const cleanPlain = (data.plainLyrics || "").split("\n").filter(l => !metaRegex.test(l.trim())).join("\n").trim();
         const result = {
           synced: data.syncedLyrics ? parseSyncedLyrics(data.syncedLyrics) : [],
-          plain: data.plainLyrics || "",
+          plain: cleanPlain,
           error: (!data.syncedLyrics && !data.plainLyrics) ? "Không có lời cho bài hát này." : null,
         };
         lyricsCacheRef.current.set(cacheKey, result);
