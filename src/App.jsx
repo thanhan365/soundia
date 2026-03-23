@@ -76,10 +76,12 @@ function HeaderUserMenu() {
         onClick={() => setOpen(!open)}
         className="flex items-center gap-2 px-2 py-1.5 rounded-full hover:bg-white/10 transition-all"
       >
-        <div className="w-9 h-9 rounded-full bg-neon/20 flex items-center justify-center text-neon text-sm font-bold uppercase">
-          {user.username?.charAt(0) || "U"}
+        <div className="w-9 h-9 rounded-full bg-neon/20 flex items-center justify-center text-neon text-sm font-bold uppercase overflow-hidden">
+          {user.avatarUrl
+            ? <img src={user.avatarUrl} alt="" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+            : (user.displayName || user.username)?.charAt(0) || "U"}
         </div>
-        <span className="text-white text-sm font-semibold hidden sm:block max-w-[120px] truncate">{user.username}</span>
+        <span className="text-white text-sm font-semibold hidden sm:block max-w-[120px] truncate">{user.displayName || user.username}</span>
       </button>
       {open && (
         <div className="absolute right-0 top-full mt-2 w-48 bg-[#1a1a2e] border border-white/10 rounded-xl shadow-2xl overflow-hidden z-[100] animate-fade-in">
