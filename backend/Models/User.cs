@@ -17,8 +17,11 @@ namespace Soundia.Api.Models
         [MaxLength(100)]
         public string Email { get; set; } = string.Empty;
 
-        [Required]
-        public string PasswordHash { get; set; } = string.Empty;
+        public string? PasswordHash { get; set; }
+
+        // Google OAuth
+        [MaxLength(200)]
+        public string? GoogleId { get; set; }
 
         // Profile fields
         [MaxLength(100)]

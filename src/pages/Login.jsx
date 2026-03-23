@@ -1,13 +1,16 @@
-import React, { useState, useContext } from 'react';
+import React, { useState, useContext, useEffect, useRef } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
+
+const GOOGLE_CLIENT_ID = '696971772501-p05qnv5pe0fpjb39cgt714mlc7oopcld.apps.googleusercontent.com';
 
 const Login = () => {
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
-    const { login } = useContext(AuthContext);
+    const { login, googleLogin } = useContext(AuthContext);
     const navigate = useNavigate();
+    const googleBtnRef = useRef(null);
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -19,6 +22,40 @@ const Login = () => {
             setError(typeof res.message === 'string' ? res.message : 'Tên đăng nhập hoặc mật khẩu không đúng');
         }
     };
+
+    // Google Sign-In
+    useEffect(() => {
+        const script = document.createElement('script');
+        script.src = 'https://accounts.google.com/gsi/client';
+        script.async = true;
+        script.defer = true;
+        script.onload = () => {
+            window.google?.accounts.id.initialize({
+                client_id: GOOGLE_CLIENT_ID,
+                callback: async (response) => {
+                    setError('');
+                    const res = await googleLogin(response.credential);
+                    if (res.success) {
+                        navigate('/');
+                    } else {
+                        setError(typeof res.message === 'string' ? res.message : 'Đăng nhập Google thất bại');
+                    }
+                },
+            });
+            if (googleBtnRef.current) {
+                window.google?.accounts.id.renderButton(googleBtnRef.current, {
+                    theme: 'filled_black',
+                    size: 'large',
+                    width: '100%',
+                    text: 'signin_with',
+                    shape: 'rectangular',
+                    logo_alignment: 'center',
+                });
+            }
+        };
+        document.head.appendChild(script);
+        return () => { script.remove(); };
+    }, []); // eslint-disable-line
 
     return (
         <div className="flex items-center justify-center min-h-screen bg-black">
@@ -59,6 +96,16 @@ const Login = () => {
                         Đăng nhập
                     </button>
                 </form>
+
+                {/* Divider */}
+                <div className="flex items-center my-5">
+                    <div className="flex-1 border-t border-gray-700"></div>
+                    <span className="px-3 text-sm text-gray-500">hoặc</span>
+                    <div className="flex-1 border-t border-gray-700"></div>
+                </div>
+
+                {/* Google Sign-In */}
+                <div ref={googleBtnRef} className="flex justify-center"></div>
 
                 <p className="mt-4 text-center text-gray-400">
                     Chưa có tài khoản? <Link to="/register" className="text-green-500 hover:underline">Đăng ký ngay</Link>

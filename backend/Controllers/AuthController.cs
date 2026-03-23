@@ -7,6 +7,7 @@ using Soundia.Api.Models;
 using Soundia.Api.Services;
 using System.Security.Claims;
 using System.Security.Cryptography;
+using System.Text.Json;
 
 namespace Soundia.Api.Controllers
 {
@@ -68,11 +69,89 @@ namespace Soundia.Api.Controllers
             if (user == null)
                 return Unauthorized("Tên đăng nhập hoặc mật khẩu không đúng.");
 
+            if (string.IsNullOrEmpty(user.PasswordHash))
+                return Unauthorized("Tài khoản này dùng đăng nhập Google.");
+
             var isPasswordValid = BCrypt.Net.BCrypt.Verify(request.Password, user.PasswordHash);
             if (!isPasswordValid)
                 return Unauthorized("Tên đăng nhập hoặc mật khẩu không đúng.");
 
             // Update refresh token
+            user.RefreshToken = GenerateRefreshToken();
+            user.RefreshTokenExpiry = DateTime.UtcNow.AddDays(30);
+            await _context.SaveChangesAsync();
+
+            return new AuthResponse
+            {
+                Id = user.Id,
+                Username = user.Username,
+                Email = user.Email,
+                Token = _tokenService.CreateToken(user),
+                RefreshToken = user.RefreshToken,
+                DisplayName = user.DisplayName,
+                AvatarUrl = user.AvatarUrl,
+                Role = user.Role
+            };
+        }
+
+        [HttpPost("google-login")]
+        public async Task<ActionResult<AuthResponse>> GoogleLogin([FromBody] GoogleLoginRequest request)
+        {
+            // Verify Google ID token
+            using var http = new HttpClient();
+            var verifyUrl = $"https://oauth2.googleapis.com/tokeninfo?id_token={request.IdToken}";
+            var verifyRes = await http.GetAsync(verifyUrl);
+            if (!verifyRes.IsSuccessStatusCode)
+                return Unauthorized("Google token không hợp lệ.");
+
+            var json = await verifyRes.Content.ReadAsStringAsync();
+            var googleData = JsonSerializer.Deserialize<JsonElement>(json);
+
+            var googleId = googleData.GetProperty("sub").GetString();
+            var email = googleData.GetProperty("email").GetString()?.ToLower();
+            var name = googleData.TryGetProperty("name", out var n) ? n.GetString() : null;
+            var picture = googleData.TryGetProperty("picture", out var p) ? p.GetString() : null;
+
+            if (string.IsNullOrEmpty(googleId) || string.IsNullOrEmpty(email))
+                return BadRequest("Không lấy được thông tin từ Google.");
+
+            // Find existing user by GoogleId
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.GoogleId == googleId);
+
+            if (user == null)
+            {
+                // Try find by email (link existing account)
+                user = await _context.Users.FirstOrDefaultAsync(u => u.Email == email);
+                if (user != null)
+                {
+                    // Link Google to existing account
+                    user.GoogleId = googleId;
+                    if (string.IsNullOrEmpty(user.AvatarUrl) && picture != null)
+                        user.AvatarUrl = picture;
+                }
+                else
+                {
+                    // Create new user
+                    user = new User
+                    {
+                        Username = email.Split('@')[0] + "_g" + googleId[^4..],
+                        Email = email,
+                        GoogleId = googleId,
+                        DisplayName = name ?? email.Split('@')[0],
+                        AvatarUrl = picture,
+                        Role = "user"
+                    };
+                    _context.Users.Add(user);
+                }
+            }
+            else
+            {
+                // Update avatar if changed
+                if (picture != null && user.AvatarUrl != picture)
+                    user.AvatarUrl = picture;
+            }
+
+            // Set refresh token
             user.RefreshToken = GenerateRefreshToken();
             user.RefreshTokenExpiry = DateTime.UtcNow.AddDays(30);
             await _context.SaveChangesAsync();
