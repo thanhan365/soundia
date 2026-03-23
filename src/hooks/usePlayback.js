@@ -191,7 +191,8 @@ export function usePlayback({ showToast }) {
         const onVisibilityChange = () => {
             if (document.visibilityState === 'hidden') {
                 // Ghi lại: đang phát hay đang pause khi tab ẩn?
-                wasPlayingBeforeHiddenRef.current = !audio.paused || (isYTModeRef.current && !audio.paused);
+                // YT mode: audio.paused luôn true, check !audio.paused chỉ đúng cho HTML5
+                wasPlayingBeforeHiddenRef.current = isYTModeRef.current ? false : !audio.paused;
                 return;
             }
             if (document.visibilityState === 'visible') {
