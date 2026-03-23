@@ -7,7 +7,6 @@ using Soundia.Api.Models;
 using Soundia.Api.Services;
 using System.Security.Claims;
 using System.Security.Cryptography;
-using System.Text.Json;
 
 namespace Soundia.Api.Controllers
 {
@@ -97,20 +96,24 @@ namespace Soundia.Api.Controllers
         [HttpPost("google-login")]
         public async Task<ActionResult<AuthResponse>> GoogleLogin([FromBody] GoogleLoginRequest request)
         {
-            // Verify Google ID token
-            using var http = new HttpClient();
-            var verifyUrl = $"https://oauth2.googleapis.com/tokeninfo?id_token={request.IdToken}";
-            var verifyRes = await http.GetAsync(verifyUrl);
-            if (!verifyRes.IsSuccessStatusCode)
+            Google.Apis.Auth.GoogleJsonWebSignature.Payload payload;
+            try
+            {
+                payload = await Google.Apis.Auth.GoogleJsonWebSignature.ValidateAsync(request.IdToken,
+                    new Google.Apis.Auth.GoogleJsonWebSignature.ValidationSettings
+                    {
+                        Audience = new[] { "696971772501-p05qnv5pe0fpjb39cgt714mlc7oopcld.apps.googleusercontent.com" }
+                    });
+            }
+            catch
+            {
                 return Unauthorized("Google token không hợp lệ.");
+            }
 
-            var json = await verifyRes.Content.ReadAsStringAsync();
-            var googleData = JsonSerializer.Deserialize<JsonElement>(json);
-
-            var googleId = googleData.GetProperty("sub").GetString();
-            var email = googleData.GetProperty("email").GetString()?.ToLower();
-            var name = googleData.TryGetProperty("name", out var n) ? n.GetString() : null;
-            var picture = googleData.TryGetProperty("picture", out var p) ? p.GetString() : null;
+            var googleId = payload.Subject;
+            var email = payload.Email?.ToLower();
+            var name = payload.Name;
+            var picture = payload.Picture;
 
             if (string.IsNullOrEmpty(googleId) || string.IsNullOrEmpty(email))
                 return BadRequest("Không lấy được thông tin từ Google.");
