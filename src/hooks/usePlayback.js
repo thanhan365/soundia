@@ -186,7 +186,14 @@ export function usePlayback({ showToast }) {
         audio.addEventListener("timeupdate", onTimeUpdate);
 
         // ── Mobile background resume: khi mở màn hình lại ──
+        // Track trạng thái phát TRƯỚC khi tab bị ẩn, tránh auto-play khi user đã cố ý pause
+        const wasPlayingBeforeHiddenRef = { current: false };
         const onVisibilityChange = () => {
+            if (document.visibilityState === 'hidden') {
+                // Ghi lại: đang phát hay đang pause khi tab ẩn?
+                wasPlayingBeforeHiddenRef.current = !audio.paused || (isYTModeRef.current && !audio.paused);
+                return;
+            }
             if (document.visibilityState === 'visible') {
                 const wasPlayingYT = isYTModeRef.current;
                 // Check pending playNext flag (bài ended khi screen off nhưng playNext fail)
@@ -199,8 +206,9 @@ export function usePlayback({ showToast }) {
                     if (audio.ended) {
                         // Bài đã kết thúc khi tắt màn hình nhưng bài tiếp chưa phát
                         playNextRef.current?.();
-                    } else if (audio.paused && audio.currentTime > 0) {
-                        // Audio bị browser tạm dừng khi background → resume
+                    } else if (audio.paused && audio.currentTime > 0 && wasPlayingBeforeHiddenRef.current) {
+                        // CHỈ resume nếu ĐANG PHÁT trước khi tab ẩn (browser tạm dừng)
+                        // Nếu user đã bấm pause → wasPlayingBeforeHidden = false → KHÔNG resume
                         audio.play().catch(() => {});
                     }
                 }
