@@ -231,7 +231,6 @@ export function PlayerProvider({ children }) {
     const audio = audioRef.current;
     crossfadeTriggeredRef.current = false;
     isRestoredRef.current = false;
-    audio.loop = false; // Xóa silent bridge loop
     pendingPlayNextRef.current = false; // Đã vào playSong → xóa flag retry
     const sessionId = ++playSessionRef.current; // unique ID for this play call
 
@@ -287,6 +286,7 @@ export function PlayerProvider({ children }) {
       setDuration(0);
       const backendBase = (import.meta.env.VITE_API_URL || 'http://localhost:5066/api').replace('/api', '');
       const audioUrl = song.audio.startsWith('/api/') ? `${backendBase}${song.audio}` : song.audio;
+      audio.loop = false; // Dừng loop silent bridge ngay trước khi gán src mới
       audio.src = audioUrl;
       audio.preload = 'auto';
       setIsLoadingStream(false);
@@ -317,6 +317,7 @@ export function PlayerProvider({ children }) {
         if (cached.type === 'nct') {
           if (isYTMode) { ytPlayerRef.current?.pause(); setIsYTMode(false); isYTModeRef.current = false; }
           const backendBase = BACKEND.replace('/api', '');
+          audio.loop = false;
           audio.src = cached.url.startsWith('/api/') ? `${backendBase}${cached.url}` : cached.url;
           audio.preload = 'auto';
           setIsLoadingStream(false); setIsPlaying(true);
@@ -382,6 +383,7 @@ export function PlayerProvider({ children }) {
           const backendBase = (import.meta.env.VITE_API_URL || 'http://localhost:5066/api').replace('/api', '');
           const audioUrl = nctStream.startsWith('/api/') ? `${backendBase}${nctStream}` : nctStream;
           audio.preload = 'auto';
+          audio.loop = false;
           audio.src = audioUrl;
           setIsLoadingStream(false);
           setIsPlaying(true);

@@ -112,6 +112,8 @@ export function usePlayback({ showToast }) {
           }
         };
         const onEnd = () => {
+            // Bỏ qua ended từ silent bridge (không nên fire nếu loop=true, nhưng phòng hờ)
+            if (audio.src && audio.src.startsWith('data:')) return;
             if (crossfadeTriggeredRef.current) { crossfadeTriggeredRef.current = false; return; }
             if (sleepTimerRef.current === 'end') { setIsPlaying(false); return; }
             // ═══ SILENT BRIDGE: giữ audio "playing" để Chrome không dismiss notification ═══
