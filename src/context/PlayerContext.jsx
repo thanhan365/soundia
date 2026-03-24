@@ -285,7 +285,6 @@ export function PlayerProvider({ children }) {
       recordListening(song);
       setCurrentTime(0);
       setDuration(0);
-      audio.pause();
       const backendBase = (import.meta.env.VITE_API_URL || 'http://localhost:5066/api').replace('/api', '');
       const audioUrl = song.audio.startsWith('/api/') ? `${backendBase}${song.audio}` : song.audio;
       audio.src = audioUrl;
@@ -297,7 +296,6 @@ export function PlayerProvider({ children }) {
     } else {
       setIsLoadingStream(true);
       isTransitioningRef.current = true;
-      audio.pause();
       setCurrentSong(song);
       addToRecent(song);
       recordListening(song);
@@ -318,7 +316,6 @@ export function PlayerProvider({ children }) {
 
         if (cached.type === 'nct') {
           if (isYTMode) { ytPlayerRef.current?.pause(); setIsYTMode(false); isYTModeRef.current = false; }
-          audio.pause();
           const backendBase = BACKEND.replace('/api', '');
           audio.src = cached.url.startsWith('/api/') ? `${backendBase}${cached.url}` : cached.url;
           audio.preload = 'auto';
