@@ -231,10 +231,11 @@ export function PlayerProvider({ children }) {
     const audio = audioRef.current;
     crossfadeTriggeredRef.current = false;
     isRestoredRef.current = false;
-    pendingPlayNextRef.current = false; // Đã vào playSong → xóa flag retry
-    const sessionId = ++playSessionRef.current; // unique ID for this play call
+    pendingPlayNextRef.current = false;
+    const sessionId = ++playSessionRef.current;
 
-    if (!forceReload && currentSong?.id === song.id) {
+    // Toggle play/pause nếu cùng bài (check TRƯỚC khi update ref)
+    if (!forceReload && currentSongRef.current?.id === song.id) {
       if (isYTMode) {
         if (isPlaying) { ytPlayerRef.current?.pause(); setIsPlaying(false); }
         else { ytPlayerRef.current?.play(); setIsPlaying(true); }
@@ -244,6 +245,9 @@ export function PlayerProvider({ children }) {
       }
       return;
     }
+
+    // ═══ BYPASS REACT: cập nhật ref trực tiếp (screen off → React không re-render) ═══
+    currentSongRef.current = song;
 
     if (song.source === 'spotify' && !song.audio) song.audio = "YT_STREAM";
 
@@ -429,7 +433,7 @@ export function PlayerProvider({ children }) {
   // ── playNext / playPrev ────────────────────────────────────────────────────
   const playNextGuardRef = useRef(false);
   const playNext = useCallback(async () => {
-    if (!currentSong) return;
+    if (!currentSongRef.current) return;
     // Guard against double invocation (crossfade + onEnd, or rapid calls)
     if (playNextGuardRef.current) return;
     playNextGuardRef.current = true;
@@ -444,15 +448,15 @@ export function PlayerProvider({ children }) {
       showToast('⏱️ Hết bài — đã tạm dừng nhạc', 'info');
       return;
     }
-    // Push current song to history before advancing
-    if (currentSong) playHistoryRef.current.push(currentSong);
+    const _cur = currentSongRef.current; // Luôn fresh, không phụ thuộc React re-render
+    if (_cur) playHistoryRef.current.push(_cur);
     if (manualQueue.length > 0) {
       const next = manualQueue[0];
       setManualQueue((q) => q.slice(1));
       playSong(next);
       return;
     }
-    const autoFiltered = autoQueue.filter(s => s.id !== currentSong?.id);
+    const autoFiltered = autoQueue.filter(s => s.id !== _cur?.id);
     if (autoFiltered.length > 0) {
       const next = shuffle
         ? autoFiltered[Math.floor(Math.random() * autoFiltered.length)]
@@ -466,15 +470,15 @@ export function PlayerProvider({ children }) {
       const sourceList = list.length > 1 ? list : allSongs;
       let idx;
       do { idx = Math.floor(Math.random() * sourceList.length); }
-      while (sourceList.length > 1 && sourceList[idx].id === currentSong.id);
+      while (sourceList.length > 1 && sourceList[idx].id === _cur.id);
       playSong(sourceList[idx]);
     } else {
-      const idx = list.findIndex((s) => s.id === currentSong.id);
+      const idx = list.findIndex((s) => s.id === _cur.id);
       if (repeatMode === "none" && (idx === list.length - 1 || idx === -1)) {
         // ── Autoplay tương tự: tìm bài cùng artist ──
         try {
           const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5066/api';
-          const query = encodeURIComponent(currentSong.artist);
+          const query = encodeURIComponent(_cur.artist);
           // Timeout 5s: tránh treo khi tắt màn hình (Chrome throttle mạng)
           const res = await Promise.race([
             fetch(`${apiUrl}/songs/search?q=${query}&limit=20`),
@@ -482,7 +486,7 @@ export function PlayerProvider({ children }) {
           ]);
           if (res.ok) {
             const data = await res.json();
-            const similar = (data.data || data).filter(s => s.id !== currentSong.id);
+            const similar = (data.data || data).filter(s => s.id !== _cur.id);
             if (similar.length > 0) {
               const pick = similar[Math.floor(Math.random() * Math.min(similar.length, 5))];
               const normalizedSong = { ...pick, audio: pick.audioUrl || pick.audio, cover: pick.coverUrl || pick.cover };
@@ -496,7 +500,7 @@ export function PlayerProvider({ children }) {
         if (allSongs.length > 1) {
           let rIdx;
           do { rIdx = Math.floor(Math.random() * allSongs.length); }
-          while (allSongs.length > 1 && allSongs[rIdx].id === currentSong.id);
+          while (allSongs.length > 1 && allSongs[rIdx].id === _cur.id);
           showToast('🎵 Phát bài ngẫu nhiên', 'info');
           playSong(allSongs[rIdx]);
           return;
@@ -564,7 +568,7 @@ export function PlayerProvider({ children }) {
   };
 
   // ── Media Session API — lock screen controls + background playback ─────────
-  useMediaSession({ currentSong, isPlaying, togglePlay, playNext, playPrev, seekTo, audioRef, isYTModeRef, ytPlayerRef });
+  useMediaSession({ currentSong, currentSongRef, isPlaying, togglePlay, playNext, playPrev, seekTo, audioRef, isYTModeRef, ytPlayerRef });
 
   const contextValue = useMemo(() => ({
     songList: filteredSongs, allSongs, currentSong, isPlaying,

@@ -5,7 +5,7 @@ import { useEffect } from "react";
  * - Android Chrome PWA: full background playback + notification media controls
  * - iOS Safari: Control Center controls + background audio when minimized
  */
-export function useMediaSession({ currentSong, isPlaying, togglePlay, playNext, playPrev, seekTo, audioRef, isYTModeRef, ytPlayerRef }) {
+export function useMediaSession({ currentSong, currentSongRef, isPlaying, togglePlay, playNext, playPrev, seekTo, audioRef, isYTModeRef, ytPlayerRef }) {
   // Update media session metadata when song changes
   useEffect(() => {
     if (!("mediaSession" in navigator) || !currentSong) return;
@@ -118,23 +118,25 @@ export function useMediaSession({ currentSong, isPlaying, togglePlay, playNext, 
     return () => clearInterval(interval);
   }, [currentSong?.id, isPlaying]);
 
-  // Safety net: khi audio th\u1EF1c s\u1EF1 ph\u00E1t, \u0111\u1EA3m b\u1EA3o notification t\u1ED3n t\u1EA1i
+  // Safety net: khi audio thực sự phát, đảm bảo notification tồn tại
   useEffect(() => {
     const audio = audioRef?.current;
     if (!audio || !("mediaSession" in navigator)) return;
     const onAudioPlaying = () => {
-      if (!currentSong) return;
+      // Dùng ref thay closure — luôn đúng bài dù React không re-render (screen off)
+      const song = currentSongRef?.current;
+      if (!song) return;
       const artwork = [];
-      if (currentSong.cover) {
+      if (song.cover) {
         artwork.push(
-          { src: currentSong.cover, sizes: "96x96", type: "image/jpeg" },
-          { src: currentSong.cover, sizes: "192x192", type: "image/jpeg" },
-          { src: currentSong.cover, sizes: "512x512", type: "image/jpeg" }
+          { src: song.cover, sizes: "96x96", type: "image/jpeg" },
+          { src: song.cover, sizes: "192x192", type: "image/jpeg" },
+          { src: song.cover, sizes: "512x512", type: "image/jpeg" }
         );
       }
       navigator.mediaSession.metadata = new MediaMetadata({
-        title: currentSong.title || "Soundia",
-        artist: currentSong.artist || "",
+        title: song.title || "Soundia",
+        artist: song.artist || "",
         album: "Soundia",
         artwork,
       });
