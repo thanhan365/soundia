@@ -28,16 +28,11 @@ export default function TrendingDetailPage() {
   const [songs, setSongs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [ctxMenu, setCtxMenu] = useState(null);
-  const [localFavs, setLocalFavs] = useState(new Set());
 
-  const handleFavorite = (song) => {
-    toggleFavorite(song);
-    setLocalFavs(prev => {
-      const next = new Set(prev);
-      if (next.has(song.id)) next.delete(song.id);
-      else next.add(song.id);
-      return next;
-    });
+  const handleToggleFavorite = async (song) => {
+    const wasLiked = isFavorite(song.id);
+    await toggleFavorite({ ...song, isExternal: true });
+    showToast(wasLiked ? `Đã bỏ yêu thích "${song.title}"` : `Đã thêm "${song.title}" vào yêu thích`, wasLiked ? "info" : "success");
   };
 
   const meta = CHART_META[type] || CHART_META.viet;
@@ -154,7 +149,7 @@ export default function TrendingDetailPage() {
             {songs.map((song, i) => {
               const isActive = isCurrentSong(song);
               const isActivePlaying = isActive && isPlaying;
-              const liked = isFavorite(song.id) || localFavs.has(song.id);
+              const liked = isFavorite(song.id);
 
               return (
                 <div
@@ -204,8 +199,8 @@ export default function TrendingDetailPage() {
 
                   {/* Like */}
                   <button
-                    onClick={(e) => { e.stopPropagation(); handleFavorite(song); showToast(liked ? "Đã bỏ yêu thích" : "Đã thêm yêu thích", liked ? "info" : "success"); }}
-                    className={`p-1 rounded-full transition-all ${liked ? "text-red-500 opacity-100" : "text-gray-600 opacity-0 group-hover:opacity-100 hover:text-white"}`}
+                    onClick={(e) => { e.stopPropagation(); handleToggleFavorite(song); }}
+                    className={`p-1 rounded-full transition-all hover:scale-110 active:scale-90 ${liked ? "text-red-500 opacity-100" : "text-gray-600 opacity-0 group-hover:opacity-100 hover:text-red-400"}`}
                   >
                     <HiHeart className="text-sm" />
                   </button>

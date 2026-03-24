@@ -6,10 +6,12 @@ import api from "../utils/api";
  */
 export function useFavorites({ user, showToast, allSongs, setAllSongs, currentSong, setCurrentSong, setFilteredSongsRef }) {
     const [favorites, setFavorites] = useState([]);
+    // Map external string IDs → DB integer IDs so isFavorite() works for both
+    const [idMap, setIdMap] = useState({});
 
     // Load favorites when user changes
     useEffect(() => {
-        if (!user) { setFavorites([]); return; }
+        if (!user) { setFavorites([]); setIdMap({}); return; }
         const load = async () => {
             try {
                 const favRes = await api.get("/favorites");
@@ -37,6 +39,10 @@ export function useFavorites({ user, showToast, allSongs, setAllSongs, currentSo
                 });
                 songToSave = res.data;
                 const newId = songToSave.id;
+                // Track external→DB ID mapping so isFavorite(externalId) works
+                if (oldId !== newId) {
+                    setIdMap(prev => ({ ...prev, [oldId]: newId }));
+                }
                 // Update currentSong's ID via React setState so isFavorite() matches
                 if (currentSong && (currentSong.id === oldId ||
                     (currentSong.title === song.title && currentSong.artist === song.artist))) {
@@ -61,7 +67,13 @@ export function useFavorites({ user, showToast, allSongs, setAllSongs, currentSo
         } catch (e) { console.error("Failed to toggle favorite", e); }
     };
 
-    const isFavorite = (id) => favorites.includes(id);
+    const isFavorite = (id) => {
+        if (favorites.includes(id)) return true;
+        // Check if this is an external ID that maps to a DB ID in favorites
+        const mappedId = idMap[id];
+        if (mappedId !== undefined && favorites.includes(mappedId)) return true;
+        return false;
+    };
 
     return { favorites, toggleFavorite, isFavorite };
 }
