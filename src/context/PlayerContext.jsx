@@ -475,7 +475,11 @@ export function PlayerProvider({ children }) {
         try {
           const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5066/api';
           const query = encodeURIComponent(currentSong.artist);
-          const res = await fetch(`${apiUrl}/songs/search?q=${query}&limit=20`);
+          // Timeout 5s: tránh treo khi tắt màn hình (Chrome throttle mạng)
+          const res = await Promise.race([
+            fetch(`${apiUrl}/songs/search?q=${query}&limit=20`),
+            new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 5000))
+          ]);
           if (res.ok) {
             const data = await res.json();
             const similar = (data.data || data).filter(s => s.id !== currentSong.id);
@@ -487,7 +491,7 @@ export function PlayerProvider({ children }) {
               return;
             }
           }
-        } catch { /* fallback below */ }
+        } catch { /* timeout hoặc lỗi mạng → fallback below */ }
         // Fallback: random từ allSongs
         if (allSongs.length > 1) {
           let rIdx;
