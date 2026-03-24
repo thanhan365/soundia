@@ -41,7 +41,7 @@ export function PlayerProvider({ children }) {
     volume, error, setError, shuffle, repeatMode,
     isLoadingStream, setIsLoadingStream, isYTMode, setIsYTMode,
     recentHistory, setRecentHistory, crossfade, setCrossfade, crossfadeTriggeredRef,
-    audioRef, ytPlayerRef, isYTModeRef, currentSongRef, playSongRef, playNextRef, ytPlayStartedRef, sleepTimerRef, sharedProgressRef, pendingPlayNextRef,
+    audioRef, ytPlayerRef, isYTModeRef, currentSongRef, playSongRef, playNextRef, ytPlayStartedRef, sleepTimerRef, sharedProgressRef, pendingPlayNextRef, isTransitioningRef,
     addToRecent, handleAudioError,
     handleYTReady, handleYTStateChange, handleYTTimeUpdate, handleYTError,
     togglePlay, seekTo, changeVolume, toggleShuffle, toggleRepeat,
@@ -229,8 +229,9 @@ export function PlayerProvider({ children }) {
   const playSong = async (song, forceReload = false) => {
     const _t0 = performance.now();
     const audio = audioRef.current;
-    crossfadeTriggeredRef.current = false; // Reset crossfade trigger for new song
-    isRestoredRef.current = false; // Clear restored flag — now playing for real
+    crossfadeTriggeredRef.current = false;
+    isRestoredRef.current = false;
+    audio.loop = false; // Xóa silent bridge loop
     const sessionId = ++playSessionRef.current; // unique ID for this play call
 
     if (!forceReload && currentSong?.id === song.id) {
@@ -276,16 +277,14 @@ export function PlayerProvider({ children }) {
 
     // ═══ FAST PLAYBACK: Set UI immediately, resolve stream in background ═══
     if (hasStableDirectUrl) {
-      // Direct URL — play instantly
       if (isYTMode) { ytPlayerRef.current?.pause(); setIsYTMode(false); isYTModeRef.current = false; }
+      isTransitioningRef.current = true;
       setCurrentSong(song);
       addToRecent(song);
       recordListening(song);
       setCurrentTime(0);
       setDuration(0);
       audio.pause();
-      audio.removeAttribute('src');
-      audio.load();
       const backendBase = (import.meta.env.VITE_API_URL || 'http://localhost:5066/api').replace('/api', '');
       const audioUrl = song.audio.startsWith('/api/') ? `${backendBase}${song.audio}` : song.audio;
       audio.src = audioUrl;
@@ -295,17 +294,13 @@ export function PlayerProvider({ children }) {
       console.log(`[stream] "${song.title}" -> Direct URL`);
       audio.play().catch(() => { });
     } else {
-      // Needs stream resolution — show loading, set song info immediately
       setIsLoadingStream(true);
-      // Stop old audio immediately to prevent stale progress reads
+      isTransitioningRef.current = true;
       audio.pause();
-      audio.removeAttribute('src');
-      audio.load();
       setCurrentSong(song);
-      pendingPlayNextRef.current = false; // Clear pending flag — playback initiated
+      pendingPlayNextRef.current = false;
       addToRecent(song);
       recordListening(song);
-      setIsPlaying(false); // Don't show as playing until audio actually starts
       setCurrentTime(0);
       setDuration(expectedDur > 0 ? expectedDur : 0);
 
@@ -323,7 +318,7 @@ export function PlayerProvider({ children }) {
 
         if (cached.type === 'nct') {
           if (isYTMode) { ytPlayerRef.current?.pause(); setIsYTMode(false); isYTModeRef.current = false; }
-          audio.pause(); audio.removeAttribute('src'); audio.load();
+          audio.pause();
           const backendBase = BACKEND.replace('/api', '');
           audio.src = cached.url.startsWith('/api/') ? `${backendBase}${cached.url}` : cached.url;
           audio.preload = 'auto';
@@ -386,9 +381,7 @@ export function PlayerProvider({ children }) {
         }
 
         if (nctStream) {
-          // ✅ NCT tìm được → phát HTML5 Audio (ổn định hơn)
           if (isYTMode) { ytPlayerRef.current?.pause(); setIsYTMode(false); isYTModeRef.current = false; }
-          audio.pause();
           const backendBase = (import.meta.env.VITE_API_URL || 'http://localhost:5066/api').replace('/api', '');
           const audioUrl = nctStream.startsWith('/api/') ? `${backendBase}${nctStream}` : nctStream;
           audio.preload = 'auto';

@@ -1,5 +1,9 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 
+// MP3 im lặng — giữ audio element "playing" giữa các bài hát
+// Chrome Android dismiss notification khi audio 'ended' và không tạo lại trong background
+const SILENT_MP3 = 'data:audio/mp3;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU4Ljc2LjEwMAAAAAAAAAAAAAAA//tQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWGluZwAAAA8AAAACAAABhgC7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7//////////////////////////////////////////////////////////////////8AAAAATGF2YzU4LjEzAAAAAAAAAAAAAAAAJAAAAAAAAAAAAYYoRwmHAAAAAAD/+1AEAAAAAP8AAAAAgAAA/wAAAABBhGRl3BEAAAAADCO7ruCAAAAAIAAAdIIAAHB4PnkHP///5cHg+/Lg+f///+XB4Pn//////5cHg+D5///8uDwfB8AAAAAT//tQBAAAAJgAAAAAAgAAA/wAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==';
+
 /**
  * usePlayback — core playback logic (HTML5 Audio + YouTube IFrame)
  */
@@ -56,6 +60,7 @@ export function usePlayback({ showToast }) {
     const sleepTimerRef = useRef(null); // synced from PlayerContext
     const sharedProgressRef = useRef({ time: 0, dur: 0 }); // shared between all ProgressBar instances
     const pendingPlayNextRef = useRef(false); // flag: playNext cần retry khi mở màn hình
+    const isTransitioningRef = useRef(false); // flag: đang chuyển bài, tránh setIsPlaying(false)
 
     // Sync refs
     useEffect(() => { currentSongRef.current = currentSong; }, [currentSong]);
@@ -107,39 +112,22 @@ export function usePlayback({ showToast }) {
           }
         };
         const onEnd = () => {
-            // Crossfade: nếu đã trigger sớm thì không playNext lại
-            if (crossfadeTriggeredRef.current) {
-                crossfadeTriggeredRef.current = false;
-                return;
-            }
-            // Sleep timer 'end' mode — dừng phát
-            if (sleepTimerRef.current === 'end') {
-                setIsPlaying(false);
-                return;
-            }
+            if (crossfadeTriggeredRef.current) { crossfadeTriggeredRef.current = false; return; }
+            if (sleepTimerRef.current === 'end') { setIsPlaying(false); return; }
+            // ═══ SILENT BRIDGE: giữ audio "playing" để Chrome không dismiss notification ═══
+            try { audio.src = SILENT_MP3; audio.loop = true; audio.play().catch(() => {}); } catch (_) {}
             if (repeatModeRef.current === "one") {
                 if (currentSongRef.current && playSongRef.current) playSongRef.current(currentSongRef.current, true);
             } else {
-                // Đặt flag pending để retry khi mở màn hình nếu playNext fail
                 pendingPlayNextRef.current = true;
                 playNextRef.current?.();
-                // Retry sau 3s nếu vẫn pending (mobile background có thể throttle)
-                setTimeout(() => {
-                    if (pendingPlayNextRef.current && audio.ended) {
-                        playNextRef.current?.();
-                    }
-                }, 3000);
-                // Retry lần 2 sau 8s
-                setTimeout(() => {
-                    if (pendingPlayNextRef.current && audio.ended) {
-                        playNextRef.current?.();
-                    }
-                }, 8000);
+                setTimeout(() => { if (pendingPlayNextRef.current) playNextRef.current?.(); }, 3000);
+                setTimeout(() => { if (pendingPlayNextRef.current) playNextRef.current?.(); }, 8000);
             }
         };
         const onErr = () => handleAudioError("Không thể phát bài này.");
-        const onPlay = () => { if (!isYTModeRef.current) setIsPlaying(true); };
-        const onPause = () => { if (!isYTModeRef.current) setIsPlaying(false); };
+        const onPlay = () => { if (!isYTModeRef.current) { isTransitioningRef.current = false; setIsPlaying(true); } };
+        const onPause = () => { if (!isYTModeRef.current && !isTransitioningRef.current) setIsPlaying(false); };
         const lastReportedDur = { value: 0 }; // track to avoid redundant setDuration on mobile
         const onTimeUpdate = () => {
             if (!isYTModeRef.current && audio.duration && !isNaN(audio.duration) && isFinite(audio.duration)) {
@@ -150,9 +138,9 @@ export function usePlayback({ showToast }) {
                     setDuration(audio.duration);
                 }
             }
-            // Crossfade: fade out trước khi bài kết thúc
+            // Crossfade: fade out trước khi bài kết thúc (bỏ qua silent bridge)
             const cf = crossfadeRef.current;
-            if (cf > 0 && !isYTModeRef.current && audio.duration > 0 && !isNaN(audio.duration)) {
+            if (cf > 0 && !isYTModeRef.current && audio.duration > cf && !isNaN(audio.duration)) {
                 const remaining = audio.duration - audio.currentTime;
                 if (remaining <= cf && remaining > 0 && !crossfadeTriggeredRef.current) {
                     crossfadeTriggeredRef.current = true;
@@ -304,7 +292,7 @@ export function usePlayback({ showToast }) {
         volume, error, setError, shuffle, repeatMode,
         isLoadingStream, setIsLoadingStream, isYTMode, setIsYTMode,
         recentHistory, setRecentHistory, crossfade, setCrossfade, crossfadeTriggeredRef,
-        audioRef, ytPlayerRef, isYTModeRef, currentSongRef, playSongRef, playNextRef, ytPlayStartedRef, sleepTimerRef, sharedProgressRef, pendingPlayNextRef,
+        audioRef, ytPlayerRef, isYTModeRef, currentSongRef, playSongRef, playNextRef, ytPlayStartedRef, sleepTimerRef, sharedProgressRef, pendingPlayNextRef, isTransitioningRef,
         addToRecent, handleAudioError,
         handleYTReady, handleYTStateChange, handleYTTimeUpdate, handleYTError,
         togglePlay, seekTo, changeVolume, toggleShuffle, toggleRepeat,

@@ -117,4 +117,30 @@ export function useMediaSession({ currentSong, isPlaying, togglePlay, playNext, 
     updatePosition(); // initial
     return () => clearInterval(interval);
   }, [currentSong?.id, isPlaying]);
+
+  // Safety net: khi audio th\u1EF1c s\u1EF1 ph\u00E1t, \u0111\u1EA3m b\u1EA3o notification t\u1ED3n t\u1EA1i
+  useEffect(() => {
+    const audio = audioRef?.current;
+    if (!audio || !("mediaSession" in navigator)) return;
+    const onAudioPlaying = () => {
+      if (!currentSong) return;
+      const artwork = [];
+      if (currentSong.cover) {
+        artwork.push(
+          { src: currentSong.cover, sizes: "96x96", type: "image/jpeg" },
+          { src: currentSong.cover, sizes: "192x192", type: "image/jpeg" },
+          { src: currentSong.cover, sizes: "512x512", type: "image/jpeg" }
+        );
+      }
+      navigator.mediaSession.metadata = new MediaMetadata({
+        title: currentSong.title || "Soundia",
+        artist: currentSong.artist || "",
+        album: "Soundia",
+        artwork,
+      });
+      navigator.mediaSession.playbackState = "playing";
+    };
+    audio.addEventListener('playing', onAudioPlaying);
+    return () => audio.removeEventListener('playing', onAudioPlaying);
+  }, [currentSong?.id, currentSong?.title, currentSong?.artist, currentSong?.cover]);
 }
