@@ -232,6 +232,7 @@ export function PlayerProvider({ children }) {
     crossfadeTriggeredRef.current = false;
     isRestoredRef.current = false;
     audio.loop = false; // Xóa silent bridge loop
+    pendingPlayNextRef.current = false; // Đã vào playSong → xóa flag retry
     const sessionId = ++playSessionRef.current; // unique ID for this play call
 
     if (!forceReload && currentSong?.id === song.id) {
@@ -298,7 +299,6 @@ export function PlayerProvider({ children }) {
       isTransitioningRef.current = true;
       audio.pause();
       setCurrentSong(song);
-      pendingPlayNextRef.current = false;
       addToRecent(song);
       recordListening(song);
       setCurrentTime(0);
