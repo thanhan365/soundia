@@ -180,7 +180,7 @@ function AppContent() {
 
   return (
     <div className="animated-bg h-[100dvh] w-full max-w-[100vw] overflow-hidden flex" style={dynamicStyle}>
-      {/* YouTube IFrame Player ẩn – dùng cho Deezer songs */}
+      {/* YouTube IFrame Player ẩn – audio fallback */}
       <YouTubeAudioPlayer
         ref={ytPlayerRef}
         onReady={handleYTReady}

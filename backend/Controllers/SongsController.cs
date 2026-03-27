@@ -12,36 +12,10 @@ namespace Soundia.Api.Controllers
     public class SongsController : ControllerBase
     {
         private readonly SoundiaDbContext _context;
-        private readonly Soundia.Api.Services.ISpotifyService _spotifyService;
 
-        public SongsController(SoundiaDbContext context, Soundia.Api.Services.ISpotifyService spotifyService)
+        public SongsController(SoundiaDbContext context)
         {
             _context = context;
-            _spotifyService = spotifyService;
-        }
-
-
-
-        // ── Spotify Proxies (kept for future use) ────────────────────────────
-        [HttpGet("spotify-proxy")]
-        public async Task<ActionResult> SpotifyProxy([FromQuery] string query, [FromQuery] string type = "track,artist")
-        {
-            try { return Content(await _spotifyService.SearchAsync(query, type), "application/json"); }
-            catch (System.Exception ex) { return StatusCode(500, new { message = "Error communicating with Spotify API", details = ex.Message }); }
-        }
-
-        [HttpGet("spotify-artist-search")]
-        public async Task<ActionResult> SpotifyArtistSearch([FromQuery] string query)
-        {
-            try { return Content(await _spotifyService.SearchArtistAsync(query), "application/json"); }
-            catch (System.Exception ex) { return StatusCode(500, new { message = "Error communicating with Spotify API", details = ex.Message }); }
-        }
-
-        [HttpGet("spotify-artist-top-tracks")]
-        public async Task<ActionResult> SpotifyArtistTopTracks([FromQuery] string artistId)
-        {
-            try { return Content(await _spotifyService.GetArtistTopTracksAsync(artistId), "application/json"); }
-            catch (System.Exception ex) { return StatusCode(500, new { message = "Error communicating with Spotify API", details = ex.Message }); }
         }
 
         // ── iTunes Proxies (CORS bypass) ──────────────────────────────────────

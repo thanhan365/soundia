@@ -249,8 +249,6 @@ export function PlayerProvider({ children }) {
     // ═══ BYPASS REACT: cập nhật ref trực tiếp (screen off → React không re-render) ═══
     currentSongRef.current = song;
 
-    if (song.source === 'spotify' && !song.audio) song.audio = "YT_STREAM";
-
     // Detect stored NCT/iTunes URLs that need re-resolution
     const isItunesPreview = song.audio &&
       (song.audio.includes('audio.itunes.apple.com') || song.audio.includes('audio-ssl.itunes.apple.com'));

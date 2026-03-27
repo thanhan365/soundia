@@ -44,7 +44,6 @@ self.addEventListener('fetch', (event) => {
     if (url.hostname.includes('googlevideo.com')) return;
     if (url.hostname.includes('nct.vn')) return;
     if (url.hostname.includes('itunes.apple.com')) return;
-    if (url.hostname.includes('deezer.com')) return;
 
     // Skip non-HTTP(S) protocols
     if (!url.protocol.startsWith('http')) return;
