@@ -76,9 +76,38 @@ namespace Soundia.Api.Controllers
             }
         }
 
-        // ── Cache NCT Top chart (15 phút) ────────────────────────────────────
+        // Cache NCT Top
         private static List<object>? _cachedNctTop;
         private static DateTime _nctTopCacheExpiry = DateTime.MinValue;
+
+        // Cache NCT Artists (30 phút)
+        private static List<object>? _cachedNctArtists;
+        private static DateTime _nctArtistsCacheExpiry = DateTime.MinValue;
+
+        // Shared: lấy chart key động, thử hôm nay → lùi tối đa 7 ngày
+        private static async Task<(string json, string key)?> FetchCurrentChartData(System.Net.Http.HttpClient client)
+        {
+            var now = DateTime.UtcNow.AddHours(7); // UTC+7 Vietnam
+            for (int offset = 0; offset <= 7; offset++)
+            {
+                var day = now.AddDays(-offset);
+                var chartKey = $"1-5-d{day.DayOfYear}-{day.Year}";
+                var chartUrl = $"https://graph.nhaccuatui.com/api/v1/playlist/charts/{chartKey}?key={chartKey}&isShowLoading=false";
+                try
+                {
+                    var json = await client.GetStringAsync(chartUrl);
+                    using var checkDoc = System.Text.Json.JsonDocument.Parse(json);
+                    var checkItems = checkDoc.RootElement.GetProperty("data").GetProperty("items");
+                    if (checkItems.GetArrayLength() > 0)
+                    {
+                        Console.WriteLine($"[NCT] Using chart key: {chartKey}");
+                        return (json, chartKey);
+                    }
+                }
+                catch { /* try next day */ }
+            }
+            return null;
+        }
 
         /// <summary>
         /// Tự động tạo chart key theo ngày hiện tại.
@@ -368,6 +397,10 @@ namespace Soundia.Api.Controllers
         [HttpGet("nct-artists")]
         public async Task<ActionResult> NctArtists()
         {
+            // Cache 30 phút
+            if (_cachedNctArtists != null && DateTime.UtcNow < _nctArtistsCacheExpiry)
+                return Ok(new { success = true, data = _cachedNctArtists });
+
             try
             {
                 using var client = new System.Net.Http.HttpClient();
@@ -376,29 +409,31 @@ namespace Soundia.Api.Controllers
                 var artists = new List<object>();
                 var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-                // 1) Lấy artist từ top chart
+                // 1) Lấy artist từ top chart — key tự động, thử hôm nay → lùi 7 ngày
                 try
                 {
-                    var chartUrl = "https://graph.nhaccuatui.com/api/v1/playlist/charts/1-5-d64-2026?key=1-5-d64-2026&isShowLoading=false";
-                    var json = await client.GetStringAsync(chartUrl);
-                    using var doc = System.Text.Json.JsonDocument.Parse(json);
-                    var items = doc.RootElement.GetProperty("data").GetProperty("items");
-
-                    foreach (var item in items.EnumerateArray())
+                    var chartResult = await FetchCurrentChartData(client);
+                    if (chartResult != null)
                     {
-                        if (item.TryGetProperty("artist", out var artistArr) && artistArr.ValueKind == System.Text.Json.JsonValueKind.Array)
+                        using var doc = System.Text.Json.JsonDocument.Parse(chartResult.Value.json);
+                        var items = doc.RootElement.GetProperty("data").GetProperty("items");
+
+                        foreach (var item in items.EnumerateArray())
                         {
-                            foreach (var a in artistArr.EnumerateArray())
+                            if (item.TryGetProperty("artist", out var artistArr) && artistArr.ValueKind == System.Text.Json.JsonValueKind.Array)
                             {
-                                var aName = a.TryGetProperty("name", out var an) ? an.GetString() ?? "" : "";
-                                var aImage = a.TryGetProperty("image", out var ai) ? ai.GetString() ?? "" : "";
-                                var aKey = a.TryGetProperty("key", out var ak) ? ak.GetString() ?? "" : "";
+                                foreach (var a in artistArr.EnumerateArray())
+                                {
+                                    var aName = a.TryGetProperty("name", out var an) ? an.GetString() ?? "" : "";
+                                    var aImage = a.TryGetProperty("image", out var ai) ? ai.GetString() ?? "" : "";
+                                    var aKey = a.TryGetProperty("key", out var ak) ? ak.GetString() ?? "" : "";
 
-                                if (string.IsNullOrEmpty(aName) || string.IsNullOrEmpty(aImage) || seen.Contains(aName))
-                                    continue;
+                                    if (string.IsNullOrEmpty(aName) || string.IsNullOrEmpty(aImage) || seen.Contains(aName))
+                                        continue;
 
-                                seen.Add(aName);
-                                artists.Add(new { id = aKey, name = aName, picture = aImage });
+                                    seen.Add(aName);
+                                    artists.Add(new { id = aKey, name = aName, picture = aImage });
+                                }
                             }
                         }
                     }
@@ -442,6 +477,13 @@ namespace Soundia.Api.Controllers
                     catch { }
                 }
 
+                // Cache kết quả 30 phút
+                if (artists.Count > 0)
+                {
+                    _cachedNctArtists = artists;
+                    _nctArtistsCacheExpiry = DateTime.UtcNow.AddMinutes(30);
+                }
+
                 return Ok(new { success = true, data = artists });
             }
             catch (System.Exception ex)
@@ -469,14 +511,18 @@ namespace Soundia.Api.Controllers
                 var covers = new List<string>();
                 try
                 {
-                    var chartUrl = "https://graph.nhaccuatui.com/api/v1/playlist/charts/1-5-d64-2026?key=1-5-d64-2026&isShowLoading=false";
-                    var json = await client.GetStringAsync(chartUrl);
-                    using var doc = System.Text.Json.JsonDocument.Parse(json);
-                    var items = doc.RootElement.GetProperty("data").GetProperty("items");
-                    foreach (var item in items.EnumerateArray())
+                    // Dùng key động thay vì hardcode
+                    var chartResult = await FetchCurrentChartData(client);
+                    var json = chartResult?.json ?? "";
+                    if (!string.IsNullOrEmpty(json))
                     {
-                        var img = item.TryGetProperty("image", out var im) ? im.GetString() : null;
-                        if (!string.IsNullOrEmpty(img)) covers.Add(img);
+                        using var doc = System.Text.Json.JsonDocument.Parse(json);
+                        var items = doc.RootElement.GetProperty("data").GetProperty("items");
+                        foreach (var item in items.EnumerateArray())
+                        {
+                            var img = item.TryGetProperty("image", out var im) ? im.GetString() : null;
+                            if (!string.IsNullOrEmpty(img)) covers.Add(img);
+                        }
                     }
                 }
                 catch { }
