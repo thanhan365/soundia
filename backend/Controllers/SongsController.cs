@@ -95,13 +95,13 @@ namespace Soundia.Api.Controllers
                 var chartUrl = $"https://graph.nhaccuatui.com/api/v1/playlist/charts/{chartKey}?key={chartKey}&isShowLoading=false";
                 try
                 {
-                    var json = await client.GetStringAsync(chartUrl);
-                    using var checkDoc = System.Text.Json.JsonDocument.Parse(json);
+                    var chartJson = await client.GetStringAsync(chartUrl);
+                    using var checkDoc = System.Text.Json.JsonDocument.Parse(chartJson);
                     var checkItems = checkDoc.RootElement.GetProperty("data").GetProperty("items");
                     if (checkItems.GetArrayLength() > 0)
                     {
                         Console.WriteLine($"[NCT] Using chart key: {chartKey}");
-                        return (json, chartKey);
+                        return (chartJson, chartKey);
                     }
                 }
                 catch { /* try next day */ }
@@ -137,35 +137,12 @@ namespace Soundia.Api.Controllers
                 using var client = new System.Net.Http.HttpClient();
                 client.DefaultRequestHeaders.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36");
                 
-                // NCT chart key format: "1-5-d{dayOfYear}-{year}"
-                // Thử key hôm nay → lùi dần tối đa 7 ngày để tìm chart có data
-                var now = DateTime.UtcNow.AddHours(7); // UTC+7 Vietnam
-                string json = "";
-                bool found = false;
-
-                for (int offset = 0; offset <= 7 && !found; offset++)
-                {
-                    var day = now.AddDays(-offset);
-                    var chartKey = $"1-5-d{day.DayOfYear}-{day.Year}";
-                    var chartUrl = $"https://graph.nhaccuatui.com/api/v1/playlist/charts/{chartKey}?key={chartKey}&isShowLoading=false";
-                    try
-                    {
-                        json = await client.GetStringAsync(chartUrl);
-                        using var checkDoc = System.Text.Json.JsonDocument.Parse(json);
-                        var checkItems = checkDoc.RootElement.GetProperty("data").GetProperty("items");
-                        if (checkItems.GetArrayLength() > 0)
-                        {
-                            found = true;
-                            Console.WriteLine($"[NctTop] Using chart key: {chartKey} ({checkItems.GetArrayLength()} items)");
-                        }
-                    }
-                    catch { /* try next day */ }
-                }
-
-                if (!found)
+                // Dùng helper chung để lấy chart key động
+                var chartResult = await FetchCurrentChartData(client);
+                if (chartResult == null)
                     return StatusCode(500, new { message = "NCT chart unavailable — no chart data found" });
 
-                using var doc = System.Text.Json.JsonDocument.Parse(json);
+                using var doc = System.Text.Json.JsonDocument.Parse(chartResult.Value.json);
                 var dataNode = doc.RootElement.GetProperty("data");
                 var items = dataNode.GetProperty("items");
 

@@ -11,75 +11,73 @@ export default function BannerSlider() {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [paused, setPaused] = useState(false);
 
-  // Fetch Top 5 bài hát thịnh hành từ NCT charts (TRENDING_MUSIC)
+  // Fetch Top 5 bài hát thịnh hành — ưu tiên backend proxy (tránh CORS), fallback direct NCT
   useEffect(() => {
     const fetchBanners = async () => {
       try {
-        // Step 1: Lấy danh sách charts để tìm key của TRENDING_MUSIC
-        const chartsRes = await fetch("https://graph.nhaccuatui.com/api/v1/playlist/charts");
-        if (!chartsRes.ok) throw new Error("Charts API returned " + chartsRes.status);
-        const chartsData = await chartsRes.json();
-        if (chartsData.code !== 0 || !Array.isArray(chartsData.data)) throw new Error("Invalid charts data");
-
-        const trendingChart = chartsData.data.find(c => c.tag === "TRENDING_MUSIC" || c.id === 5);
-        if (!trendingChart?.key) throw new Error("No trending chart found");
-
-        // Step 2: Lấy chi tiết chart (đầy đủ 50 bài) bằng chart key
-        const detailRes = await fetch(`https://graph.nhaccuatui.com/api/v1/playlist/charts/${trendingChart.key}`);
-        if (!detailRes.ok) throw new Error("Chart detail API returned " + detailRes.status);
-        const detailData = await detailRes.json();
-        if (detailData.code !== 0) throw new Error("Invalid chart detail data");
-
-        const items = detailData.data?.items || [];
-        if (items.length === 0) throw new Error("No items in chart");
-
-        // Take top 5 items and map to our song format
-        const top5 = items.slice(0, 5).map(item => {
-          // Extract stream URL (prefer 320kbps, fallback 128kbps)
-          let streamUrl = "";
-          if (Array.isArray(item.streamURL)) {
-            const hq = item.streamURL.find(s => s.type === "320");
-            const normal = item.streamURL.find(s => s.type === "128");
-            streamUrl = (hq?.stream || normal?.stream || "");
+        // Primary: Backend proxy (luôn dùng key động, không bị CORS)
+        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5066/api';
+        const res = await fetch(`${apiUrl}/songs/nct-top`);
+        if (res.ok) {
+          const result = await res.json();
+          const data = result.data || result;
+          if (Array.isArray(data) && data.length > 0) {
+            setSongs(data.slice(0, 5).map(item => ({
+              id: item.id || `nct-${item.key}`,
+              title: item.title || item.name,
+              artist: item.artist || item.artistName,
+              cover: item.cover || item.image || "",
+              duration: item.duration || 0,
+              source: "nct",
+              key: item.key,
+              streamUrl: item.streamUrl || "",
+            })));
+            return;
           }
-
-          return {
-            id: `nct-${item.key}`,
-            title: item.name,
-            artist: item.artistName,
-            cover: item.image || item.bgImage || "",
-            duration: item.duration || 0,
-            source: "nct",
-            key: item.key,
-            streamUrl,
-          };
-        });
-
-        setSongs(top5);
+        }
+        throw new Error("Backend proxy returned no data");
       } catch (err) {
-        console.warn("BannerSlider: Direct NCT API failed, trying backend proxy:", err.message);
-        // Fallback: try through backend proxy
+        console.warn("BannerSlider: Backend proxy failed, trying direct NCT API:", err.message);
+        // Fallback: Direct NCT API (chỉ hoạt động ở localhost, bị CORS trên production)
         try {
-          const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5066/api';
-          const res = await fetch(`${apiUrl}/songs/nct-top`);
-          if (res.ok) {
-            const result = await res.json();
-            const data = result.data || result; // Handle both direct array and nested {data: [...]}
-            if (Array.isArray(data) && data.length > 0) {
-              setSongs(data.slice(0, 5).map(item => ({
-                id: item.id || `nct-${item.key}`,
-                title: item.title || item.name,
-                artist: item.artist || item.artistName,
-                cover: item.cover || item.image || "",
-                duration: item.duration || 0,
-                source: "nct",
-                key: item.key,
-                streamUrl: item.streamUrl || "",
-              })));
+          const chartsRes = await fetch("https://graph.nhaccuatui.com/api/v1/playlist/charts");
+          if (!chartsRes.ok) throw new Error("Charts API returned " + chartsRes.status);
+          const chartsData = await chartsRes.json();
+          if (chartsData.code !== 0 || !Array.isArray(chartsData.data)) throw new Error("Invalid charts data");
+
+          const trendingChart = chartsData.data.find(c => c.tag === "TRENDING_MUSIC" || c.id === 5);
+          if (!trendingChart?.key) throw new Error("No trending chart found");
+
+          const detailRes = await fetch(`https://graph.nhaccuatui.com/api/v1/playlist/charts/${trendingChart.key}`);
+          if (!detailRes.ok) throw new Error("Chart detail API returned " + detailRes.status);
+          const detailData = await detailRes.json();
+          if (detailData.code !== 0) throw new Error("Invalid chart detail data");
+
+          const items = detailData.data?.items || [];
+          if (items.length === 0) throw new Error("No items in chart");
+
+          const top5 = items.slice(0, 5).map(item => {
+            let streamUrl = "";
+            if (Array.isArray(item.streamURL)) {
+              const hq = item.streamURL.find(s => s.type === "320");
+              const normal = item.streamURL.find(s => s.type === "128");
+              streamUrl = (hq?.stream || normal?.stream || "");
             }
-          }
+            return {
+              id: `nct-${item.key}`,
+              title: item.name,
+              artist: item.artistName,
+              cover: item.image || item.bgImage || "",
+              duration: item.duration || 0,
+              source: "nct",
+              key: item.key,
+              streamUrl,
+            };
+          });
+
+          setSongs(top5);
         } catch (fallbackErr) {
-          console.error("BannerSlider: Backend proxy also failed:", fallbackErr);
+          console.error("BannerSlider: All sources failed:", fallbackErr);
         }
       }
     };
