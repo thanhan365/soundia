@@ -136,7 +136,8 @@ namespace Soundia.Api.Controllers
             [FromForm] IFormFile file,
             [FromForm] string title,
             [FromForm] string artist,
-            [FromForm] string? coverUrl)
+            [FromForm] string? coverUrl,
+            [FromForm] string? duration)
         {
             if (!await IsAdmin()) return Forbid();
 
@@ -164,12 +165,20 @@ namespace Soundia.Api.Controllers
             // Build audio URL
             var audioUrl = $"/uploads/songs/{fileName}";
 
+            // Format duration robustly
+            var finalDuration = "0:00";
+            if (!string.IsNullOrWhiteSpace(duration))
+            {
+                if (duration.Contains(":")) finalDuration = duration;
+                else if (int.TryParse(duration, out var sec)) finalDuration = $"{sec / 60}:{sec % 60:D2}";
+            }
+
             // Save to DB
             var song = new Soundia.Api.Models.Song
             {
                 Title = title,
                 Artist = artist,
-                Duration = "0:00",
+                Duration = finalDuration,
                 CoverUrl = coverUrl ?? "",
                 AudioUrl = audioUrl
             };

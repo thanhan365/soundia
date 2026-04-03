@@ -87,6 +87,7 @@ function UploadMp3Section() {
     const [loadingSongs, setLoadingSongs] = useState(false);
     const [deletingId, setDeletingId] = useState(null);
     const [confirmDeleteId, setConfirmDeleteId] = useState(null);
+    const [fileDuration, setFileDuration] = useState('');
 
     const fetchUploaded = useCallback(async (p = 1) => {
         setLoadingSongs(true);
@@ -104,6 +105,15 @@ function UploadMp3Section() {
         const f = e.target.files?.[0];
         if (!f) return;
         setFile(f);
+        
+        // Trích xuất duration từ file audio
+        const objUrl = URL.createObjectURL(f);
+        const tempAudio = new Audio(objUrl);
+        tempAudio.addEventListener('loadedmetadata', () => {
+             setFileDuration(Math.round(tempAudio.duration).toString());
+             URL.revokeObjectURL(objUrl);
+        });
+
         // Auto-fill tên bài từ tên file
         const nameParts = f.name.replace(/\.[^.]+$/, '').split(' - ');
         if (nameParts.length >= 2) {
@@ -126,6 +136,7 @@ function UploadMp3Section() {
             formData.append('title', title.trim());
             formData.append('artist', artist.trim());
             if (coverUrl.trim()) formData.append('coverUrl', coverUrl.trim());
+            if (fileDuration) formData.append('duration', fileDuration);
 
             await api.post('/admin/upload-song', formData, {
                 headers: { 'Content-Type': 'multipart/form-data' },
