@@ -545,6 +545,7 @@ namespace Soundia.Api.Services
                 Duration = s.TryGetProperty("duration", out var d) ? d.GetInt32() : 0,
                 GenreName = s.TryGetProperty("genreName", out var g) ? g.GetString() : "",
                 LinkShare = s.TryGetProperty("linkShare", out var ls) ? ls.GetString() : "",
+                Viewed = s.TryGetProperty("viewed", out var v) ? v.GetInt32() : 0,
             };
         }
 
@@ -582,5 +583,6 @@ namespace Soundia.Api.Services
         public string GenreName { get; set; }
         public string LinkShare { get; set; }
         public string StreamUrl { get; set; }
+        public int Viewed { get; set; }
     }
 }

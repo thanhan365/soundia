@@ -1191,8 +1191,30 @@ namespace Soundia.Api.Controllers
             if (string.IsNullOrWhiteSpace(keyword))
                 return BadRequest(new { message = "keyword is required" });
 
-            var songs = await _nctApi.SearchSongsAsync(keyword, 1, limit);
-            var result = songs.Select(s =>
+            // Fetch a larger pool than limit to allow better sorting? 
+            // The API returns top results, but we re-score them to prioritize 'original' and 'most viewed'
+            var songs = await _nctApi.SearchSongsAsync(keyword, 1, Math.Max(limit, 30));
+            
+            var queryLower = keyword.ToLowerInvariant();
+            var sortedSongs = songs.OrderByDescending(s => 
+            {
+                long score = s.Viewed;
+                string titleLower = (s.Name ?? "").ToLowerInvariant();
+                
+                // Penalize non-original versions unless the user specifically searched for them
+                if (!queryLower.Contains("remix") && titleLower.Contains("remix")) score /= 10;
+                if (!queryLower.Contains("cover") && titleLower.Contains("cover")) score /= 10;
+                if (!queryLower.Contains("karaoke") && titleLower.Contains("karaoke")) score /= 10;
+                if (!queryLower.Contains("beat") && titleLower.Contains("beat")) score /= 10;
+                if (!queryLower.Contains("lofi") && titleLower.Contains("lofi")) score /= 10;
+                
+                // Boost exact matches
+                if (titleLower == queryLower) score += 10000000;
+                
+                return score;
+            }).Take(limit).ToList();
+
+            var result = sortedSongs.Select(s =>
             {
                 var proxiedUrl = !string.IsNullOrEmpty(s.StreamUrl)
                     ? $"/api/stream/proxy-audio?url={System.Net.WebUtility.UrlEncode(s.StreamUrl)}"
@@ -1228,9 +1250,23 @@ namespace Soundia.Api.Controllers
                 await Task.WhenAll(keywordsTask, songsTask);
 
                 var keywords = keywordsTask.Result ?? new List<string>();
-                var nctSongs = (songsTask.Result ?? new List<Soundia.Api.Services.NctSong>())
+                var qLower = q.ToLowerInvariant();
+                
+                var topSongs = (songsTask.Result ?? new List<Soundia.Api.Services.NctSong>())
+                    .OrderByDescending(s => 
+                    {
+                        long score = s.Viewed;
+                        string titleLower = (s.Name ?? "").ToLowerInvariant();
+                        if (!qLower.Contains("remix") && titleLower.Contains("remix")) score /= 10;
+                        if (!qLower.Contains("cover") && titleLower.Contains("cover")) score /= 10;
+                        if (!qLower.Contains("karaoke") && titleLower.Contains("karaoke")) score /= 10;
+                        if (!qLower.Contains("beat") && titleLower.Contains("beat")) score /= 10;
+                        return score;
+                    })
                     .Take(6)
-                    .Select(s => new
+                    .ToList();
+
+                var nctSongs = topSongs.Select(s => new
                     {
                         title = s.Name,
                         artist = s.ArtistName,
