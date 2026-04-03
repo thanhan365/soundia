@@ -257,7 +257,7 @@ export function PlayerProvider({ children }) {
     );
     const hasStableDirectUrl = song.audio && song.audio !== 'YT_STREAM' &&
       !isItunesPreview && !isStoredNctUrl &&
-      (song.audio.startsWith('http') || song.audio.startsWith('/api/'));
+      (song.audio.startsWith('http') || song.audio.startsWith('/api/') || song.audio.startsWith('/uploads/'));
 
     const parseDurationStr = (str) => {
       if (typeof str === 'number') return str;
@@ -285,9 +285,9 @@ export function PlayerProvider({ children }) {
       addToRecent(song);
       recordListening(song);
       setCurrentTime(0);
-      setDuration(0);
+      setDuration(expectedDur > 0 ? expectedDur : 0); // Fix setDuration to use expectedDur instead of hardcoded 0
       const backendBase = (import.meta.env.VITE_API_URL || 'http://localhost:5066/api').replace('/api', '');
-      const audioUrl = song.audio.startsWith('/api/') ? `${backendBase}${song.audio}` : song.audio;
+      const audioUrl = (song.audio.startsWith('/api/') || song.audio.startsWith('/uploads/')) ? `${backendBase}${song.audio}` : song.audio;
       audio.loop = false; // Dừng loop silent bridge ngay trước khi gán src mới
       audio.src = audioUrl;
       audio.preload = 'auto';
