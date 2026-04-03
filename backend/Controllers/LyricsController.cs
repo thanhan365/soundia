@@ -230,6 +230,9 @@ namespace Soundia.Api.Controllers
                 catch { }
             }
 
+            // Biến lưu LRCLib plain fallback (dùng cuối nếu không tìm được synced)
+            string? lrclibFallbackPlain = null;
+            
             // Strategy 1: LRCLib exact match
             try
             {
@@ -243,79 +246,81 @@ namespace Soundia.Api.Controllers
                     var hasSynced = data.TryGetProperty("syncedLyrics", out var synced) && synced.ValueKind != JsonValueKind.Null;
                     var hasPlain = data.TryGetProperty("plainLyrics", out var plain) && plain.ValueKind != JsonValueKind.Null;
 
-                    if (hasSynced || hasPlain)
+                    if (hasSynced)
                     {
-                        Console.WriteLine($"[Lyrics] OK → lrclib-exact");
+                        // Có synced → return ngay
+                        Console.WriteLine($"[Lyrics] OK → lrclib-exact (synced)");
                         var result = new
                         {
-                            syncedLyrics = hasSynced ? synced.GetString() : null,
+                            syncedLyrics = synced.GetString(),
                             plainLyrics = hasPlain ? plain.GetString() : null,
                             source = "lrclib-exact"
                         };
                         _cache[cacheKey] = (result, DateTime.UtcNow.AddHours(24));
                         return Ok(result);
                     }
+                    else if (hasPlain)
+                    {
+                        // Chỉ có plain → lưu fallback, tiếp tục tìm synced từ LRCLib search
+                        Console.WriteLine($"[Lyrics] LRCLib exact has plain but no synced → save as fallback, continue to search");
+                        lrclibFallbackPlain = plain.GetString();
+                    }
                 }
             }
             catch { }
 
-            // Strategy 2: LRCLib search (fuzzy)
+            // Strategy 2: LRCLib search (fuzzy) — CHỈ tìm SYNCED lyrics (plain đã có từ fallback)
             try
             {
-                var q = Uri.EscapeDataString($"{cleanTrack} {fullArtist}");
-                var url = $"https://lrclib.net/api/search?q={q}";
-                var res = await http.GetAsync(url);
-                if (res.IsSuccessStatusCode)
+                // Thử 2 lần search: cleanTrack + artist, rồi track gốc
+                var searchQueries = new[] {
+                    $"{cleanTrack} {cleanArtist}",
+                    $"{track} {cleanArtist}"
+                };
+                
+                foreach (var searchQ in searchQueries)
                 {
+                    var q = Uri.EscapeDataString(searchQ);
+                    var url = $"https://lrclib.net/api/search?q={q}";
+                    var res = await http.GetAsync(url);
+                    if (!res.IsSuccessStatusCode) continue;
+                    
                     var json = await res.Content.ReadAsStringAsync();
                     var results = JsonSerializer.Deserialize<JsonElement>(json);
 
-                    if (results.ValueKind == JsonValueKind.Array && results.GetArrayLength() > 0)
+                    if (results.ValueKind != JsonValueKind.Array || results.GetArrayLength() == 0) continue;
+                    
+                    // Tìm kết quả CÓ synced lyrics + khớp tên bài
+                    foreach (var item in results.EnumerateArray())
                     {
-                        // Find best result that has lyrics
-                        JsonElement? best = null;
-                        foreach (var item in results.EnumerateArray())
+                        if (!item.TryGetProperty("syncedLyrics", out var sl) || sl.ValueKind == JsonValueKind.Null)
+                            continue; // Bỏ qua kết quả không có synced
+                        
+                        var resultTrackS = item.TryGetProperty("trackName", out var rtS) ? rtS.GetString()?.ToLowerInvariant() ?? "" : "";
+                        var resultArtistS = item.TryGetProperty("artistName", out var raS) ? raS.GetString()?.ToLowerInvariant() ?? "" : "";
+                        
+                        // Kiểm tra tên bài khớp (bắt buộc)
+                        var cleanTrackLower = cleanTrack.ToLowerInvariant();
+                        var resultTrackClean = System.Text.RegularExpressions.Regex.Replace(resultTrackS,
+                            @"\s*[\(\[].*?[\)\]]\s*", "").Trim();
+                        bool trackMatch = resultTrackClean.Contains(cleanTrackLower) 
+                            || cleanTrackLower.Contains(resultTrackClean)
+                            || resultTrackS.Contains(cleanTrackLower)
+                            || cleanTrackLower.Contains(resultTrackS);
+                        
+                        if (!trackMatch) continue;
+                        
+                        var hasPlain = item.TryGetProperty("plainLyrics", out var pl) && pl.ValueKind != JsonValueKind.Null;
+                        
+                        Console.WriteLine($"[Lyrics] OK → lrclib-search (synced from \"{resultTrackS}\" by \"{resultArtistS}\")");
+                        var result = new
                         {
-                            if (item.TryGetProperty("syncedLyrics", out var sl) && sl.ValueKind != JsonValueKind.Null)
-                            {
-                                // Validate: check if result matches our song
-                                var resultArtistS = item.TryGetProperty("artistName", out var raS) ? raS.GetString()?.ToLowerInvariant() ?? "" : "";
-                                var resultTrackS = item.TryGetProperty("trackName", out var rtS) ? rtS.GetString()?.ToLowerInvariant() ?? "" : "";
-                                bool artistMatchS = artistParts.Any(a => resultArtistS.Contains(a.ToLowerInvariant()) || a.ToLowerInvariant().Contains(resultArtistS));
-                                bool trackMatchS = resultTrackS.Contains(cleanTrack.ToLowerInvariant()) || cleanTrack.ToLowerInvariant().Contains(resultTrackS);
-                                if (artistMatchS || trackMatchS)
-                                {
-                                    best = item;
-                                    break;
-                                }
-                            }
-                            if (best == null && item.TryGetProperty("plainLyrics", out var pl) && pl.ValueKind != JsonValueKind.Null)
-                            {
-                                // Validate: check if result artist matches at least one of our artists
-                                var resultArtist = item.TryGetProperty("artistName", out var ra) ? ra.GetString()?.ToLowerInvariant() ?? "" : "";
-                                var resultTrack = item.TryGetProperty("trackName", out var rt) ? rt.GetString()?.ToLowerInvariant() ?? "" : "";
-                                bool artistMatch = artistParts.Any(a => resultArtist.Contains(a.ToLowerInvariant()) || a.ToLowerInvariant().Contains(resultArtist));
-                                bool trackMatch = resultTrack.Contains(cleanTrack.ToLowerInvariant()) || cleanTrack.ToLowerInvariant().Contains(resultTrack);
-                                if (artistMatch || trackMatch) best = item;
-                            }
-                        }
-
-                        if (best.HasValue)
-                        {
-                            var b = best.Value;
-                            var hasSynced = b.TryGetProperty("syncedLyrics", out var synced) && synced.ValueKind != JsonValueKind.Null;
-                            var hasPlain = b.TryGetProperty("plainLyrics", out var plain) && plain.ValueKind != JsonValueKind.Null;
-
-                            Console.WriteLine($"[Lyrics] OK → lrclib-search");
-                            var result = new
-                            {
-                                syncedLyrics = hasSynced ? synced.GetString() : null,
-                                plainLyrics = hasPlain ? plain.GetString() : null,
-                                source = "lrclib-search"
-                            };
-                            _cache[cacheKey] = (result, DateTime.UtcNow.AddHours(24));
-                            return Ok(result);
-                        }
+                            syncedLyrics = sl.GetString(),
+                            plainLyrics = hasPlain ? pl.GetString() : null,
+                            source = "lrclib-search"
+                        };
+                        _cache[cacheKey] = (result, DateTime.UtcNow.AddHours(24));
+                        return Ok(result);
                     }
                 }
             }
@@ -427,7 +432,16 @@ namespace Soundia.Api.Controllers
             }
             catch { }
 
-            // Trước khi return 404, check NCT fallback
+            // Trước khi return 404, check LRCLib plain fallback (ưu tiên hơn NCT vì data sạch hơn)
+            if (!string.IsNullOrWhiteSpace(lrclibFallbackPlain))
+            {
+                Console.WriteLine($"[Lyrics] OK → lrclib-exact (plain fallback)");
+                var lrclibResult = new { syncedLyrics = (string?)null, plainLyrics = lrclibFallbackPlain, source = "lrclib-exact" };
+                _cache[cacheKey] = (lrclibResult, DateTime.UtcNow.AddHours(24));
+                return Ok(lrclibResult);
+            }
+            
+            // NCT plain fallback
             if (!string.IsNullOrWhiteSpace(nctFallbackPlain))
             {
                 Console.WriteLine($"[Lyrics] OK → nct (plain fallback)");
