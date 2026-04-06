@@ -300,11 +300,11 @@ function UploadMp3Section() {
                                 <div className="flex items-center gap-1 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
                                     <button
                                         onClick={() => {
-                                            const backendBase = (import.meta.env.VITE_API_URL || 'http://localhost:5066/api').replace('/api', '');
                                             playSong({
                                                 id: `local_${song.id}`, title: song.title, artist: song.artist,
                                                 cover: song.coverUrl,
-                                                audio: song.audioUrl ? `${backendBase}${song.audioUrl}` : 'YT_STREAM',
+                                                audio: song.audioUrl || 'YT_STREAM',
+                                                duration: song.duration,
                                                 source: 'local'
                                             });
                                         }}

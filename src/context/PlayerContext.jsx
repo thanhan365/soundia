@@ -285,15 +285,25 @@ export function PlayerProvider({ children }) {
       addToRecent(song);
       recordListening(song);
       setCurrentTime(0);
-      setDuration(expectedDur > 0 ? expectedDur : 0); // Fix setDuration to use expectedDur instead of hardcoded 0
-      const backendBase = (import.meta.env.VITE_API_URL || 'http://localhost:5066/api').replace('/api', '');
-      const audioUrl = (song.audio.startsWith('/api/') || song.audio.startsWith('/uploads/')) ? `${backendBase}${song.audio}` : song.audio;
-      audio.loop = false; // Dừng loop silent bridge ngay trước khi gán src mới
+      setDuration(expectedDur > 0 ? expectedDur : 0);
+
+      // Construct audio URL: for relative paths (/api/... or /uploads/...) prepend backend base
+      let audioUrl = song.audio;
+      if (audioUrl.startsWith('/api/') || audioUrl.startsWith('/uploads/')) {
+        const viteApi = import.meta.env.VITE_API_URL || 'http://localhost:5066/api';
+        if (viteApi.startsWith('http')) {
+          // Dev mode: VITE_API_URL is full URL like http://localhost:5066/api
+          audioUrl = viteApi.replace('/api', '') + audioUrl;
+        }
+        // Production: VITE_API_URL=/api → audioUrl stays as /uploads/... (proxied by Vercel)
+      }
+
+      audio.loop = false;
       audio.src = audioUrl;
       audio.preload = 'auto';
       setIsLoadingStream(false);
       setIsPlaying(true);
-      console.log(`[stream] "${song.title}" -> Direct URL`);
+      console.log(`[stream] "${song.title}" -> Direct URL: ${audioUrl}`);
       audio.play().catch(() => { });
     } else {
       setIsLoadingStream(true);
