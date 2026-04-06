@@ -227,12 +227,22 @@ namespace Soundia.Api.Controllers
             if (song == null) return NotFound("Song not found.");
 
             // Delete physical file
-            if (song.AudioUrl.StartsWith("/uploads/"))
+            if (song.AudioUrl != null && song.AudioUrl.StartsWith("/uploads/"))
             {
                 var filePath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", song.AudioUrl.TrimStart('/'));
                 if (System.IO.File.Exists(filePath))
                     System.IO.File.Delete(filePath);
             }
+
+            // Remove from all playlists
+            var playlistSongs = await _context.PlaylistSongs.Where(ps => ps.SongId == id).ToListAsync();
+            if (playlistSongs.Count > 0)
+                _context.PlaylistSongs.RemoveRange(playlistSongs);
+
+            // Remove from favorites
+            var favorites = await _context.Favorites.Where(f => f.SongId == id).ToListAsync();
+            if (favorites.Count > 0)
+                _context.Favorites.RemoveRange(favorites);
 
             _context.Songs.Remove(song);
             await _context.SaveChangesAsync();
