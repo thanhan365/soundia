@@ -65,7 +65,7 @@ export default function AllArtists() {
     }, []);
 
     const handleArtistClick = (artist) => {
-        navigate(`/search?q=${encodeURIComponent(artist.name)}`);
+        navigate(`/artist-detail/${encodeURIComponent(artist.name)}`);
     };
 
     return (
